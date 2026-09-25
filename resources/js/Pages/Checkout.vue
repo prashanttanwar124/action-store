@@ -42,8 +42,8 @@ function completeOrder() {
 <template>
   <Head title="Express Checkout — Masala Mart" />
 
-  <StoreLayout :showCartBar="false">
-    <div class="space-y-6 max-w-5xl mx-auto">
+  <StoreLayout :showCartBar="false" :showBottomNav="false">
+    <div class="space-y-6 max-w-5xl mx-auto pb-20 sm:pb-0">
 
       <!-- Breadcrumbs -->
       <nav class="flex items-center gap-2 text-xs font-mono text-zinc-500">
@@ -56,20 +56,20 @@ function completeOrder() {
       </nav>
 
       <!-- Order Confirmation State -->
-      <div v-if="orderPlaced" class="bg-white border-2 border-zinc-950 p-8 text-center space-y-5">
-        <div class="w-16 h-16 bg-emerald-100 text-emerald-700 flex items-center justify-center mx-auto border-2 border-emerald-500">
-          <CheckCircle2 class="w-10 h-10" />
+      <div v-if="orderPlaced" class="bg-white border-2 border-zinc-950 p-6 sm:p-8 text-center space-y-5">
+        <div class="w-14 h-14 sm:w-16 sm:h-16 bg-emerald-100 text-emerald-700 flex items-center justify-center mx-auto border-2 border-emerald-500">
+          <CheckCircle2 class="w-8 h-8 sm:w-10 sm:h-10" />
         </div>
         
         <div>
-          <span class="text-[11px] font-mono uppercase tracking-widest text-[#E52E04] font-bold">ORDER CONFIRMED #MM-88492</span>
-          <h1 class="text-3xl font-black text-zinc-950 tracking-tight mt-1">Thank you for your order!</h1>
-          <p class="text-sm text-zinc-600 mt-2 max-w-md mx-auto">
+          <span class="text-[10px] sm:text-[11px] font-mono uppercase tracking-widest text-[#E52E04] font-bold">ORDER CONFIRMED #MM-88492</span>
+          <h1 class="text-2xl sm:text-3xl font-black text-zinc-950 tracking-tight mt-1">Thank you for your order!</h1>
+          <p class="text-xs sm:text-sm text-zinc-600 mt-2 max-w-md mx-auto">
             Your items are being packed at <strong>{{ store.selectedStore }}</strong> and will be ready for pickup <strong>TODAY between 4–5 pm</strong>.
           </p>
         </div>
 
-        <div class="max-w-md mx-auto bg-zinc-50 p-4 border border-zinc-300 text-left space-y-2 text-xs font-mono">
+        <div class="max-w-md mx-auto bg-zinc-50 p-3.5 sm:p-4 border border-zinc-300 text-left space-y-2 text-xs font-mono">
           <div class="flex justify-between">
             <span class="text-zinc-500">Pickup Location:</span>
             <span class="font-bold text-zinc-950">482 Main Street (Bay 3)</span>
@@ -84,16 +84,16 @@ function completeOrder() {
           </div>
         </div>
 
-        <div class="flex justify-center gap-4 pt-4">
+        <div class="flex flex-col sm:flex-row justify-center gap-3 pt-3">
           <Link 
             href="/account" 
-            class="px-6 py-3 bg-zinc-950 text-white font-bold text-xs uppercase tracking-wider border border-zinc-950"
+            class="px-5 py-3 bg-zinc-950 text-white font-bold text-xs uppercase tracking-wider border border-zinc-950 text-center"
           >
             View Account & Orders
           </Link>
           <Link 
             href="/" 
-            class="px-6 py-3 bg-[#E52E04] text-white font-bold text-xs uppercase tracking-wider border border-[#B82200]"
+            class="px-5 py-3 bg-[#E52E04] text-white font-bold text-xs uppercase tracking-wider border border-[#B82200] text-center"
           >
             Continue Shopping
           </Link>
@@ -101,36 +101,36 @@ function completeOrder() {
       </div>
 
       <!-- Main Checkout 2-Column Form -->
-      <div v-else class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+      <div v-else class="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 items-start">
         
         <!-- LEFT COLUMN: Fulfillment & Payment Details (lg:col-span-7) -->
-        <div class="lg:col-span-7 space-y-6">
+        <div class="lg:col-span-7 space-y-5">
           
           <!-- SECTION 1: Pickup / Delivery 2-Cell Switch (Screen 1e) -->
-          <div class="bg-white border border-zinc-300 p-6 space-y-4">
-            <h2 class="text-base font-black text-zinc-950 uppercase tracking-wide font-mono flex items-center gap-2">
+          <div class="bg-white border border-zinc-300 p-4 sm:p-6 space-y-3.5">
+            <h2 class="text-sm sm:text-base font-black text-zinc-950 uppercase tracking-wide font-mono flex items-center gap-2">
               <span class="w-5 h-5 bg-zinc-950 text-white flex items-center justify-center text-xs">1</span>
               <span>Fulfillment Method</span>
             </h2>
 
-            <div class="grid grid-cols-2 gap-3">
+            <div class="grid grid-cols-2 gap-2.5 sm:gap-3">
               <button 
                 type="button"
                 @click="deliveryMethod = 'pickup'"
                 :class="[
-                  'p-4 border-2 text-left transition-colors flex flex-col justify-between cursor-pointer',
+                  'p-3 sm:p-4 border-2 text-left transition-colors flex flex-col justify-between cursor-pointer',
                   deliveryMethod === 'pickup' 
                     ? 'border-zinc-950 bg-zinc-50 shadow-sm' 
                     : 'border-zinc-200 hover:border-zinc-400 bg-white'
                 ]"
               >
                 <div class="flex items-center justify-between">
-                  <Store class="w-5 h-5 text-zinc-950" />
-                  <span v-if="deliveryMethod === 'pickup'" class="w-3 h-3 bg-[#E52E04]"></span>
+                  <Store class="w-4 h-4 sm:w-5 sm:h-5 text-zinc-950" />
+                  <span v-if="deliveryMethod === 'pickup'" class="w-2.5 h-2.5 sm:w-3 sm:h-3 bg-[#E52E04]"></span>
                 </div>
-                <div class="mt-3">
-                  <div class="font-black text-sm text-zinc-950">Store Pickup</div>
-                  <div class="text-[11px] text-zinc-500 font-mono mt-0.5">{{ store.selectedStore }} · FREE</div>
+                <div class="mt-2.5 sm:mt-3">
+                  <div class="font-black text-xs sm:text-sm text-zinc-950">Store Pickup</div>
+                  <div class="text-[10px] sm:text-[11px] text-zinc-500 font-mono mt-0.5">{{ store.selectedStore }} · FREE</div>
                 </div>
               </button>
 
@@ -138,20 +138,20 @@ function completeOrder() {
                 type="button"
                 @click="deliveryMethod = 'delivery'"
                 :class="[
-                  'p-4 border-2 text-left transition-colors flex flex-col justify-between cursor-pointer',
+                  'p-3 sm:p-4 border-2 text-left transition-colors flex flex-col justify-between cursor-pointer',
                   deliveryMethod === 'delivery' 
                     ? 'border-zinc-950 bg-zinc-50 shadow-sm' 
                     : 'border-zinc-200 hover:border-zinc-400 bg-white'
                 ]"
               >
                 <div class="flex items-center justify-between">
-                  <Truck class="w-5 h-5 text-zinc-950" />
-                  <span v-if="deliveryMethod === 'delivery'" class="w-3 h-3 bg-[#E52E04]"></span>
+                  <Truck class="w-4 h-4 sm:w-5 sm:h-5 text-zinc-950" />
+                  <span v-if="deliveryMethod === 'delivery'" class="w-2.5 h-2.5 sm:w-3 sm:h-3 bg-[#E52E04]"></span>
                 </div>
-                <div class="mt-3">
-                  <div class="font-black text-sm text-zinc-950">Local Delivery</div>
-                  <div class="text-[11px] text-zinc-500 font-mono mt-0.5">
-                    {{ store.subtotal >= 40 ? 'FREE ($40+ met)' : '$4.99 or free over $40' }}
+                <div class="mt-2.5 sm:mt-3">
+                  <div class="font-black text-xs sm:text-sm text-zinc-950">Local Delivery</div>
+                  <div class="text-[10px] sm:text-[11px] text-zinc-500 font-mono mt-0.5">
+                    {{ store.subtotal >= 40 ? 'FREE ($40+ met)' : '$4.99' }}
                   </div>
                 </div>
               </button>
@@ -159,13 +159,13 @@ function completeOrder() {
           </div>
 
           <!-- SECTION 2: 1-Hour Time Slot Picker (Screen 1e) -->
-          <div class="bg-white border border-zinc-300 p-6 space-y-4">
+          <div class="bg-white border border-zinc-300 p-4 sm:p-6 space-y-3.5">
             <div class="flex items-center justify-between">
-              <h2 class="text-base font-black text-zinc-950 uppercase tracking-wide font-mono flex items-center gap-2">
+              <h2 class="text-sm sm:text-base font-black text-zinc-950 uppercase tracking-wide font-mono flex items-center gap-2">
                 <span class="w-5 h-5 bg-zinc-950 text-white flex items-center justify-center text-xs">2</span>
                 <span>Select 1-Hour Window</span>
               </h2>
-              <span class="text-[11px] font-mono text-emerald-700 font-bold">Fast Turnaround</span>
+              <span class="text-[10px] sm:text-[11px] font-mono text-emerald-700 font-bold">Fast Turnaround</span>
             </div>
 
             <div class="space-y-2">
@@ -175,13 +175,13 @@ function completeOrder() {
                 type="button"
                 @click="selectedSlot = slot.id"
                 :class="[
-                  'w-full p-3.5 border-2 text-left flex items-center justify-between transition-colors cursor-pointer',
+                  'w-full p-3 sm:p-3.5 border-2 text-left flex items-center justify-between transition-colors cursor-pointer',
                   selectedSlot === slot.id 
                     ? 'border-zinc-950 bg-zinc-50 shadow-sm' 
                     : 'border-zinc-200 hover:border-zinc-400 bg-white'
                 ]"
               >
-                <div class="flex items-center gap-3">
+                <div class="flex items-center gap-2.5 sm:gap-3">
                   <div :class="['w-4 h-4 border-2 flex items-center justify-center', selectedSlot === slot.id ? 'border-zinc-950 bg-zinc-950' : 'border-zinc-400']">
                     <Check v-if="selectedSlot === slot.id" class="w-3 h-3 text-white stroke-[3]" />
                   </div>
@@ -192,29 +192,29 @@ function completeOrder() {
                     </span>
                   </div>
                 </div>
-                <span class="text-[11px] font-mono text-zinc-500">{{ slot.status }}</span>
+                <span class="text-[10px] sm:text-[11px] font-mono text-zinc-500">{{ slot.status }}</span>
               </button>
             </div>
           </div>
 
           <!-- SECTION 3: Payment & Express Wallets (Screen 1e) -->
-          <div class="bg-white border border-zinc-300 p-6 space-y-5">
-            <h2 class="text-base font-black text-zinc-950 uppercase tracking-wide font-mono flex items-center gap-2">
+          <div class="bg-white border border-zinc-300 p-4 sm:p-6 space-y-4">
+            <h2 class="text-sm sm:text-base font-black text-zinc-950 uppercase tracking-wide font-mono flex items-center gap-2">
               <span class="w-5 h-5 bg-zinc-950 text-white flex items-center justify-center text-xs">3</span>
               <span>Express Payment</span>
             </h2>
 
             <!-- Express Buttons: Apple Pay & Google Pay -->
-            <div class="grid grid-cols-2 gap-3">
+            <div class="grid grid-cols-2 gap-2.5 sm:gap-3">
               <button 
                 type="button"
                 @click="paymentMethod = 'apple-pay'"
                 :class="[
-                  'py-3.5 px-4 bg-black text-white font-bold text-sm flex items-center justify-center gap-2 border-2 transition-transform active:scale-[0.99] cursor-pointer',
+                  'py-3 sm:py-3.5 px-3 bg-black text-white font-bold text-xs sm:text-sm flex items-center justify-center gap-1.5 border-2 active:scale-[0.99] cursor-pointer',
                   paymentMethod === 'apple-pay' ? 'border-[#E52E04] ring-2 ring-[#E52E04]' : 'border-black'
                 ]"
               >
-                <span class="text-base"></span>
+                <span class="text-base sm:text-lg"></span>
                 <span>Pay</span>
               </button>
 
@@ -222,7 +222,7 @@ function completeOrder() {
                 type="button"
                 @click="paymentMethod = 'google-pay'"
                 :class="[
-                  'py-3.5 px-4 bg-zinc-100 hover:bg-zinc-200 text-zinc-900 font-bold text-sm flex items-center justify-center gap-2 border-2 transition-transform active:scale-[0.99] cursor-pointer',
+                  'py-3 sm:py-3.5 px-3 bg-zinc-100 hover:bg-zinc-200 text-zinc-900 font-bold text-xs sm:text-sm flex items-center justify-center gap-1.5 border-2 active:scale-[0.99] cursor-pointer',
                   paymentMethod === 'google-pay' ? 'border-[#E52E04] ring-2 ring-[#E52E04]' : 'border-zinc-300'
                 ]"
               >
@@ -231,9 +231,9 @@ function completeOrder() {
               </button>
             </div>
 
-            <div class="relative flex items-center justify-center">
+            <div class="relative flex items-center justify-center my-2">
               <div class="border-t border-zinc-300 w-full"></div>
-              <span class="bg-white px-3 text-[10px] font-mono text-zinc-500 uppercase tracking-wider absolute">
+              <span class="bg-white px-2.5 text-[9px] sm:text-[10px] font-mono text-zinc-500 uppercase tracking-wider absolute">
                 Or pay with credit / debit card
               </span>
             </div>
@@ -247,20 +247,20 @@ function completeOrder() {
                     type="text" 
                     placeholder="4242 ···· ···· 4242"
                     value="•••• •••• •••• 4242"
-                    class="w-full px-3 py-2.5 bg-zinc-50 border border-zinc-400 text-xs font-mono text-zinc-950 focus:bg-white focus:outline-none focus:border-zinc-950"
+                    class="w-full px-3 py-2 bg-zinc-50 border border-zinc-400 text-xs font-mono text-zinc-950 focus:bg-white focus:outline-none"
                   />
-                  <CreditCard class="absolute right-3 top-3 w-4 h-4 text-zinc-400" />
+                  <CreditCard class="absolute right-3 top-2.5 w-4 h-4 text-zinc-400" />
                 </div>
               </div>
 
-              <div class="grid grid-cols-2 gap-3">
+              <div class="grid grid-cols-2 gap-2.5 sm:gap-3">
                 <div>
                   <label class="block text-[10px] font-mono uppercase text-zinc-500 font-bold mb-1">Expires (MM/YY)</label>
                   <input 
                     type="text" 
                     placeholder="12/28" 
                     value="12/28"
-                    class="w-full px-3 py-2.5 bg-zinc-50 border border-zinc-400 text-xs font-mono text-zinc-950 focus:bg-white focus:outline-none"
+                    class="w-full px-3 py-2 bg-zinc-50 border border-zinc-400 text-xs font-mono text-zinc-950 focus:bg-white focus:outline-none"
                   />
                 </div>
                 <div>
@@ -269,7 +269,7 @@ function completeOrder() {
                     type="text" 
                     placeholder="•••" 
                     value="882"
-                    class="w-full px-3 py-2.5 bg-zinc-50 border border-zinc-400 text-xs font-mono text-zinc-950 focus:bg-white focus:outline-none"
+                    class="w-full px-3 py-2 bg-zinc-50 border border-zinc-400 text-xs font-mono text-zinc-950 focus:bg-white focus:outline-none"
                   />
                 </div>
               </div>
@@ -279,20 +279,20 @@ function completeOrder() {
 
         </div>
 
-        <!-- RIGHT COLUMN: Order Summary & Pay Button (lg:col-span-5) -->
+        <!-- RIGHT COLUMN: Order Summary & Desktop Pay Button (lg:col-span-5) -->
         <div class="lg:col-span-5 space-y-4">
           
-          <div class="bg-white border-2 border-zinc-950 p-6 space-y-4 shadow-sm">
-            <h2 class="text-base font-black text-zinc-950 uppercase tracking-wide font-mono border-b border-zinc-200 pb-3">
+          <div class="bg-white border-2 border-zinc-950 p-4 sm:p-6 space-y-4 shadow-sm">
+            <h2 class="text-sm sm:text-base font-black text-zinc-950 uppercase tracking-wide font-mono border-b border-zinc-200 pb-3">
               Order Review ({{ store.totalItemCount }} items)
             </h2>
 
             <!-- Items Quick View -->
-            <div class="max-h-60 overflow-y-auto divide-y divide-zinc-100 pr-1">
+            <div class="max-h-52 sm:max-h-60 overflow-y-auto divide-y divide-zinc-100 pr-1">
               <div 
                 v-for="item in store.cartItems" 
                 :key="item.id"
-                class="py-2.5 flex items-center justify-between text-xs"
+                class="py-2 flex items-center justify-between text-xs"
               >
                 <div>
                   <div class="font-bold text-zinc-950">{{ item.name }}</div>
@@ -314,24 +314,24 @@ function completeOrder() {
                 <span>Pickup</span>
                 <span class="text-emerald-700 font-bold">FREE</span>
               </div>
-              <div class="pt-2 border-t border-zinc-200 flex justify-between items-baseline text-lg font-black text-zinc-950">
+              <div class="pt-2 border-t border-zinc-200 flex justify-between items-baseline text-base sm:text-lg font-black text-zinc-950">
                 <span>Total Due</span>
-                <span class="text-2xl font-mono text-zinc-950">${{ store.total.toFixed(2) }}</span>
+                <span class="text-xl sm:text-2xl font-mono text-zinc-950">${{ store.total.toFixed(2) }}</span>
               </div>
             </div>
 
-            <!-- Pay Now Button (Screen 1e) -->
+            <!-- Desktop Pay Now Button -->
             <button 
               type="button"
               @click="completeOrder"
               :disabled="isProcessing"
-              class="w-full py-4 bg-[#E52E04] hover:bg-[#CC2500] text-white font-black text-center text-sm uppercase tracking-wider border border-[#B82200] transition-colors cursor-pointer flex items-center justify-center gap-2"
+              class="hidden sm:flex w-full py-4 bg-[#E52E04] hover:bg-[#CC2500] text-white font-black text-center text-sm uppercase tracking-wider border border-[#B82200] transition-colors cursor-pointer items-center justify-center gap-2"
             >
               <span v-if="isProcessing" class="animate-spin text-base">⟳</span>
               <span>{{ isProcessing ? 'Authorizing Payment...' : `Pay $${store.total.toFixed(2)}` }}</span>
             </button>
 
-            <div class="flex items-center justify-center gap-2 text-[10px] font-mono text-zinc-500 pt-1">
+            <div class="flex items-center justify-center gap-1.5 text-[10px] font-mono text-zinc-500 pt-1">
               <ShieldCheck class="w-3.5 h-3.5 text-emerald-600" />
               <span>256-Bit SSL Encrypted & Stripe Secured</span>
             </div>
@@ -339,6 +339,29 @@ function completeOrder() {
 
         </div>
 
+      </div>
+
+      <!-- Mobile Sticky Bottom Pay Bar -->
+      <div 
+        v-if="!orderPlaced"
+        class="sm:hidden fixed bottom-0 left-0 right-0 z-40 bg-white border-t border-zinc-300 p-3 shadow-2xl flex items-center justify-between gap-3"
+      >
+        <div>
+          <div class="text-[10px] font-mono text-zinc-500 uppercase leading-none">Total Due</div>
+          <div class="text-lg font-black font-mono text-zinc-950 mt-0.5 leading-none">
+            ${{ store.total.toFixed(2) }}
+          </div>
+        </div>
+
+        <button 
+          type="button"
+          @click="completeOrder"
+          :disabled="isProcessing"
+          class="flex-1 py-3 bg-[#E52E04] active:bg-[#CC2500] text-white font-black text-xs uppercase tracking-wider text-center border border-[#B82200] cursor-pointer flex items-center justify-center gap-1.5"
+        >
+          <span v-if="isProcessing" class="animate-spin text-sm">⟳</span>
+          <span>{{ isProcessing ? 'Authorizing...' : `Pay $${store.total.toFixed(2)}` }}</span>
+        </button>
       </div>
 
     </div>

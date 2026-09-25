@@ -13,16 +13,13 @@ import {
   Check, 
   ShoppingBag, 
   ArrowRight,
-  Flame,
-  ShieldAlert
+  Flame
 } from 'lucide-vue-next';
 
 const store = useStore();
 
-const activeFilter = ref('all');
-
 function addRecipeKit(name, price) {
-  store.cart.push({
+  store.addToCart({
     id: 'kit-' + Date.now(),
     name: name,
     weight: 'Complete Kit',
@@ -38,55 +35,44 @@ function addRecipeKit(name, price) {
   <Head title="Masala Mart — Indian Groceries & Fresh Click-and-Collect" />
 
   <StoreLayout>
-    <div class="space-y-10">
+    <div class="space-y-6 sm:space-y-10">
 
-      <!-- HERO SECTION: Split Festival Banner (Page 2: 1a Modernist Specification) -->
+      <!-- HERO SECTION: Split Festival Banner (Page 2: Screen 1a Specification) -->
       <section class="grid grid-cols-1 lg:grid-cols-12 gap-4">
         <!-- Main Festival Pre-Order Banner (Vermilion Red #E52E04) -->
-        <div class="lg:col-span-8 bg-[#E52E04] text-white border border-[#B82200] grid grid-cols-1 md:grid-cols-12 overflow-hidden shadow-sm">
-          <!-- Banner Copy -->
-          <div class="md:col-span-7 p-6 sm:p-8 flex flex-col justify-between space-y-6">
+        <div class="lg:col-span-8 bg-[#E52E04] text-white border border-[#B82200] grid grid-cols-12 overflow-hidden shadow-sm min-h-[160px] sm:min-h-[190px]">
+          <!-- Banner Copy (7 cols on mobile, exact match to Screen 1a) -->
+          <div class="col-span-7 p-3.5 sm:p-7 flex flex-col justify-between">
             <div>
-              <div class="text-[10px] font-mono font-bold tracking-widest uppercase text-white/90 mb-2 flex items-center gap-1.5">
-                <span class="w-2 h-2 bg-white inline-block"></span>
-                <span>FESTIVAL PRE-ORDER · CLOSES OCT 30</span>
+              <div class="text-[9px] sm:text-[10px] font-mono font-bold tracking-wider uppercase text-white/95 leading-tight mb-1">
+                FESTIVAL PRE-ORDER · CLOSES OCT 30
               </div>
-              <h1 class="text-3xl sm:text-4xl lg:text-5xl font-black leading-[1.08] tracking-tight">
-                Diwali sweets,<br />boxed &<br />ready.
+              <h1 class="text-xl sm:text-3xl lg:text-4xl font-black leading-tight sm:leading-none tracking-tight">
+                Diwali<br />sweets,<br />boxed &<br />ready.
               </h1>
-              <p class="text-xs sm:text-sm text-white/90 mt-3 max-w-sm leading-relaxed">
-                Handcrafted Kaju Katli, Besan Ladoo, and premium dry fruit boxes batched fresh at our local kitchen.
-              </p>
             </div>
 
             <div>
               <Link 
                 href="/products/sweets-box" 
-                class="inline-flex items-center gap-2 px-4 py-2.5 bg-zinc-950 hover:bg-zinc-800 text-white font-black text-xs uppercase tracking-wider border border-zinc-950 transition-colors"
+                class="inline-flex items-center gap-1 text-xs font-black text-white hover:underline mt-2 sm:mt-4 group"
               >
                 <span>Pre-order from $24.99</span>
-                <ChevronRight class="w-4 h-4 stroke-[3]" />
+                <span class="text-base leading-none group-hover:translate-x-0.5 transition-transform">&rsaquo;</span>
               </Link>
             </div>
           </div>
 
-          <!-- Banner Visual Texture (Diagonal Stripe Box labeled "mithai box") -->
-          <div class="md:col-span-5 min-h-[160px] md:min-h-full bg-red-950/30 border-t md:border-t-0 md:border-l border-white/20 p-4 flex flex-col justify-between relative overflow-hidden bg-stripes-bold">
-            <div class="flex justify-between items-start text-[10px] font-mono text-white/80">
-              <span class="px-1.5 py-0.5 bg-black/30 border border-white/20">EDITION 2026</span>
-              <span>1 kg / 2.2 lb</span>
-            </div>
-            
-            <div class="relative z-10 bg-zinc-950/70 p-2.5 border border-white/10 backdrop-blur-sm self-start">
-              <span class="text-[11px] font-mono text-white font-bold tracking-wide">
-                mithai box · assorted 24 pcs
-              </span>
-            </div>
+          <!-- Banner Visual Texture (5 cols: Diagonal Stripe Box labeled "mithai box") -->
+          <div class="col-span-5 relative bg-red-900/40 border-l border-white/20 p-2 sm:p-4 flex flex-col justify-end overflow-hidden bg-stripes-bold">
+            <span class="relative z-10 text-[10px] font-mono text-white/95 font-semibold">
+              mithai box
+            </span>
           </div>
         </div>
 
-        <!-- Side Promo Card: Click & Collect Guarantee -->
-        <div class="lg:col-span-4 bg-white border border-zinc-300 p-6 flex flex-col justify-between">
+        <!-- Desktop Click & Collect Guarantee Card -->
+        <div class="hidden lg:flex lg:col-span-4 bg-white border border-zinc-300 p-6 flex-col justify-between">
           <div>
             <div class="flex items-center justify-between text-[10px] font-mono uppercase tracking-wider text-zinc-500 mb-2">
               <span>EXPRESS STORE PICKUP</span>
@@ -115,36 +101,39 @@ function addRecipeKit(name, price) {
         </div>
       </section>
 
-      <!-- SECTION: "Buy it again" (Screen 1a) -->
-      <section class="space-y-4">
-        <div class="flex items-center justify-between border-b border-zinc-300 pb-2">
-          <div>
-            <h2 class="text-2xl font-black text-zinc-950 tracking-tight">Buy it again</h2>
-            <p class="text-xs text-zinc-500">Your frequently replenished pantry staples and household favorites.</p>
-          </div>
+      <!-- Banner Pagination Indicator Dots (Screen 1a match) -->
+      <div class="flex items-center gap-1 -mt-3 sm:-mt-6">
+        <span class="w-4 h-1 bg-zinc-950"></span>
+        <span class="w-2 h-1 bg-zinc-300"></span>
+        <span class="w-2 h-1 bg-zinc-300"></span>
+      </div>
+
+      <!-- SECTION: "Buy it again" (Screen 1a Specification) -->
+      <section class="space-y-3">
+        <div class="flex items-center justify-between">
+          <h2 class="text-lg sm:text-2xl font-black text-zinc-950 tracking-tight">Buy it again</h2>
           <Link 
             href="/reorder" 
-            class="text-xs font-bold text-[#E52E04] hover:underline flex items-center gap-1"
+            class="text-xs font-bold text-[#E52E04] hover:underline cursor-pointer"
           >
-            <span>See all past items</span>
-            <ChevronRight class="w-3.5 h-3.5" />
+            See all
           </Link>
         </div>
 
-        <!-- Products Grid (Chakki Atta, Desi Ghee, Glucose Biscuits, Paneer, Basmati) -->
-        <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3.5">
+        <!-- Products Carousel / Grid (Horizontal swipe on mobile, 5 cols on desktop) -->
+        <div class="flex sm:grid sm:grid-cols-5 gap-2.5 overflow-x-auto no-scrollbar -mx-4 px-4 sm:mx-0 sm:px-0 pb-1 snap-x">
           
-          <!-- Item 1: Chakki Atta -->
-          <div class="bg-white border border-zinc-300 p-2.5 flex flex-col justify-between group hover:border-zinc-950 transition-colors">
+          <!-- Item 1: Chakki Atta (with active [- 1 +] red bar) -->
+          <div class="w-[130px] sm:w-auto shrink-0 snap-start flex flex-col justify-between bg-white border border-zinc-300 p-2 group hover:border-zinc-950 transition-colors">
             <div>
-              <div class="relative w-full aspect-square bg-[#EAEAEA] border border-zinc-200 p-2 flex flex-col justify-between bg-stripes mb-2">
-                <span class="text-[10px] font-mono text-zinc-700 font-bold">atta bag</span>
+              <div class="relative w-full aspect-square bg-[#EAEAEA] border border-zinc-200 p-1.5 flex flex-col justify-between bg-stripes mb-1.5">
+                <span class="text-[10px] font-mono text-zinc-700">atta bag</span>
                 
-                <!-- Active [- 1 +] control matching Screen 1a -->
-                <div class="w-full bg-[#E52E04] text-white h-8 flex items-center justify-between px-2 border border-[#B82200]">
+                <!-- Bottom red [- 1 +] control matching Screen 1a -->
+                <div class="w-full bg-[#E52E04] text-white h-7 sm:h-8 flex items-center justify-between px-1.5 border border-[#B82200]">
                   <button 
                     @click.stop="store.removeFromCart('atta')" 
-                    class="p-1 font-black hover:bg-[#CC2500] cursor-pointer"
+                    class="p-0.5 font-black hover:bg-[#CC2500] cursor-pointer"
                     aria-label="Decrease quantity"
                   >
                     -
@@ -152,7 +141,7 @@ function addRecipeKit(name, price) {
                   <span class="text-xs font-black font-mono">{{ store.getItemQuantity('atta') }}</span>
                   <button 
                     @click.stop="store.addToCart({ id: 'atta', name: 'Aashirvaad Chakki Atta', weight: '20 lb', price: 18.04, originalPrice: 18.99, isSubscribed: true })" 
-                    class="p-1 font-black hover:bg-[#CC2500] cursor-pointer"
+                    class="p-0.5 font-black hover:bg-[#CC2500] cursor-pointer"
                     aria-label="Increase quantity"
                   >
                     +
@@ -160,251 +149,204 @@ function addRecipeKit(name, price) {
                 </div>
               </div>
 
-              <Link href="/products/rice" class="block">
-                <div class="text-base font-black text-zinc-950 font-mono leading-none">$18.99</div>
-                <div class="text-xs font-bold text-zinc-950 mt-1 line-clamp-1 group-hover:text-[#E52E04]">Aashirvaad Chakki Atta</div>
-                <div class="text-[10px] text-zinc-500 font-mono">20 lb (9.07 kg)</div>
+              <Link href="/products/rice" class="block text-left">
+                <div class="text-sm sm:text-base font-black text-zinc-950 font-mono leading-none">$18.99</div>
+                <div class="text-xs font-bold text-zinc-950 mt-1 truncate">Chakki Atta</div>
+                <div class="text-[10px] text-zinc-500 font-mono">20 lb</div>
               </Link>
-            </div>
-            
-            <div class="mt-2 pt-1.5 border-t border-zinc-100 flex items-center justify-between text-[9px] font-mono text-zinc-500">
-              <span class="text-[#E52E04] font-bold">Save 5% sub</span>
-              <span>100% Whole Wheat</span>
             </div>
           </div>
 
-          <!-- Item 2: Desi Ghee -->
-          <div class="bg-white border border-zinc-300 p-2.5 flex flex-col justify-between group hover:border-zinc-950 transition-colors">
+          <!-- Item 2: Desi Ghee (with red + button at bottom right) -->
+          <div class="w-[130px] sm:w-auto shrink-0 snap-start flex flex-col justify-between bg-white border border-zinc-300 p-2 group hover:border-zinc-950 transition-colors">
             <div>
-              <div class="relative w-full aspect-square bg-[#EAEAEA] border border-zinc-200 p-2 flex flex-col justify-between bg-stripes mb-2">
-                <span class="text-[10px] font-mono text-zinc-700 font-bold">ghee jar</span>
+              <div class="relative w-full aspect-square bg-[#EAEAEA] border border-zinc-200 p-1.5 flex flex-col justify-between bg-stripes mb-1.5">
+                <span class="text-[10px] font-mono text-zinc-700">ghee jar</span>
                 
                 <button 
                   @click="store.addToCart({ id: 'ghee', name: 'Amul Pure Desi Ghee', weight: '500 ml', price: 9.99, originalPrice: 9.99 })"
-                  class="self-end w-8 h-8 bg-[#E52E04] hover:bg-[#CC2500] text-white flex items-center justify-center border border-[#B82200] font-black cursor-pointer"
+                  class="self-end w-7 h-7 sm:w-8 sm:h-8 bg-[#E52E04] hover:bg-[#CC2500] text-white flex items-center justify-center border border-[#B82200] font-black cursor-pointer active:scale-95"
                   aria-label="Add Desi Ghee"
                 >
                   +
                 </button>
               </div>
 
-              <div>
-                <div class="text-base font-black text-zinc-950 font-mono leading-none">$9.99</div>
-                <div class="text-xs font-bold text-zinc-950 mt-1 line-clamp-1">Amul Pure Desi Ghee</div>
-                <div class="text-[10px] text-zinc-500 font-mono">500 ml jar</div>
+              <div class="text-left">
+                <div class="text-sm sm:text-base font-black text-zinc-950 font-mono leading-none">$9.99</div>
+                <div class="text-xs font-bold text-zinc-950 mt-1 truncate">Desi Ghee</div>
+                <div class="text-[10px] text-zinc-500 font-mono">500 ml</div>
               </div>
-            </div>
-
-            <div class="mt-2 pt-1.5 border-t border-zinc-100 text-[9px] font-mono text-zinc-500">
-              Grass-fed cow milk
             </div>
           </div>
 
           <!-- Item 3: Glucose Biscuits -->
-          <div class="bg-white border border-zinc-300 p-2.5 flex flex-col justify-between group hover:border-zinc-950 transition-colors">
+          <div class="w-[130px] sm:w-auto shrink-0 snap-start flex flex-col justify-between bg-white border border-zinc-300 p-2 group hover:border-zinc-950 transition-colors">
             <div>
-              <div class="relative w-full aspect-square bg-[#EAEAEA] border border-zinc-200 p-2 flex flex-col justify-between bg-stripes mb-2">
-                <span class="text-[10px] font-mono text-zinc-700 font-bold">biscuits</span>
+              <div class="relative w-full aspect-square bg-[#EAEAEA] border border-zinc-200 p-1.5 flex flex-col justify-between bg-stripes mb-1.5">
+                <span class="text-[10px] font-mono text-zinc-700">biscuits</span>
                 
                 <button 
                   @click="store.addToCart({ id: 'biscuits', name: 'Parle-G Glucose Biscuits', weight: '800 g', price: 3.49, originalPrice: 3.49 })"
-                  class="self-end w-8 h-8 bg-[#E52E04] hover:bg-[#CC2500] text-white flex items-center justify-center border border-[#B82200] font-black cursor-pointer"
+                  class="self-end w-7 h-7 sm:w-8 sm:h-8 bg-[#E52E04] hover:bg-[#CC2500] text-white flex items-center justify-center border border-[#B82200] font-black cursor-pointer active:scale-95"
                   aria-label="Add Biscuits"
                 >
                   +
                 </button>
               </div>
 
-              <div>
-                <div class="text-base font-black text-zinc-950 font-mono leading-none">$3.49</div>
-                <div class="text-xs font-bold text-zinc-950 mt-1 line-clamp-1">Parle-G Biscuits</div>
-                <div class="text-[10px] text-zinc-500 font-mono">800 g family pack</div>
+              <div class="text-left">
+                <div class="text-sm sm:text-base font-black text-zinc-950 font-mono leading-none">$3.49</div>
+                <div class="text-xs font-bold text-zinc-950 mt-1 truncate">Glucose Biscuits</div>
+                <div class="text-[10px] text-zinc-500 font-mono">800 g</div>
               </div>
-            </div>
-
-            <div class="mt-2 pt-1.5 border-t border-zinc-100 text-[9px] font-mono text-zinc-500">
-              Tea time classic
             </div>
           </div>
 
-          <!-- Item 4: Malai Paneer (Screen 1b feature item) -->
-          <div class="bg-white border border-zinc-300 p-2.5 flex flex-col justify-between group hover:border-zinc-950 transition-colors">
+          <!-- Item 4: Malai Paneer (Links to /products/paneer) -->
+          <div class="w-[130px] sm:w-auto shrink-0 snap-start flex flex-col justify-between bg-white border border-zinc-300 p-2 group hover:border-zinc-950 transition-colors">
             <div>
-              <div class="relative w-full aspect-square bg-[#EAEAEA] border border-zinc-200 p-2 flex flex-col justify-between bg-stripes mb-2">
-                <span class="text-[10px] font-mono text-zinc-700 font-bold">paneer block</span>
+              <div class="relative w-full aspect-square bg-[#EAEAEA] border border-zinc-200 p-1.5 flex flex-col justify-between bg-stripes mb-1.5">
+                <span class="text-[10px] font-mono text-zinc-700">paneer block</span>
                 
                 <button 
                   @click="store.addToCart({ id: 'paneer', name: 'Amul Malai Paneer', weight: '400 g', price: 5.99, originalPrice: 5.99 })"
-                  class="self-end w-8 h-8 bg-[#E52E04] hover:bg-[#CC2500] text-white flex items-center justify-center border border-[#B82200] font-black cursor-pointer"
+                  class="self-end w-7 h-7 sm:w-8 sm:h-8 bg-[#E52E04] hover:bg-[#CC2500] text-white flex items-center justify-center border border-[#B82200] font-black cursor-pointer active:scale-95"
                   aria-label="Add Malai Paneer"
                 >
                   +
                 </button>
               </div>
 
-              <Link href="/products/paneer" class="block">
-                <div class="text-base font-black text-zinc-950 font-mono leading-none">$5.99</div>
-                <div class="text-xs font-bold text-zinc-950 mt-1 line-clamp-1 group-hover:text-[#E52E04]">Amul Malai Paneer</div>
-                <div class="text-[10px] text-zinc-500 font-mono">400 g · Local Batch</div>
+              <Link href="/products/paneer" class="block text-left">
+                <div class="text-sm sm:text-base font-black text-zinc-950 font-mono leading-none">$5.99</div>
+                <div class="text-xs font-bold text-zinc-950 mt-1 truncate group-hover:text-[#E52E04]">Malai Paneer</div>
+                <div class="text-[10px] text-zinc-500 font-mono">400 g</div>
               </Link>
-            </div>
-
-            <div class="mt-2 pt-1.5 border-t border-zinc-100 flex items-center justify-between text-[9px] font-mono text-emerald-700 font-bold">
-              <span>Fresh Batch</span>
-              <span>24 left</span>
             </div>
           </div>
 
-          <!-- Item 5: Basmati Rice (Screen 1c feature item) -->
-          <div class="bg-white border border-zinc-300 p-2.5 flex flex-col justify-between group hover:border-zinc-950 transition-colors">
+          <!-- Item 5: Basmati Rice (Links to /products/rice) -->
+          <div class="w-[130px] sm:w-auto shrink-0 snap-start flex flex-col justify-between bg-white border border-zinc-300 p-2 group hover:border-zinc-950 transition-colors">
             <div>
-              <div class="relative w-full aspect-square bg-[#EAEAEA] border border-zinc-200 p-2 flex flex-col justify-between bg-stripes mb-2">
-                <span class="text-[10px] font-mono text-zinc-700 font-bold">rice sack</span>
+              <div class="relative w-full aspect-square bg-[#EAEAEA] border border-zinc-200 p-1.5 flex flex-col justify-between bg-stripes mb-1.5">
+                <span class="text-[10px] font-mono text-zinc-700">rice sack</span>
                 
                 <button 
                   @click="store.addToCart({ id: 'rice', name: 'Royal Aged Basmati Rice', weight: '20 lb', price: 24.99, originalPrice: 24.99 })"
-                  class="self-end w-8 h-8 bg-[#E52E04] hover:bg-[#CC2500] text-white flex items-center justify-center border border-[#B82200] font-black cursor-pointer"
+                  class="self-end w-7 h-7 sm:w-8 sm:h-8 bg-[#E52E04] hover:bg-[#CC2500] text-white flex items-center justify-center border border-[#B82200] font-black cursor-pointer active:scale-95"
                   aria-label="Add Basmati Rice"
                 >
                   +
                 </button>
               </div>
 
-              <Link href="/products/rice" class="block">
-                <div class="text-base font-black text-zinc-950 font-mono leading-none">$24.99</div>
-                <div class="text-xs font-bold text-zinc-950 mt-1 line-clamp-1 group-hover:text-[#E52E04]">Royal Aged Basmati</div>
-                <div class="text-[10px] text-zinc-500 font-mono">20 lb · Aged 2 Yrs</div>
+              <Link href="/products/rice" class="block text-left">
+                <div class="text-sm sm:text-base font-black text-zinc-950 font-mono leading-none">$24.99</div>
+                <div class="text-xs font-bold text-zinc-950 mt-1 truncate group-hover:text-[#E52E04]">Basmati Rice</div>
+                <div class="text-[10px] text-zinc-500 font-mono">20 lb</div>
               </Link>
-            </div>
-
-            <div class="mt-2 pt-1.5 border-t border-zinc-100 text-[9px] font-mono text-zinc-500">
-              Extra Long Grain
             </div>
           </div>
 
         </div>
       </section>
 
-      <!-- SECTION: "Recipe kits" (Screen 1a) -->
-      <section id="recipe-kits" class="space-y-4">
-        <div class="flex items-center justify-between border-b border-zinc-300 pb-2">
-          <div>
-            <div class="flex items-center gap-2">
-              <h2 class="text-2xl font-black text-zinc-950 tracking-tight">Recipe kits</h2>
-              <span class="bg-zinc-950 text-white text-[10px] font-mono px-2 py-0.5 font-bold uppercase">1 Tap Add</span>
-            </div>
-            <p class="text-xs text-zinc-500 mt-0.5">Every ingredient for one authentic dish, measured and batched together.</p>
-          </div>
-          <span class="text-xs font-bold text-[#E52E04]">All 14 kits available</span>
+      <!-- SECTION: "Recipe kits" (Screen 1a Specification) -->
+      <section id="recipe-kits" class="space-y-2.5">
+        <div class="flex items-center justify-between">
+          <h2 class="text-lg sm:text-2xl font-black text-zinc-950 tracking-tight">Recipe kits</h2>
+          <span class="text-xs font-bold text-[#E52E04] cursor-pointer">All 14 kits</span>
         </div>
+        
+        <p class="text-xs text-zinc-500 font-medium">
+          Every ingredient for one dish, added in one tap.
+        </p>
 
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <!-- 2 Columns on mobile, 4 Columns on desktop (Screen 1a exact match) -->
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-4 pt-1">
           
           <!-- Kit 1: Paneer Butter Masala -->
-          <div class="bg-white border-2 border-zinc-300 hover:border-zinc-950 p-4 flex flex-col justify-between transition-colors">
+          <div class="bg-white border border-zinc-300 p-2 sm:p-4 flex flex-col justify-between hover:border-zinc-950 transition-colors">
             <div>
-              <div class="w-full h-32 bg-[#EAEAEA] border border-zinc-200 mb-3 p-2 bg-stripes flex flex-col justify-between">
-                <span class="text-[10px] font-mono font-bold text-zinc-700">paneer kit · serves 4</span>
+              <div class="w-full h-20 sm:h-32 bg-[#EAEAEA] border border-zinc-200 mb-1.5 p-1.5 bg-stripes flex flex-col justify-between">
+                <span class="text-[9px] sm:text-[10px] font-mono text-zinc-700">paneer kit</span>
                 <button 
                   @click="addRecipeKit('Paneer Butter Masala Kit', 14.99)"
-                  class="self-end px-3 py-1.5 bg-[#E52E04] hover:bg-[#CC2500] text-white text-xs font-black flex items-center gap-1 border border-[#B82200]"
+                  class="self-end w-6 h-6 sm:w-7 sm:h-7 bg-[#E52E04] hover:bg-[#CC2500] text-white flex items-center justify-center font-black text-xs active:scale-95 cursor-pointer"
+                  aria-label="Add Paneer kit"
                 >
-                  <Plus class="w-3.5 h-3.5" />
-                  <span>Add Kit</span>
+                  +
                 </button>
               </div>
 
-              <div class="text-lg font-black text-zinc-950 font-mono">$14.99</div>
-              <h3 class="font-bold text-sm text-zinc-950 mt-1">Paneer Butter Masala</h3>
-              <p class="text-xs text-zinc-500 mt-1 leading-snug">
-                Includes 400g Malai Paneer, ripe tomato puree, ginger garlic paste, whole garam masala & kasuri methi.
-              </p>
-            </div>
-            
-            <div class="mt-4 pt-2 border-t border-zinc-100 flex items-center justify-between text-[10px] font-mono text-zinc-500">
-              <span>Cook time: 25 mins</span>
-              <span class="text-emerald-700 font-bold">Vegetarian</span>
+              <div>
+                <div class="font-black text-xs sm:text-base text-zinc-950 font-mono leading-none">$14.99</div>
+                <div class="font-bold text-[11px] sm:text-sm text-zinc-950 mt-1 line-clamp-1">Paneer Butter Masala</div>
+              </div>
             </div>
           </div>
 
           <!-- Kit 2: Royal Dum Biryani -->
-          <div class="bg-white border-2 border-zinc-300 hover:border-zinc-950 p-4 flex flex-col justify-between transition-colors">
+          <div class="bg-white border border-zinc-300 p-2 sm:p-4 flex flex-col justify-between hover:border-zinc-950 transition-colors">
             <div>
-              <div class="w-full h-32 bg-[#EAEAEA] border border-zinc-200 mb-3 p-2 bg-stripes flex flex-col justify-between">
-                <span class="text-[10px] font-mono font-bold text-zinc-700">biryani kit · serves 6</span>
+              <div class="w-full h-20 sm:h-32 bg-[#EAEAEA] border border-zinc-200 mb-1.5 p-1.5 bg-stripes flex flex-col justify-between">
+                <span class="text-[9px] sm:text-[10px] font-mono text-zinc-700">biryani kit</span>
                 <button 
                   @click="addRecipeKit('Royal Dum Biryani Kit', 19.99)"
-                  class="self-end px-3 py-1.5 bg-[#E52E04] hover:bg-[#CC2500] text-white text-xs font-black flex items-center gap-1 border border-[#B82200]"
+                  class="self-end w-6 h-6 sm:w-7 sm:h-7 bg-[#E52E04] hover:bg-[#CC2500] text-white flex items-center justify-center font-black text-xs active:scale-95 cursor-pointer"
+                  aria-label="Add Biryani kit"
                 >
-                  <Plus class="w-3.5 h-3.5" />
-                  <span>Add Kit</span>
+                  +
                 </button>
               </div>
 
-              <div class="text-lg font-black text-zinc-950 font-mono">$19.99</div>
-              <h3 class="font-bold text-sm text-zinc-950 mt-1">Royal Dum Biryani</h3>
-              <p class="text-xs text-zinc-500 mt-1 leading-snug">
-                Includes Aged Basmati Rice, shahi biryani masala pot, pure cow ghee, saffron strands & fried onions.
-              </p>
-            </div>
-            
-            <div class="mt-4 pt-2 border-t border-zinc-100 flex items-center justify-between text-[10px] font-mono text-zinc-500">
-              <span>Cook time: 45 mins</span>
-              <span class="text-amber-700 font-bold">Chef's Special</span>
+              <div>
+                <div class="font-black text-xs sm:text-base text-zinc-950 font-mono leading-none">$19.99</div>
+                <div class="font-bold text-[11px] sm:text-sm text-zinc-950 mt-1 line-clamp-1">Royal Dum Biryani</div>
+              </div>
             </div>
           </div>
 
           <!-- Kit 3: Punjabi Chana Masala -->
-          <div class="bg-white border-2 border-zinc-300 hover:border-zinc-950 p-4 flex flex-col justify-between transition-colors">
+          <div class="bg-white border border-zinc-300 p-2 sm:p-4 flex flex-col justify-between hover:border-zinc-950 transition-colors">
             <div>
-              <div class="w-full h-32 bg-[#EAEAEA] border border-zinc-200 mb-3 p-2 bg-stripes flex flex-col justify-between">
-                <span class="text-[10px] font-mono font-bold text-zinc-700">chana kit · serves 4</span>
+              <div class="w-full h-20 sm:h-32 bg-[#EAEAEA] border border-zinc-200 mb-1.5 p-1.5 bg-stripes flex flex-col justify-between">
+                <span class="text-[9px] sm:text-[10px] font-mono text-zinc-700">chana kit</span>
                 <button 
                   @click="addRecipeKit('Punjabi Chana Masala Kit', 11.99)"
-                  class="self-end px-3 py-1.5 bg-[#E52E04] hover:bg-[#CC2500] text-white text-xs font-black flex items-center gap-1 border border-[#B82200]"
+                  class="self-end w-6 h-6 sm:w-7 sm:h-7 bg-[#E52E04] hover:bg-[#CC2500] text-white flex items-center justify-center font-black text-xs active:scale-95 cursor-pointer"
+                  aria-label="Add Chana kit"
                 >
-                  <Plus class="w-3.5 h-3.5" />
-                  <span>Add Kit</span>
+                  +
                 </button>
               </div>
 
-              <div class="text-lg font-black text-zinc-950 font-mono">$11.99</div>
-              <h3 class="font-bold text-sm text-zinc-950 mt-1">Punjabi Chana Masala</h3>
-              <p class="text-xs text-zinc-500 mt-1 leading-snug">
-                Includes dry kabuli chickpeas, tea bag for dark color, anardana (pomegranate seed) spice blend & green chilies.
-              </p>
-            </div>
-            
-            <div class="mt-4 pt-2 border-t border-zinc-100 flex items-center justify-between text-[10px] font-mono text-zinc-500">
-              <span>Cook time: 35 mins</span>
-              <span class="text-emerald-700 font-bold">High Protein</span>
+              <div>
+                <div class="font-black text-xs sm:text-base text-zinc-950 font-mono leading-none">$11.99</div>
+                <div class="font-bold text-[11px] sm:text-sm text-zinc-950 mt-1 line-clamp-1">Punjabi Chana</div>
+              </div>
             </div>
           </div>
 
           <!-- Kit 4: Dal Tadka & Jeera Rice -->
-          <div class="bg-white border-2 border-zinc-300 hover:border-zinc-950 p-4 flex flex-col justify-between transition-colors">
+          <div class="bg-white border border-zinc-300 p-2 sm:p-4 flex flex-col justify-between hover:border-zinc-950 transition-colors">
             <div>
-              <div class="w-full h-32 bg-[#EAEAEA] border border-zinc-200 mb-3 p-2 bg-stripes flex flex-col justify-between">
-                <span class="text-[10px] font-mono font-bold text-zinc-700">dal kit · serves 4</span>
+              <div class="w-full h-20 sm:h-32 bg-[#EAEAEA] border border-zinc-200 mb-1.5 p-1.5 bg-stripes flex flex-col justify-between">
+                <span class="text-[9px] sm:text-[10px] font-mono text-zinc-700">dal kit</span>
                 <button 
                   @click="addRecipeKit('Dal Tadka & Jeera Rice Kit', 10.99)"
-                  class="self-end px-3 py-1.5 bg-[#E52E04] hover:bg-[#CC2500] text-white text-xs font-black flex items-center gap-1 border border-[#B82200]"
+                  class="self-end w-6 h-6 sm:w-7 sm:h-7 bg-[#E52E04] hover:bg-[#CC2500] text-white flex items-center justify-center font-black text-xs active:scale-95 cursor-pointer"
+                  aria-label="Add Dal kit"
                 >
-                  <Plus class="w-3.5 h-3.5" />
-                  <span>Add Kit</span>
+                  +
                 </button>
               </div>
 
-              <div class="text-lg font-black text-zinc-950 font-mono">$10.99</div>
-              <h3 class="font-bold text-sm text-zinc-950 mt-1">Dal Tadka & Jeera Rice</h3>
-              <p class="text-xs text-zinc-500 mt-1 leading-snug">
-                Includes yellow Toor Dal, whole cumin seeds, dried Kashmiri chilies, pure ghee & fragrant basmati.
-              </p>
-            </div>
-            
-            <div class="mt-4 pt-2 border-t border-zinc-100 flex items-center justify-between text-[10px] font-mono text-zinc-500">
-              <span>Cook time: 20 mins</span>
-              <span class="text-emerald-700 font-bold">Everyday Comfort</span>
+              <div>
+                <div class="font-black text-xs sm:text-base text-zinc-950 font-mono leading-none">$10.99</div>
+                <div class="font-bold text-[11px] sm:text-sm text-zinc-950 mt-1 line-clamp-1">Dal Tadka & Rice</div>
+              </div>
             </div>
           </div>
 
@@ -412,30 +354,30 @@ function addRecipeKit(name, price) {
       </section>
 
       <!-- SECTION: Subscribe & Save Banner Callout -->
-      <section class="bg-zinc-950 text-white p-6 sm:p-8 border border-zinc-800 flex flex-col md:flex-row items-center justify-between gap-6">
-        <div class="space-y-2">
+      <section class="bg-zinc-950 text-white p-5 sm:p-8 border border-zinc-800 flex flex-col md:flex-row items-start md:items-center justify-between gap-5">
+        <div class="space-y-1.5">
           <div class="flex items-center gap-2 text-[10px] font-mono text-[#E52E04] font-bold uppercase tracking-wider">
             <span class="w-2 h-2 bg-[#E52E04]"></span>
             <span>AUTOMATIC REPLENISHMENT · ZERO COMMITMENT</span>
           </div>
-          <h3 class="text-2xl sm:text-3xl font-black tracking-tight">
+          <h3 class="text-xl sm:text-2xl font-black tracking-tight">
             Never run out of Chakki Atta or Basmati again.
           </h3>
           <p class="text-xs text-zinc-400 max-w-xl leading-relaxed">
-            Subscribe to monthly essentials and get 5% discount on every bag, plus free prioritized curbside staging. Skip, pause, or cancel anytime in one click.
+            Subscribe to monthly essentials and get 5% discount on every bag. Skip, pause, or cancel anytime in one click.
           </p>
         </div>
 
-        <div class="shrink-0 flex flex-col sm:flex-row gap-3 w-full md:w-auto">
+        <div class="shrink-0 flex flex-row gap-2.5 w-full md:w-auto">
           <Link 
             href="/products/rice" 
-            class="px-5 py-3 bg-[#E52E04] hover:bg-[#CC2500] text-white text-xs font-black uppercase tracking-wider text-center border border-[#B82200]"
+            class="flex-1 sm:flex-none px-4 py-2.5 bg-[#E52E04] hover:bg-[#CC2500] text-white text-xs font-black uppercase tracking-wider text-center border border-[#B82200]"
           >
             Explore Staples (-5%)
           </Link>
           <Link 
             href="/account" 
-            class="px-5 py-3 bg-zinc-800 hover:bg-zinc-700 text-white text-xs font-bold uppercase tracking-wider text-center border border-zinc-700"
+            class="flex-1 sm:flex-none px-4 py-2.5 bg-zinc-800 hover:bg-zinc-700 text-white text-xs font-bold uppercase tracking-wider text-center border border-zinc-700"
           >
             Manage Subscriptions
           </Link>
