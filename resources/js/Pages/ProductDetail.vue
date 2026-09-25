@@ -466,7 +466,36 @@ function handleAddAllFbt() {
                 class="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-300"
               />
               <span class="photo-label absolute top-2.5 left-2.5 text-[11px] text-[#1d1d1f] font-mono bg-white/80 backdrop-blur-xs px-2 py-0.5 rounded-lg z-10 shadow-2xs">{{ item.label || item.tag || 'item' }}</span>
+
+              <!-- When item is in cart: show Primary [- qty +] stepper pill -->
+              <div 
+                v-if="store.getItemQuantity(item.id) > 0"
+                class="absolute bottom-2.5 inset-x-2.5 bg-[#1a1a1a] text-white h-8 sm:h-9 rounded-full flex items-center justify-between px-2.5 shadow-md z-10"
+                @click.stop.prevent
+              >
+                <button 
+                  type="button"
+                  @click.stop.prevent="store.removeFromCart(item.id)" 
+                  class="p-1 hover:opacity-80 cursor-pointer flex items-center justify-center"
+                  aria-label="Decrease quantity"
+                >
+                  <Minus class="w-3.5 h-3.5 stroke-[2.5]" />
+                </button>
+                <span class="text-xs font-bold">{{ store.getItemQuantity(item.id) }}</span>
+                <button 
+                  type="button"
+                  @click.stop.prevent="store.addToCart({ id: item.id, name: item.name, weight: item.size || item.weight, price: item.price, originalPrice: item.price })" 
+                  class="p-1 hover:opacity-80 cursor-pointer flex items-center justify-center"
+                  aria-label="Increase quantity"
+                >
+                  <Plus class="w-3.5 h-3.5 stroke-[2.5]" />
+                </button>
+              </div>
+
+              <!-- When item is not in cart: show round Primary + button -->
               <button 
+                v-else
+                type="button"
                 @click.stop.prevent="store.addToCart({ id: item.id, name: item.name, weight: item.size || item.weight, price: item.price, originalPrice: item.price })"
                 class="absolute bottom-2.5 right-2.5 w-8 h-8 sm:w-9 sm:h-9 bg-[#1a1a1a] hover:bg-black text-white rounded-full flex items-center justify-center cursor-pointer active:scale-95 shadow-md z-10 transition-transform group-hover:scale-105"
                 aria-label="Add pairing item"

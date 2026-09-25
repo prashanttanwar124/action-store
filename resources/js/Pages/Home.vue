@@ -64,13 +64,13 @@ const bannerSlides = [
 
 // Masala Dabba (Spice-Box) Essential Staples
 const masalaDabbaSpices = [
-  { id: 101, name: 'Haldi', english: 'Turmeric Powder', size: '200g', price: 3.49, image: '/images/products/garam_masala.jpg', photoLabel: 'haldi' },
-  { id: 102, name: 'Jeera', english: 'Whole Cumin', size: '200g', price: 4.29, image: '/images/products/garam_masala.jpg', photoLabel: 'jeera' },
-  { id: 103, name: 'Rai', english: 'Mustard Seeds', size: '200g', price: 2.99, image: '/images/products/garam_masala.jpg', photoLabel: 'rai' },
-  { id: 104, name: 'Dhaniya', english: 'Coriander Powder', size: '200g', price: 3.49, image: '/images/products/garam_masala.jpg', photoLabel: 'dhaniya' },
-  { id: 105, name: 'Lal Mirch', english: 'Kashmiri Chilli', size: '200g', price: 4.49, image: '/images/products/garam_masala.jpg', photoLabel: 'mirch' },
-  { id: 106, name: 'Garam Masala', english: 'Royal 12-Spice', size: '100g', price: 5.49, image: '/images/products/garam_masala.jpg', photoLabel: 'garam masala' },
-  { id: 107, name: 'Hing', english: 'Asafoetida', size: '50g', price: 3.99, image: '/images/products/garam_masala.jpg', photoLabel: 'hing' },
+  { id: 101, slug: 'garam-masala', name: 'Haldi', english: 'Turmeric Powder', size: '200g', price: 3.49, image: '/images/products/garam_masala.jpg', photoLabel: 'haldi' },
+  { id: 102, slug: 'garam-masala', name: 'Jeera', english: 'Whole Cumin', size: '200g', price: 4.29, image: '/images/products/garam_masala.jpg', photoLabel: 'jeera' },
+  { id: 103, slug: 'garam-masala', name: 'Rai', english: 'Mustard Seeds', size: '200g', price: 2.99, image: '/images/products/garam_masala.jpg', photoLabel: 'rai' },
+  { id: 104, slug: 'garam-masala', name: 'Dhaniya', english: 'Coriander Powder', size: '200g', price: 3.49, image: '/images/products/garam_masala.jpg', photoLabel: 'dhaniya' },
+  { id: 105, slug: 'garam-masala', name: 'Lal Mirch', english: 'Kashmiri Chilli', size: '200g', price: 4.49, image: '/images/products/garam_masala.jpg', photoLabel: 'mirch' },
+  { id: 106, slug: 'garam-masala', name: 'Garam Masala', english: 'Royal 12-Spice', size: '100g', price: 5.49, image: '/images/products/garam_masala.jpg', photoLabel: 'garam masala' },
+  { id: 107, slug: 'garam-masala', name: 'Hing', english: 'Asafoetida', size: '50g', price: 3.99, image: '/images/products/garam_masala.jpg', photoLabel: 'hing' },
 ];
 
 const currentSlideIndex = ref(0);
@@ -424,47 +424,74 @@ const recipeKitItems = computed(() => {
           <span class="text-xs text-[#6e6e73]">7 Daily Kitchen Spices</span>
         </div>
 
-        <div class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3 sm:gap-4">
-          <div 
+        <div class="flex sm:grid sm:grid-cols-4 lg:grid-cols-7 gap-3 sm:gap-4 overflow-x-auto no-scrollbar pb-2 snap-x sm:overflow-visible">
+          <Link 
             v-for="spice in masalaDabbaSpices" 
             :key="spice.id"
-            class="bg-[#f3efe7] border border-[#e0d9cc] rounded-3xl overflow-hidden flex flex-col justify-between hover:border-[#a47a3c]/60 transition-colors group shadow-2xs"
+            :href="'/products/' + (spice.slug || 'garam-masala')"
+            class="relative block w-[140px] sm:w-auto shrink-0 snap-start flex flex-col group text-left cursor-pointer transition-transform duration-200"
           >
-            <!-- Edge-to-edge image at top with NO padding -->
-            <div class="w-full aspect-square overflow-hidden relative bg-white">
-              <img :src="spice.image" :alt="spice.name" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
-              <span class="photo-label absolute bottom-2 left-2 text-[10px] bg-white/90 backdrop-blur-xs px-2 py-0.5 rounded-md text-[#1d1d1f] font-mono shadow-2xs">
+            <!-- Card Image Tile with Modern Classic v3 styling -->
+            <div class="relative w-full aspect-square bg-[#f3efe7] rounded-[22px] sm:rounded-3xl overflow-hidden img-zoom-container shrink-0 border border-[#e0d9cc]/70 shadow-2xs group-hover:border-[#a47a3c]/60 transition-all group-hover:shadow-xs">
+              <img 
+                :src="spice.image" 
+                :alt="spice.name" 
+                class="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-300"
+              />
+              <span class="photo-label absolute top-2.5 left-2.5 text-[10px] sm:text-[11px] text-[#1d1d1f] font-mono bg-white/85 backdrop-blur-xs px-2 py-0.5 rounded-lg z-10 shadow-2xs">
                 {{ spice.photoLabel }}
               </span>
-            </div>
 
-            <!-- Card text & price area with clean inner padding -->
-            <div class="p-3.5 pt-2.5 flex flex-col justify-between flex-1">
-              <div>
-                <!-- Spice-box label: Newsreader Medium 500 -->
-                <div class="font-serif font-medium text-base text-[#1d1d1f] leading-snug">
-                  {{ spice.name }}
-                </div>
-                <div class="text-xs text-[#6e6e73] font-normal mt-0.5 leading-tight">
-                  {{ spice.english }} · {{ spice.size }}
-                </div>
-              </div>
-
-              <div class="flex items-center justify-between mt-3 pt-2.5 border-t border-[#e0d9cc]/60">
-                <div class="font-serif font-medium text-base text-[#1d1d1f]">
-                  ${{ spice.price.toFixed(2) }}
-                </div>
+              <!-- When item is in cart: show Primary [- qty +] stepper pill -->
+              <div 
+                v-if="store.getItemQuantity(spice.id) > 0"
+                class="absolute bottom-2.5 inset-x-2.5 bg-[#1a1a1a] text-white h-8 sm:h-9 rounded-full flex items-center justify-between px-2 sm:px-2.5 shadow-md z-10"
+                @click.stop.prevent
+              >
                 <button 
                   type="button"
-                  @click.stop="store.addToCart({ id: spice.id, name: spice.name + ' (' + spice.english + ')', price: spice.price, weight: spice.size, image: spice.image })"
-                  class="w-8 h-8 rounded-full bg-[#1a1a1a] hover:bg-black text-white flex items-center justify-center cursor-pointer shadow-xs active:scale-90 transition-transform"
-                  :aria-label="'Add ' + spice.name"
+                  @click.stop.prevent="store.removeFromCart(spice.id)" 
+                  class="p-1 hover:opacity-80 cursor-pointer flex items-center justify-center"
+                  :aria-label="'Decrease ' + spice.name"
                 >
-                  <Plus class="w-4 h-4 stroke-[2.5]" />
+                  <Minus class="w-3.5 h-3.5 stroke-[2.5]" />
+                </button>
+                <span class="text-xs font-bold">{{ store.getItemQuantity(spice.id) }}</span>
+                <button 
+                  type="button"
+                  @click.stop.prevent="store.addToCart({ id: spice.id, name: spice.name + ' (' + spice.english + ')', price: spice.price, weight: spice.size, image: spice.image, label: spice.photoLabel })" 
+                  class="p-1 hover:opacity-80 cursor-pointer flex items-center justify-center"
+                  :aria-label="'Increase ' + spice.name"
+                >
+                  <Plus class="w-3.5 h-3.5 stroke-[2.5]" />
                 </button>
               </div>
+
+              <!-- When item is not in cart: show round Primary + button -->
+              <button 
+                v-else
+                type="button"
+                @click.stop.prevent="store.addToCart({ id: spice.id, name: spice.name + ' (' + spice.english + ')', price: spice.price, weight: spice.size, image: spice.image, label: spice.photoLabel })"
+                class="absolute bottom-2.5 right-2.5 w-8 h-8 sm:w-8.5 sm:h-8.5 bg-[#1a1a1a] hover:bg-black text-white rounded-full flex items-center justify-center font-bold cursor-pointer active:scale-95 shadow-md z-10 transition-transform group-hover:scale-105"
+                :aria-label="'Add ' + spice.name + ' to cart'"
+              >
+                <Plus class="w-4 h-4 stroke-[2.5]" />
+              </button>
             </div>
-          </div>
+
+            <!-- Card Typography Below Image (Big price in Newsreader Medium 500) -->
+            <div class="pt-2 sm:pt-2.5 text-left">
+              <div class="text-base sm:text-lg font-serif font-medium text-[#1d1d1f] leading-none">
+                ${{ spice.price.toFixed(2) }}
+              </div>
+              <div class="text-sm sm:text-base font-serif font-medium text-[#1d1d1f] mt-1 truncate group-hover:text-[#a47a3c] transition-colors">
+                {{ spice.name }}
+              </div>
+              <div class="text-xs text-[#6e6e73] font-normal mt-0.5 truncate">
+                {{ spice.english }} · {{ spice.size }}
+              </div>
+            </div>
+          </Link>
         </div>
       </section>
 
