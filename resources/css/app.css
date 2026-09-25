@@ -1,0 +1,58 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 0 0% 97%;
+    --foreground: 0 0% 9%;
+    --card: 0 0% 100%;
+    --card-foreground: 0 0% 9%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 0 0% 9%;
+    --primary: 11 93% 46%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 0 0% 92%;
+    --secondary-foreground: 0 0% 12%;
+    --muted: 0 0% 94%;
+    --muted-foreground: 0 0% 45%;
+    --accent: 11 93% 96%;
+    --accent-foreground: 11 93% 46%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 0 0% 80%;
+    --input: 0 0% 80%;
+    --ring: 11 93% 46%;
+    --radius: 0px; /* Sharp 90-degree zero rounded corners */
+  }
+}
+
+* {
+  border-radius: 0px !important;
+}
+
+body {
+  background-color: #f4f4f5;
+  color: #18181b;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Custom scrollbar hiding */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+@keyframes pop {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.15); }
+  100% { transform: scale(1); }
+}
+
+.animate-pop {
+  animation: pop 0.2s ease-in-out;
+}
