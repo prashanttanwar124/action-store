@@ -1,195 +1,201 @@
 <script setup>
+import { ref } from 'vue';
 import { Head, Link } from '@inertiajs/vue3';
-import MobileWebLayout from '../Layouts/MobileWebLayout.vue';
+import StoreLayout from '../Layouts/StoreLayout.vue';
 import { useStore } from '../stores/cart';
-import { ShoppingBag, RefreshCw, SkipForward, Pause, Play, Check } from 'lucide-vue-next';
+import { 
+  Sparkles, 
+  RefreshCw, 
+  RotateCcw, 
+  ChevronRight, 
+  Check, 
+  Package, 
+  Calendar,
+  Clock,
+  ArrowRight
+} from 'lucide-vue-next';
 
 const store = useStore();
+
+function reorderPastOrder() {
+  store.reorderAll();
+}
 </script>
 
 <template>
-  <Head title="Customer Dashboard — Masala Mart" />
+  <Head title="My Account & Subscriptions — Masala Mart" />
 
-  <MobileWebLayout :showBottomNav="true" :showCartBar="false">
-    
-    <!-- Top Header: Greeting & Cart Button (Page 7: 1f) -->
-    <div class="px-4 pt-3 pb-2 flex items-center justify-between bg-white">
-      <h1 class="text-2xl font-black tracking-tight text-zinc-950">
-        Hi, Priya
-      </h1>
+  <StoreLayout>
+    <div class="space-y-8 max-w-5xl mx-auto">
 
-      <Link 
-        href="/cart"
-        class="relative p-2 border-2 border-zinc-950 bg-white text-zinc-950 hover:bg-zinc-100 rounded-none cursor-pointer"
-        aria-label="View Shopping Cart"
-      >
-        <ShoppingBag class="w-5 h-5 stroke-[2.2]" />
-        <span 
-          v-if="store.totalItemCount > 0"
-          class="absolute -top-1.5 -right-1.5 bg-[#E52E04] text-white text-[11px] font-black w-5 h-5 rounded-none flex items-center justify-center border border-white animate-pop"
-        >
-          {{ store.totalItemCount }}
-        </span>
-      </Link>
-    </div>
-
-    <!-- Main Account Dashboard Content -->
-    <div class="px-4 py-3 space-y-6">
-
-      <!-- MASALA POINTS Box (Exact match to Page 7: 1f) -->
-      <div class="bg-zinc-950 text-white p-4 rounded-none border border-zinc-800 space-y-3">
-        <div class="flex justify-between items-center text-[10px] font-mono">
-          <span class="font-bold tracking-wider uppercase text-zinc-400">MASALA POINTS</span>
-          <span class="text-zinc-400">Gold member</span>
+      <!-- Account Header Profile -->
+      <div class="bg-white border border-zinc-300 p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <div>
+          <span class="text-[10px] font-mono uppercase tracking-widest text-[#E52E04] font-bold">LOYALTY MEMBER</span>
+          <h1 class="text-2xl sm:text-3xl font-black text-zinc-950 tracking-tight">Kavya Sharma</h1>
+          <div class="text-xs text-zinc-500 font-mono mt-0.5">kavya.sharma@example.com · +1 (555) 392-1084</div>
         </div>
 
-        <div class="text-4xl font-black tracking-tight leading-none">
-          1,240 <span class="text-sm font-normal text-zinc-400 font-mono">pts</span>
+        <div class="flex items-center gap-3">
+          <Link 
+            href="/cart" 
+            class="px-4 py-2 bg-zinc-950 text-white font-bold text-xs uppercase font-mono border border-zinc-950"
+          >
+            View Active Cart ({{ store.totalItemCount }})
+          </Link>
+        </div>
+      </div>
+
+      <!-- SECTION 1: Masala Points Reward Meter (Screen 1f) -->
+      <div class="bg-zinc-950 text-white p-6 border border-zinc-900 shadow-sm space-y-4">
+        <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
+          <div>
+            <div class="text-xs font-mono font-bold uppercase tracking-wider text-amber-400 flex items-center gap-1.5">
+              <Sparkles class="w-4 h-4" />
+              <span>MASALA POINTS REWARDS</span>
+            </div>
+            <div class="text-3xl font-black font-mono tracking-tight mt-1 text-white">
+              {{ store.masalaPoints.toLocaleString() }} <span class="text-base text-zinc-400 font-normal">pts</span>
+            </div>
+          </div>
+          <div class="text-right text-xs font-mono text-zinc-400">
+            <span>Next Tier: 1,500 pts</span>
+            <div class="text-white font-bold mt-0.5">$10 Grocery Credit Unlock</div>
+          </div>
         </div>
 
-        <!-- Segmented Red Meter Bar (12 blocks) -->
-        <div class="grid grid-cols-12 gap-1 h-3 py-0.5">
-          <span v-for="i in 10" :key="i" class="bg-[#E52E04] h-full"></span>
-          <span v-for="i in 2" :key="`empty-${i}`" class="bg-zinc-800 h-full"></span>
+        <!-- 12-Segment Progress Meter (Screen 1f Specification) -->
+        <div class="grid grid-cols-12 gap-1.5">
+          <div 
+            v-for="i in 12" 
+            :key="i"
+            :class="[
+              'h-2.5 transition-colors',
+              i <= 10 ? 'bg-[#E52E04]' : 'bg-zinc-800'
+            ]"
+          ></div>
         </div>
 
-        <div class="flex justify-between items-center text-[10px] font-mono text-zinc-400 pt-0.5">
+        <div class="flex justify-between text-xs font-mono text-zinc-400 pt-1">
           <span>260 pts to a $10 reward</span>
-          <span>1 pt per $1</span>
+          <span>1 pt per $1 spent</span>
         </div>
       </div>
 
-      <!-- Subscriptions Section (Page 7: 1f) -->
-      <div>
-        <div class="flex items-center justify-between mb-2.5">
-          <h2 class="text-lg font-black text-zinc-950 tracking-tight">Subscriptions</h2>
-          <span class="text-xs font-mono text-zinc-500">1 active</span>
+      <!-- SECTION 2: Subscriptions Management (Screen 1f) -->
+      <div class="space-y-4">
+        <div class="flex items-center justify-between border-b border-zinc-300 pb-2">
+          <div>
+            <h2 class="text-xl font-black text-zinc-950 tracking-tight">Subscriptions</h2>
+            <p class="text-xs text-zinc-500">Auto-replenished pantry staples with 5% off every order.</p>
+          </div>
+          <span class="text-xs font-mono font-bold bg-zinc-100 border border-zinc-300 px-2.5 py-1 text-zinc-900">
+            {{ store.subscriptions.filter(s => s.status === 'active').length }} active
+          </span>
         </div>
 
-        <div class="space-y-3">
-          <!-- Subscription Item 1: Atta -->
-          <div class="p-3 border-2 border-zinc-300 bg-white rounded-none space-y-2.5">
-            <div class="flex items-start justify-between gap-3">
-              <div class="flex items-center gap-2.5">
-                <div class="w-10 h-10 bg-[#EAEAEA] border border-zinc-300 relative overflow-hidden shrink-0">
-                  <div class="absolute inset-0 bg-[linear-gradient(45deg,rgba(0,0,0,0.06)_25%,transparent_25%,transparent_50%,rgba(0,0,0,0.06)_50%,rgba(0,0,0,0.06)_75%,transparent_75%,transparent)] bg-[length:6px_6px]"></div>
-                </div>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <!-- Active Subscription Card (Chakki Atta) -->
+          <div 
+            v-for="sub in store.subscriptions" 
+            :key="sub.id"
+            :class="[
+              'p-5 border-2 bg-white flex flex-col justify-between transition-colors space-y-4',
+              sub.status === 'active' ? 'border-zinc-950' : 'border-zinc-300 bg-zinc-50 opacity-90'
+            ]"
+          >
+            <div>
+              <div class="flex items-start justify-between">
                 <div>
-                  <div class="font-black text-xs text-zinc-950">Chakki Atta · 20 lb</div>
-                  <div class="text-[11px] font-mono text-zinc-500">Monthly · $18.04</div>
+                  <h3 class="font-black text-sm text-zinc-950">{{ sub.name }}</h3>
+                  <div class="text-xs font-mono text-zinc-500 mt-0.5">{{ sub.weight }} · {{ sub.frequency }}</div>
+                </div>
+                <div class="text-right">
+                  <span class="font-black font-mono text-sm text-zinc-950">${{ sub.price.toFixed(2) }}</span>
+                  <div 
+                    :class="[
+                      'text-[10px] font-mono font-bold uppercase mt-0.5',
+                      sub.status === 'active' ? 'text-emerald-700' : 'text-zinc-500'
+                    ]"
+                  >
+                    {{ sub.status === 'active' ? 'Active' : 'Paused' }}
+                  </div>
                 </div>
               </div>
 
-              <div class="text-[11px] font-mono font-bold text-zinc-900">
-                Next Oct 3
+              <div class="mt-3 flex items-center gap-2 text-xs font-mono text-zinc-600 bg-zinc-100 p-2 border border-zinc-200">
+                <Calendar class="w-3.5 h-3.5 text-zinc-500" />
+                <span>Next pickup delivery: <strong>{{ sub.nextDate }}</strong></span>
               </div>
             </div>
 
-            <!-- Action buttons -->
-            <div class="flex gap-2 pt-1 border-t border-zinc-200">
-              <button 
-                @click="store.skipSubscription('sub-1')"
-                class="px-3 py-1.5 border border-zinc-400 text-zinc-900 hover:border-zinc-950 text-xs font-bold rounded-none cursor-pointer"
-              >
-                ▷| Skip next
-              </button>
-              <button 
-                @click="store.toggleSubscription('sub-1')"
-                class="px-3 py-1.5 border border-zinc-400 text-zinc-900 hover:border-zinc-950 text-xs font-bold rounded-none cursor-pointer"
-              >
-                Pause
-              </button>
-            </div>
-          </div>
-
-          <!-- Subscription Item 2: Toor Dal -->
-          <div class="p-3 border border-zinc-300 bg-zinc-50 rounded-none space-y-2.5">
-            <div class="flex items-start justify-between gap-3">
-              <div class="flex items-center gap-2.5">
-                <div class="w-10 h-10 bg-[#EAEAEA] border border-zinc-300 relative overflow-hidden shrink-0">
-                  <div class="absolute inset-0 bg-[linear-gradient(45deg,rgba(0,0,0,0.06)_25%,transparent_25%,transparent_50%,rgba(0,0,0,0.06)_50%,rgba(0,0,0,0.06)_75%,transparent_75%,transparent)] bg-[length:6px_6px]"></div>
-                </div>
-                <div>
-                  <div class="font-black text-xs text-zinc-950">Toor Dal · 4 lb</div>
-                  <div class="text-[11px] font-mono text-zinc-500">Every 2 weeks · $7.59</div>
-                </div>
-              </div>
-
-              <div class="text-[11px] font-mono font-bold text-zinc-500">
-                Paused
-              </div>
-            </div>
-
-            <div class="flex gap-2 pt-1 border-t border-zinc-200">
-              <button 
-                @click="store.toggleSubscription('sub-2')"
-                class="px-3 py-1.5 border border-zinc-400 text-zinc-900 hover:border-zinc-950 text-xs font-bold rounded-none cursor-pointer"
-              >
-                Resume
-              </button>
+            <!-- Subscription Action Buttons (Screen 1f) -->
+            <div class="pt-2 border-t border-zinc-200 flex gap-2">
+              <template v-if="sub.status === 'active'">
+                <button 
+                  @click="store.skipSubscription(sub.id)"
+                  class="px-3.5 py-2 border border-zinc-400 bg-white hover:bg-zinc-100 text-xs font-bold text-zinc-900 transition-colors cursor-pointer"
+                >
+                  ▷| Skip next
+                </button>
+                <button 
+                  @click="store.toggleSubscription(sub.id)"
+                  class="px-3.5 py-2 border border-zinc-400 bg-white hover:bg-zinc-100 text-xs font-bold text-zinc-900 transition-colors cursor-pointer"
+                >
+                  Pause
+                </button>
+              </template>
+              <template v-else>
+                <button 
+                  @click="store.toggleSubscription(sub.id)"
+                  class="px-4 py-2 bg-zinc-950 text-white hover:bg-zinc-800 text-xs font-bold transition-colors cursor-pointer"
+                >
+                  Resume Subscription
+                </button>
+              </template>
             </div>
           </div>
         </div>
       </div>
 
-      <!-- Past Orders Section (Page 7: 1f) -->
-      <div>
-        <h2 class="text-lg font-black text-zinc-950 tracking-tight mb-2.5">
-          Past orders
-        </h2>
+      <!-- SECTION 3: Past Orders (Screen 1f) -->
+      <div class="space-y-4">
+        <div class="flex items-center justify-between border-b border-zinc-300 pb-2">
+          <div>
+            <h2 class="text-xl font-black text-zinc-950 tracking-tight">Past orders</h2>
+            <p class="text-xs text-zinc-500">Pickups and deliveries fulfilled at your local store.</p>
+          </div>
+        </div>
 
-        <div class="space-y-3">
-          <!-- Order 1: Sep 18 -->
-          <div class="p-3 border-2 border-zinc-300 bg-white rounded-none space-y-2.5">
-            <div class="flex justify-between items-baseline">
-              <span class="font-black text-xs text-zinc-950">Sep 18 · Picked up</span>
-              <span class="font-black text-sm text-zinc-950 font-mono">$62.40</span>
+        <div class="border-2 border-zinc-300 bg-white p-6 space-y-4">
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-zinc-200 pb-3">
+            <div>
+              <div class="font-black text-sm text-zinc-950">Sep 18, 2026 · Picked up at Main St. Store</div>
+              <div class="text-xs font-mono text-zinc-500">Order #10482 · Curbside Bay 3</div>
             </div>
-
-            <div class="text-[11px] text-zinc-600 leading-snug">
-              #10482 · Chakki Atta, Desi Ghee, Okra (Bhindi), Curry Leaves, Glucose Biscuits, Masala Noodles
+            <div class="text-right">
+              <span class="text-xl font-black font-mono text-zinc-950">$62.40</span>
+              <div class="text-[10px] font-mono text-emerald-700 font-bold uppercase">6 items fulfilled</div>
             </div>
-
-            <!-- Item Thumbnails row -->
-            <div class="flex gap-1.5">
-              <div v-for="i in 6" :key="i" class="w-8 h-8 bg-[#EAEAEA] border border-zinc-300 relative overflow-hidden">
-                <div class="absolute inset-0 bg-[linear-gradient(45deg,rgba(0,0,0,0.05)_25%,transparent_25%,transparent_50%,rgba(0,0,0,0.05)_50%,rgba(0,0,0,0.05)_75%,transparent_75%,transparent)] bg-[length:5px_5px]"></div>
-              </div>
-            </div>
-
-            <!-- Reorder All 6 Items Button (Drops entire past order into live cart) -->
-            <button 
-              @click="store.reorderAll('#10482')"
-              class="w-full py-2 bg-[#E52E04] hover:bg-[#CC2500] text-white font-black text-xs uppercase tracking-wider rounded-none flex items-center justify-center gap-1.5 transition-colors cursor-pointer border border-[#B82200]"
-            >
-              <RefreshCw class="w-3.5 h-3.5" />
-              <span>Reorder all 6 items</span>
-            </button>
           </div>
 
-          <!-- Order 2: Sep 4 -->
-          <div class="p-3 border border-zinc-300 bg-zinc-50 rounded-none space-y-2">
-            <div class="flex justify-between items-baseline">
-              <span class="font-black text-xs text-zinc-950">Sep 4 · Delivered</span>
-              <span class="font-black text-sm text-zinc-950 font-mono">$58.15</span>
-            </div>
+          <div class="text-xs text-zinc-600 leading-relaxed font-mono">
+            Chakki Atta (20 lb), Desi Ghee (500 ml), Fresh Okra Bhindi (1 lb), Fresh Curry Leaves (1 bunch), Glucose Biscuits (800 g), Maggi Masala Noodles (6-pack)
+          </div>
 
-            <div class="text-[11px] text-zinc-600 leading-snug">
-              #10391 · Aged Basmati Rice, Toor Dal, Fresh Coriander, Ghee
-            </div>
-
+          <!-- Reorder All 6 Items Button (Screen 1f) -->
+          <div class="pt-2">
             <button 
-              @click="store.reorderAll('#10391')"
-              class="w-full py-2 border border-zinc-950 bg-white text-zinc-950 font-bold text-xs uppercase rounded-none hover:bg-zinc-100 transition-colors cursor-pointer flex items-center justify-center gap-1"
+              @click="reorderPastOrder"
+              class="w-full sm:w-auto px-6 py-3 bg-[#E52E04] hover:bg-[#CC2500] text-white font-black text-xs uppercase tracking-wider border border-[#B82200] transition-colors flex items-center justify-center gap-2 cursor-pointer shadow-sm"
             >
-              <RefreshCw class="w-3 h-3" />
-              <span>Reorder items</span>
+              <RotateCcw class="w-4 h-4 stroke-[2.5]" />
+              <span>🔁 Reorder all 6 items into cart</span>
             </button>
           </div>
         </div>
       </div>
 
     </div>
-
-  </MobileWebLayout>
+  </StoreLayout>
 </template>
