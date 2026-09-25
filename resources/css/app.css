@@ -1,31 +1,37 @@
-/* 1. Archivo: Modernist style (headings, prices: 800 ExtraBold, body: 400 Regular, labels: 600 SemiBold) */
+/* Local Font Faces in public/fonts/ */
 @font-face {
-  font-family: 'Archivo';
+  font-family: 'Newsreader';
   font-style: normal;
-  font-weight: 400 900;
-  font-stretch: 100%;
+  font-weight: 400 700;
   font-display: swap;
-  src: url('/fonts/archivo.woff2') format('woff2');
+  src: url('/fonts/newsreader.woff2') format('woff2');
   unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
 }
 
-/* 2. Caprasimo: Organic style headings and big prices */
 @font-face {
-  font-family: 'Caprasimo';
-  font-style: normal;
-  font-weight: 400;
+  font-family: 'Newsreader';
+  font-style: italic;
+  font-weight: 400 700;
   font-display: swap;
-  src: url('/fonts/caprasimo.woff2') format('woff2');
+  src: url('/fonts/newsreader-italic.woff2') format('woff2');
   unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
 }
 
-/* 3. Figtree: Organic style body text, labels and buttons (400, 600, 700) */
 @font-face {
-  font-family: 'Figtree';
+  font-family: 'Noto Sans Devanagari';
   font-style: normal;
-  font-weight: 400 900;
+  font-weight: 400 700;
   font-display: swap;
-  src: url('/fonts/figtree.woff2') format('woff2');
+  src: url('/fonts/noto-sans-devanagari.woff2') format('woff2');
+  unicode-range: U+0900-097F, U+1CD0-1CF9, U+200C-200D, U+20A8, U+20B9, U+20F0, U+25CC, U+A830-A839, U+A8E0-A8FF, U+11B00-11B09;
+}
+
+@font-face {
+  font-family: 'Plus Jakarta Sans';
+  font-style: normal;
+  font-weight: 400 800;
+  font-display: swap;
+  src: url('/fonts/plus-jakarta-sans.woff2') format('woff2');
   unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
 }
 
@@ -35,130 +41,114 @@
 
 @layer base {
   :root {
-    --background: 0 0% 97%;
-    --foreground: 0 0% 9%;
-    --card: 0 0% 100%;
-    --card-foreground: 0 0% 9%;
-    --popover: 0 0% 100%;
-    --popover-foreground: 0 0% 9%;
-    --primary: 11 93% 46%;
-    --primary-foreground: 0 0% 100%;
-    --secondary: 0 0% 92%;
-    --secondary-foreground: 0 0% 12%;
-    --muted: 0 0% 94%;
-    --muted-foreground: 0 0% 45%;
-    --accent: 11 93% 96%;
-    --accent-foreground: 11 93% 46%;
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 0 0% 98%;
-    --border: 0 0% 80%;
-    --input: 0 0% 80%;
-    --ring: 11 93% 46%;
-    --radius: 0px; /* Sharp 90-degree zero rounded corners */
+    --background: 40 33% 97%; /* Screen background (ivory): #fbf9f5 */
+    --foreground: 240 3% 12%; /* Main text: #1d1d1f */
+    --card: 40 24% 93%; /* Cards and surfaces (cream): #f3efe7 */
+    --card-foreground: 240 3% 12%;
+    --primary: 0 0% 10%; /* Primary (buttons, badges, checks): #1a1a1a */
+    --primary-foreground: 0 0% 100%; /* #ffffff */
+    --muted: 38 18% 89%; /* Light fills: #ece7de */
+    --muted-foreground: 240 2% 44%; /* Secondary text: #6e6e73 */
+    --border: 39 21% 84%; /* Borders: #e0d9cc */
+    --radius: 1rem;
   }
 }
 
-* {
-  border-radius: 0px !important;
-}
-
-/* Modernist Style (Grocery Click and Collect shopping-flow screens) */
 body {
-  background-color: #f4f4f5;
-  color: #18181b;
-  font-family: 'Archivo', sans-serif;
-  font-weight: 400; /* Regular body text (400) */
+  background-color: #fbf9f5;
+  color: #1d1d1f;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-weight: 400; /* Plus Jakarta Sans, 400–700: body text, buttons, labels, small prices */
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* Shopping flow headings and prices: Archivo ExtraBold (800) */
-h1, h2, h3, h4, .price-display, .font-extrabold {
-  font-family: 'Archivo', sans-serif;
-  font-weight: 800;
-  letter-spacing: -0.02em;
-}
-
-/* Shopping flow labels: Archivo SemiBold (600) */
-label, .label-text, .badge-label, .font-semibold {
-  font-weight: 600;
-}
-
-/* Photo placeholder labels: Device's built-in monospace font */
-.photo-label, .mono, [data-photo-label] {
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace !important;
-  font-feature-settings: "tnum" 1;
-}
-
-/* Frictionless Checkout (Organic style) Specific Classes */
-.font-caprasimo, .checkout-organic h1, .checkout-organic h2, .checkout-organic h3, .checkout-organic .big-price {
-  font-family: 'Caprasimo', Georgia, serif !important;
-  font-weight: 400 !important;
+/* 
+ * 1. Newsreader (serif), Medium 500: headings, Masala Mart name, banner title, 
+ *    big prices, totals, spice-box labels
+ */
+h1, h2, h3, h4, h5, h6, 
+.font-heading, .font-serif, .font-newsreader,
+.brand-name, .banner-title,
+.big-price, .price-large, .total-amount,
+.spice-box-label, .masala-dabba-label {
+  font-family: 'Newsreader', Georgia, serif;
+  font-weight: 500;
   letter-spacing: -0.01em;
 }
 
-.font-figtree, .checkout-organic {
-  font-family: 'Figtree', sans-serif;
+/* 
+ * 2. Plus Jakarta Sans, 400–700: body text, buttons, labels, small prices
+ */
+button, .btn, label, .badge, .tab-label, .action-label, nav a, input, select, textarea, .small-price, .font-sans {
+  font-family: 'Plus Jakarta Sans', sans-serif;
 }
 
-/* Organic style body text: Figtree Regular (400) */
-.checkout-organic p, .checkout-organic .body-text, .checkout-organic div:not([class*="font-"]):not(h1):not(h2):not(h3):not(button):not(label) {
-  font-family: 'Figtree', sans-serif;
+button, .btn, .tab-label, .action-label {
+  font-weight: 600;
 }
 
-/* Organic style labels: Figtree SemiBold (600) */
-.checkout-organic label, .checkout-organic .organic-label {
-  font-family: 'Figtree', sans-serif !important;
-  font-weight: 600 !important;
+/* 
+ * 3. Noto Sans Devanagari, 500: the small Hindi labels (color: #7a5620)
+ */
+.font-devanagari, .hindi-label {
+  font-family: 'Noto Sans Devanagari', 'Plus Jakarta Sans', sans-serif;
+  font-weight: 500;
+  color: #7a5620;
 }
 
-/* Organic style buttons: Figtree Bold (700) */
-.checkout-organic button, .checkout-organic .organic-btn {
-  font-family: 'Figtree', sans-serif !important;
-  font-weight: 700 !important;
+/* Tag / Badge: Brass text (#7a5620) on Brass tint (#f5eee2) */
+.tag-brass, .badge-save {
+  background-color: #f5eee2;
+  color: #7a5620;
+  border: 1px solid #e0d9cc;
 }
 
-/* Photo placeholder labels inside organic checkout still strictly use built-in mono */
-.checkout-organic .photo-label {
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace !important;
+/* Text colors helper classes */
+.text-main { color: #1d1d1f; }
+.text-secondary { color: #6e6e73; }
+.text-hint { color: #86868b; }
+.text-brass { color: #7a5620; }
+.bg-brass-accent { background-color: #a47a3c; }
+.bg-brass-tint { background-color: #f5eee2; }
+.bg-ivory { background-color: #fbf9f5; }
+.bg-cream { background-color: #f3efe7; }
+.bg-light-fill { background-color: #ece7de; }
+.border-warm { border-color: #e0d9cc; }
+.divider-line { border-color: rgba(26, 26, 26, 0.12); }
+
+/* Photo label tags */
+.photo-label {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-weight: 500;
+  letter-spacing: 0.02em;
 }
 
-/* Diagonal Stripe Placeholder Pattern (Modernist signature) */
-.bg-stripes {
-  background-image: repeating-linear-gradient(
-    45deg,
-    rgba(0, 0, 0, 0.04) 0px,
-    rgba(0, 0, 0, 0.04) 2px,
-    transparent 2px,
-    transparent 8px
-  );
+/* Premium card hover */
+.card-hover {
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+}
+.card-hover:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.06);
 }
 
-.bg-stripes-bold {
-  background-image: repeating-linear-gradient(
-    135deg,
-    rgba(255, 255, 255, 0.22) 0px,
-    rgba(255, 255, 255, 0.22) 3px,
-    transparent 3px,
-    transparent 12px
-  );
+/* Image zoom container */
+.img-zoom-container {
+  overflow: hidden;
+}
+.img-zoom-container img {
+  transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.img-zoom-container:hover img {
+  transform: scale(1.05);
 }
 
-/* Custom scrollbar hiding */
+/* Hide scrollbar */
 .no-scrollbar::-webkit-scrollbar {
   display: none;
 }
 .no-scrollbar {
   -ms-overflow-style: none;
   scrollbar-width: none;
-}
-
-@keyframes pop {
-  0% { transform: scale(1); }
-  50% { transform: scale(1.15); }
-  100% { transform: scale(1); }
-}
-
-.animate-pop {
-  animation: pop 0.2s ease-in-out;
 }

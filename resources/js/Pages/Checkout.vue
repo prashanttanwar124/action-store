@@ -1,5 +1,5 @@
 <script setup>
-import { ref } from 'vue';
+import { ref, computed } from 'vue';
 import { Head, Link } from '@inertiajs/vue3';
 import StoreLayout from '../Layouts/StoreLayout.vue';
 import { useStore } from '../stores/cart';
@@ -12,9 +12,11 @@ import {
   Check, 
   CheckCircle2, 
   Truck, 
-  Store,
-  Lock,
-  Loader2
+  Store, 
+  Lock, 
+  Loader2, 
+  Sparkles, 
+  ArrowRight 
 } from 'lucide-vue-next';
 import IconApplePay from '../Components/Icons/IconApplePay.vue';
 import IconGooglePay from '../Components/Icons/IconGooglePay.vue';
@@ -28,10 +30,21 @@ const isProcessing = ref(false);
 const orderPlaced = ref(false);
 
 const timeSlots = [
-  { id: 'today-4-5', label: 'TODAY 4–5 pm', status: 'Next available', recommended: true },
-  { id: 'today-6-7', label: 'TODAY 6–7 pm', status: 'Available' },
-  { id: 'tomorrow-9-10', label: 'TOMORROW 9–10 am', status: 'Available' },
+  { id: 'today-4-5', day: 'TODAY', time: '4–5 pm', full: false, label: 'Today 4–5 pm' },
+  { id: 'today-full', day: 'TODAY', time: 'Full', full: true, label: 'Today Full' },
+  { id: 'today-6-7', day: 'TODAY', time: '6–7 pm', full: false, label: 'Today 6–7 pm' },
+  { id: 'tomorrow-10-11', day: 'TOMORROW', time: '10–11 am', full: false, label: 'Tomorrow 10–11 am' },
+  { id: 'tomorrow-11-12', day: 'TOMORROW', time: '11–12 pm', full: false, label: 'Tomorrow 11–12 pm' },
+  { id: 'tomorrow-12-1', day: 'TOMORROW', time: '12–1 pm', full: false, label: 'Tomorrow 12–1 pm' },
 ];
+
+const currentSlot = computed(() => {
+  return timeSlots.find(s => s.id === selectedSlot.value) || timeSlots[0];
+});
+
+const checkoutTotal = computed(() => {
+  return store.total > 0 ? store.total.toFixed(2) : '81.57';
+});
 
 function completeOrder() {
   isProcessing.value = true;
@@ -44,372 +57,365 @@ function completeOrder() {
 </script>
 
 <template>
-  <Head title="Express Checkout — Masala Mart" />
+  <Head title="Checkout — Masala Mart" />
 
-  <StoreLayout :showCartBar="false" :showBottomNav="false">
-    <!-- Frictionless Checkout Design System: Organic Style 
-         - Caprasimo for headings and big prices
-         - Figtree for body text (400), labels (600), and buttons (700)
-         - Built-in monospace font for photo labels
-    -->
-    <div class="checkout-organic font-figtree space-y-6 max-w-5xl mx-auto pb-20 sm:pb-0">
+  <StoreLayout :showHeader="false" :showFooter="false" :showCartBar="false" :showBottomNav="false">
+    <div class="space-y-6 max-w-4xl mx-auto pb-24 sm:pb-8 pt-2 sm:pt-4">
 
-      <!-- Breadcrumbs -->
-      <nav class="flex items-center gap-2 text-xs font-figtree text-zinc-500">
-        <Link href="/cart" class="hover:text-zinc-950 flex items-center gap-1 font-semibold text-zinc-700">
-          <ChevronLeft class="w-4 h-4 stroke-[2]" />
-          <span>Back to Cart</span>
+      <!-- Breadcrumbs / Top Navigation (Screen 1e: < Checkout) -->
+      <div class="flex items-center gap-1">
+        <Link href="/cart" class="inline-flex items-center gap-1 text-[#1d1d1f] hover:text-[#a47a3c] transition-colors -ml-1">
+          <ChevronLeft class="w-6 h-6 stroke-[2.5]" />
+          <h1 class="text-xl sm:text-2xl font-serif font-medium tracking-tight text-[#1d1d1f]">Checkout</h1>
         </Link>
-        <span class="text-zinc-400">/</span>
-        <span class="text-zinc-950 font-bold">Checkout</span>
-      </nav>
+      </div>
 
-      <!-- Order Confirmation State (Organic Style) -->
-      <div v-if="orderPlaced" class="bg-white border-2 border-zinc-950 p-6 sm:p-10 text-center space-y-6 shadow-sm">
-        <div class="w-16 h-16 bg-emerald-50 text-emerald-700 flex items-center justify-center mx-auto border-2 border-emerald-600">
+      <!-- Order Confirmation State -->
+      <div v-if="orderPlaced" class="bg-white rounded-3xl border border-[#e0d9cc] p-6 sm:p-10 text-center space-y-6 shadow-sm">
+        <div class="w-16 h-16 bg-[#f5eee2] text-[#7a5620] rounded-full flex items-center justify-center mx-auto border-2 border-[#e0d9cc]">
           <CheckCircle2 class="w-9 h-9 stroke-[2.2]" />
         </div>
         
         <div>
-          <span class="text-[11px] font-figtree font-bold uppercase tracking-widest text-[#E52E04]">
+          <span class="text-[11px] font-semibold uppercase tracking-widest text-[#7a5620] bg-[#f5eee2] px-3 py-1 rounded-full border border-[#e0d9cc]">
             ORDER CONFIRMED #MM-88492
           </span>
-          <h1 class="font-caprasimo text-2xl sm:text-4xl text-zinc-950 tracking-tight mt-1.5 leading-tight">
+          <h2 class="text-2xl sm:text-4xl text-[#1d1d1f] tracking-tight mt-3 leading-tight font-serif font-medium">
             Thank you for your order!
-          </h1>
-          <p class="text-sm text-zinc-600 mt-2.5 max-w-md mx-auto font-figtree leading-relaxed">
-            Your items are being hand-picked at <strong>{{ store.selectedStore }}</strong> and will be ready for pickup <strong>TODAY between 4–5 pm</strong>.
+          </h2>
+          <p class="text-sm text-[#6e6e73] mt-2.5 max-w-md mx-auto font-normal leading-relaxed">
+            Your items are being hand-picked at <strong>{{ store.selectedStore }}</strong> and will be ready for pickup <strong>{{ currentSlot.label }}</strong>.
           </p>
         </div>
 
-        <div class="max-w-md mx-auto bg-zinc-50 p-4 border border-zinc-300 text-left space-y-2.5 text-xs">
+        <div class="max-w-md mx-auto bg-[#f3efe7] rounded-2xl p-5 border border-[#e0d9cc] text-left space-y-3 text-xs">
           <div class="flex justify-between items-center">
-            <span class="text-zinc-500 font-figtree font-medium">Pickup Location:</span>
-            <span class="font-figtree font-bold text-zinc-950">482 Main Street (Bay 3)</span>
+            <span class="text-[#6e6e73] font-normal">Fulfillment Window:</span>
+            <span class="font-bold text-[#1d1d1f]">{{ currentSlot.label }}</span>
           </div>
           <div class="flex justify-between items-center">
-            <span class="text-zinc-500 font-figtree font-medium">Total Paid:</span>
-            <span class="font-caprasimo text-base text-zinc-950">${{ store.total.toFixed(2) }}</span>
+            <span class="text-[#6e6e73] font-normal">Pickup Location:</span>
+            <span class="font-bold text-[#1d1d1f]">214 Main St. · Curbside Bay 3</span>
           </div>
           <div class="flex justify-between items-center">
-            <span class="text-zinc-500 font-figtree font-medium">Masala Points Earned:</span>
-            <span class="font-figtree font-bold text-[#E52E04]">+{{ Math.floor(store.subtotal) }} pts</span>
+            <span class="text-[#6e6e73] font-normal">Total Paid:</span>
+            <span class="font-serif font-medium text-lg text-[#1d1d1f]">${{ store.total.toFixed(2) }}</span>
+          </div>
+          <div class="flex justify-between items-center">
+            <span class="text-[#6e6e73] font-normal">Masala Points Earned:</span>
+            <span class="font-bold text-[#7a5620]">+{{ Math.floor(store.subtotal) }} pts</span>
           </div>
         </div>
 
         <div class="flex flex-col sm:flex-row justify-center gap-3 pt-3">
           <Link 
             href="/account" 
-            class="px-6 py-3.5 bg-zinc-950 text-white font-figtree font-bold text-xs uppercase tracking-wider border border-zinc-950 text-center hover:bg-zinc-800 transition-colors"
+            class="px-6 py-3.5 bg-[#ece7de] text-[#1d1d1f] font-semibold text-xs rounded-full text-center hover:bg-[#e0d9cc] transition-colors"
           >
             View Account & Orders
           </Link>
           <Link 
             href="/" 
-            class="px-6 py-3.5 bg-[#E52E04] text-white font-figtree font-bold text-xs uppercase tracking-wider border border-[#B82200] text-center hover:bg-[#CC2500] transition-colors"
+            class="px-6 py-3.5 bg-[#1a1a1a] text-white font-semibold text-xs rounded-full text-center hover:bg-black transition-colors shadow-sm"
           >
             Continue Shopping
           </Link>
         </div>
       </div>
 
-      <!-- Main Checkout 2-Column Form -->
+      <!-- Main Checkout Flow (Exact Match to Screen 1e) -->
       <div v-else class="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 items-start">
         
-        <!-- LEFT COLUMN: Fulfillment & Payment Details (lg:col-span-7) -->
-        <div class="lg:col-span-7 space-y-5">
+        <!-- LEFT COLUMN: Form Steps (Screen 1e exact layout) -->
+        <div class="lg:col-span-7 space-y-6">
           
-          <!-- SECTION 1: Pickup / Delivery 2-Cell Switch (Screen 1e) -->
-          <div class="bg-white border border-zinc-300 p-4 sm:p-6 space-y-4">
-            <div class="flex items-center gap-2">
-              <span class="w-6 h-6 bg-zinc-950 text-white flex items-center justify-center text-xs font-figtree font-bold">1</span>
-              <h2 class="font-caprasimo text-lg sm:text-xl text-zinc-950 tracking-tight leading-none">
-                Fulfillment Method
-              </h2>
+          <!-- STEP 01: HOW DO YOU WANT IT? -->
+          <div class="space-y-3.5">
+            <div class="text-[11px] font-semibold text-stone-400 uppercase tracking-wider">
+              01 · HOW DO YOU WANT IT?
             </div>
 
+            <!-- Two-Cell Switch (Screen 1e) -->
             <div class="grid grid-cols-2 gap-3">
+              <!-- In-store pickup Card (Selected dark state) -->
               <button 
                 type="button"
                 @click="deliveryMethod = 'pickup'"
                 :class="[
-                  'p-3.5 sm:p-4 border-2 text-left transition-colors flex flex-col justify-between cursor-pointer',
+                  'p-4 rounded-2xl text-left transition-all flex flex-col justify-between cursor-pointer min-h-[92px]',
                   deliveryMethod === 'pickup' 
-                    ? 'border-zinc-950 bg-zinc-50 shadow-sm' 
-                    : 'border-zinc-200 hover:border-zinc-400 bg-white'
+                    ? 'bg-[#1a1a1a] text-white shadow-md' 
+                    : 'bg-white text-[#1d1d1f] border border-[#e0d9cc] hover:border-[#a47a3c]'
                 ]"
               >
                 <div class="flex items-center justify-between">
-                  <Store class="w-5 h-5 text-zinc-950 stroke-[2]" />
-                  <span v-if="deliveryMethod === 'pickup'" class="w-3 h-3 bg-[#E52E04]"></span>
+                  <Store :class="['w-5 h-5 stroke-[2]', deliveryMethod === 'pickup' ? 'text-white' : 'text-[#1d1d1f]']" />
                 </div>
-                <div class="mt-3">
-                  <div class="font-figtree font-bold text-xs sm:text-sm text-zinc-950">Store Pickup</div>
-                  <div class="text-[11px] text-zinc-500 font-figtree font-medium mt-0.5">{{ store.selectedStore }} · FREE</div>
+                <div class="mt-2">
+                  <div class="font-bold text-sm">In-store pickup</div>
+                  <div :class="['text-xs font-normal mt-0.5', deliveryMethod === 'pickup' ? 'text-stone-300' : 'text-[#6e6e73]']">
+                    Free · ready in 1 hr
+                  </div>
                 </div>
               </button>
 
+              <!-- Local delivery Card -->
               <button 
                 type="button"
                 @click="deliveryMethod = 'delivery'"
                 :class="[
-                  'p-3.5 sm:p-4 border-2 text-left transition-colors flex flex-col justify-between cursor-pointer',
+                  'p-4 rounded-2xl text-left transition-all flex flex-col justify-between cursor-pointer min-h-[92px]',
                   deliveryMethod === 'delivery' 
-                    ? 'border-zinc-950 bg-zinc-50 shadow-sm' 
-                    : 'border-zinc-200 hover:border-zinc-400 bg-white'
+                    ? 'bg-[#1a1a1a] text-white shadow-md' 
+                    : 'bg-white text-[#1d1d1f] border border-[#e0d9cc] hover:border-[#a47a3c]'
                 ]"
               >
                 <div class="flex items-center justify-between">
-                  <Truck class="w-5 h-5 text-zinc-950 stroke-[2]" />
-                  <span v-if="deliveryMethod === 'delivery'" class="w-3 h-3 bg-[#E52E04]"></span>
+                  <Truck :class="['w-5 h-5 stroke-[2]', deliveryMethod === 'delivery' ? 'text-white' : 'text-[#1d1d1f]']" />
                 </div>
-                <div class="mt-3">
-                  <div class="font-figtree font-bold text-xs sm:text-sm text-zinc-950">Local Delivery</div>
-                  <div class="text-[11px] text-zinc-500 font-figtree font-medium mt-0.5">
-                    {{ store.subtotal >= 40 ? 'FREE ($40+ met)' : '$4.99' }}
+                <div class="mt-2">
+                  <div class="font-bold text-sm">Local delivery</div>
+                  <div :class="['text-xs font-normal mt-0.5', deliveryMethod === 'delivery' ? 'text-stone-300' : 'text-[#6e6e73]']">
+                    Free on this order
                   </div>
                 </div>
               </button>
             </div>
-          </div>
 
-          <!-- SECTION 2: 1-Hour Time Slot Picker (Screen 1e) -->
-          <div class="bg-white border border-zinc-300 p-4 sm:p-6 space-y-4">
-            <div class="flex items-center justify-between">
-              <div class="flex items-center gap-2">
-                <span class="w-6 h-6 bg-zinc-950 text-white flex items-center justify-center text-xs font-figtree font-bold">2</span>
-                <h2 class="font-caprasimo text-lg sm:text-xl text-zinc-950 tracking-tight leading-none">
-                  Select 1-Hour Window
-                </h2>
+            <!-- Store Location details (Screen 1e) -->
+            <div class="pt-1">
+              <template v-if="deliveryMethod === 'pickup'">
+                <div class="font-bold text-sm text-[#1d1d1f]">Masala Mart — Main St.</div>
+                <div class="text-xs text-[#6e6e73] font-normal">214 Main St. · curbside bay or counter</div>
+              </template>
+              <template v-else>
+                <div class="font-bold text-sm text-[#1d1d1f]">Local Delivery Address</div>
+                <div class="text-xs text-[#6e6e73] font-normal">742 Evergreen Terrace, Apt 4B · Contactless delivery</div>
+              </template>
+            </div>
+
+            <!-- Pick a time slot (Screen 1e: 3x2 Grid) -->
+            <div class="space-y-2.5 pt-2">
+              <div class="text-xs font-semibold text-[#1d1d1f]">
+                Pick a time slot
               </div>
-              <span class="text-[11px] font-figtree font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5">
-                Fast Turnaround
-              </span>
-            </div>
 
-            <div class="space-y-2.5">
-              <button 
-                v-for="slot in timeSlots"
-                :key="slot.id"
-                type="button"
-                @click="selectedSlot = slot.id"
-                :class="[
-                  'w-full p-3.5 border-2 text-left flex items-center justify-between transition-colors cursor-pointer',
-                  selectedSlot === slot.id 
-                    ? 'border-zinc-950 bg-zinc-50 shadow-sm' 
-                    : 'border-zinc-200 hover:border-zinc-400 bg-white'
-                ]"
-              >
-                <div class="flex items-center gap-3">
-                  <div :class="['w-4 h-4 border-2 flex items-center justify-center', selectedSlot === slot.id ? 'border-zinc-950 bg-zinc-950' : 'border-zinc-400']">
-                    <Check v-if="selectedSlot === slot.id" class="w-3 h-3 text-white stroke-[3]" />
-                  </div>
-                  <div>
-                    <span class="font-figtree font-bold text-xs sm:text-sm text-zinc-950">{{ slot.label }}</span>
-                    <span v-if="slot.recommended" class="ml-2 px-1.5 py-0.5 bg-[#E52E04] text-white text-[9px] font-figtree font-bold uppercase tracking-wider">
-                      Recommended
-                    </span>
-                  </div>
-                </div>
-                <span class="text-[11px] font-figtree font-medium text-zinc-500">{{ slot.status }}</span>
-              </button>
+              <div class="grid grid-cols-3 gap-2.5">
+                <button
+                  v-for="slot in timeSlots"
+                  :key="slot.id"
+                  type="button"
+                  :disabled="slot.full"
+                  @click="!slot.full ? selectedSlot = slot.id : null"
+                  :class="[
+                    'p-3 rounded-2xl text-left transition-all flex flex-col justify-between min-h-[68px]',
+                    slot.full 
+                      ? 'bg-[#ece7de] text-[#86868b] cursor-not-allowed opacity-75' 
+                      : (selectedSlot === slot.id 
+                          ? 'bg-[#1a1a1a] text-white shadow-xs cursor-pointer' 
+                          : 'bg-white text-[#1d1d1f] border border-[#e0d9cc] hover:border-[#1a1a1a] cursor-pointer')
+                  ]"
+                >
+                  <span :class="['text-[9px] font-bold uppercase tracking-wider', selectedSlot === slot.id ? 'text-stone-300' : 'text-[#86868b]']">
+                    {{ slot.day }}
+                  </span>
+                  <span :class="['text-sm font-bold', selectedSlot === slot.id ? 'text-white' : (slot.full ? 'text-[#86868b]' : 'text-[#1d1d1f]')]">
+                    {{ slot.time }}
+                  </span>
+                </button>
+              </div>
             </div>
           </div>
 
-          <!-- SECTION 3: Payment & Express Wallets (Screen 1e) -->
-          <div class="bg-white border border-zinc-300 p-4 sm:p-6 space-y-4">
-            <div class="flex items-center gap-2">
-              <span class="w-6 h-6 bg-zinc-950 text-white flex items-center justify-center text-xs font-figtree font-bold">3</span>
-              <h2 class="font-caprasimo text-lg sm:text-xl text-zinc-950 tracking-tight leading-none">
-                Express Payment
-              </h2>
+          <!-- STEP 02: PAYMENT (Screen 1e) -->
+          <div class="space-y-3.5 pt-3 border-t border-[#e0d9cc]">
+            <div class="text-[11px] font-semibold text-[#86868b] uppercase tracking-wider">
+              02 · PAYMENT
             </div>
 
-            <!-- Express Buttons: High Quality SVG Icon Components -->
+            <!-- Apple Pay / Google Pay Pills (Screen 1e) -->
             <div class="grid grid-cols-2 gap-3">
               <button 
                 type="button"
                 @click="paymentMethod = 'apple-pay'"
                 :class="[
-                  'h-12 px-4 bg-black text-white font-figtree font-bold text-xs sm:text-sm flex items-center justify-center gap-2 border-2 transition-all cursor-pointer shadow-sm active:scale-[0.99]',
-                  paymentMethod === 'apple-pay' ? 'border-[#E52E04] ring-2 ring-[#E52E04]' : 'border-black hover:bg-zinc-900'
+                  'h-12 bg-[#1a1a1a] hover:bg-black text-white font-semibold text-sm rounded-full flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-xs active:scale-[0.99]',
+                  paymentMethod === 'apple-pay' ? 'ring-2 ring-[#a47a3c]' : ''
                 ]"
-                aria-label="Pay with Apple Pay"
+                aria-label="Apple Pay"
               >
-                <IconApplePay :width="48" :height="22" class="text-white" />
+                <IconApplePay :width="50" :height="22" class="text-white" />
               </button>
 
               <button 
                 type="button"
                 @click="paymentMethod = 'google-pay'"
                 :class="[
-                  'h-12 px-4 bg-zinc-100 hover:bg-zinc-200 text-zinc-900 font-figtree font-bold text-xs sm:text-sm flex items-center justify-center gap-2 border-2 transition-all cursor-pointer shadow-sm active:scale-[0.99]',
-                  paymentMethod === 'google-pay' ? 'border-[#E52E04] ring-2 ring-[#E52E04]' : 'border-zinc-300'
+                  'h-12 bg-[#1a1a1a] hover:bg-black text-white font-semibold text-sm rounded-full flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-xs active:scale-[0.99]',
+                  paymentMethod === 'google-pay' ? 'ring-2 ring-[#a47a3c]' : ''
                 ]"
-                aria-label="Pay with Google Pay"
+                aria-label="Google Pay"
               >
-                <IconGooglePay :width="54" :height="22" />
+                <IconGooglePay :width="54" :height="22" class="text-white" />
               </button>
             </div>
 
+            <!-- "or pay by card" divider -->
             <div class="relative flex items-center justify-center my-3">
-              <div class="border-t border-zinc-300 w-full"></div>
-              <span class="bg-white px-3 text-[10px] sm:text-[11px] font-figtree font-semibold text-zinc-500 uppercase tracking-wider absolute">
-                Or pay with credit / debit card
+              <div class="border-t border-[#e0d9cc] w-full"></div>
+              <span class="bg-[#fbf9f5] px-3 text-[11px] font-normal text-[#86868b] absolute">
+                or pay by card
               </span>
             </div>
 
-            <!-- Card Inputs -->
-            <div class="space-y-3.5 pt-1">
+            <!-- Card Inputs (Screen 1e: #f3efe7 filled rounded inputs) -->
+            <div class="space-y-3">
               <div>
-                <label class="block text-[11px] font-figtree font-semibold uppercase text-zinc-700 mb-1.5">
-                  Card Number
+                <label class="block text-xs font-normal text-[#6e6e73] mb-1">
+                  Card number
                 </label>
-                <div class="relative">
+                <div class="relative flex items-center">
                   <input 
                     type="text" 
-                    placeholder="4242 ···· ···· 4242"
-                    value="•••• •••• •••• 4242"
-                    class="w-full px-3.5 py-2.5 bg-zinc-50 border border-zinc-400 text-xs font-mono text-zinc-950 focus:bg-white focus:border-zinc-950 focus:outline-none"
+                    placeholder="1234 1234 1234 1234"
+                    value="1234 1234 1234 1234"
+                    class="w-full px-4 py-3 bg-[#f3efe7] border border-[#e0d9cc] rounded-xl text-xs font-normal text-[#1d1d1f] placeholder-[#86868b] focus:bg-white focus:ring-2 focus:ring-[#1a1a1a]/10 focus:outline-none"
                   />
-                  <CreditCard class="absolute right-3.5 top-3 w-4 h-4 text-zinc-400 stroke-[1.8]" />
+                  <!-- Card brand badges (Screen 1e: VISA, MC, AMEX) -->
+                  <div class="absolute right-3 flex items-center gap-1">
+                    <span class="text-[9px] font-bold font-mono px-1.5 py-0.5 bg-white border border-[#e0d9cc] text-[#1d1d1f] rounded-sm">VISA</span>
+                    <span class="text-[9px] font-bold font-mono px-1.5 py-0.5 bg-white border border-[#e0d9cc] text-[#1d1d1f] rounded-sm">MC</span>
+                    <span class="text-[9px] font-bold font-mono px-1.5 py-0.5 bg-white border border-[#e0d9cc] text-[#1d1d1f] rounded-sm">AMEX</span>
+                  </div>
                 </div>
               </div>
 
               <div class="grid grid-cols-2 gap-3">
                 <div>
-                  <label class="block text-[11px] font-figtree font-semibold uppercase text-zinc-700 mb-1.5">
-                    Expires (MM/YY)
+                  <label class="block text-xs font-normal text-[#6e6e73] mb-1">
+                    Expiry
                   </label>
                   <input 
                     type="text" 
-                    placeholder="12/28" 
-                    value="12/28"
-                    class="w-full px-3.5 py-2.5 bg-zinc-50 border border-zinc-400 text-xs font-mono text-zinc-950 focus:bg-white focus:border-zinc-950 focus:outline-none"
+                    placeholder="MM / YY" 
+                    value="MM / YY"
+                    class="w-full px-4 py-3 bg-[#f3efe7] border border-[#e0d9cc] rounded-xl text-xs font-normal text-[#1d1d1f] placeholder-[#86868b] focus:bg-white focus:ring-2 focus:ring-[#1a1a1a]/10 focus:outline-none"
                   />
                 </div>
                 <div>
-                  <label class="block text-[11px] font-figtree font-semibold uppercase text-zinc-700 mb-1.5">
-                    Security Code (CVC)
+                  <label class="block text-xs font-normal text-[#6e6e73] mb-1">
+                    CVC
                   </label>
-                  <div class="relative">
-                    <input 
-                      type="text" 
-                      placeholder="•••" 
-                      value="882"
-                      class="w-full px-3.5 py-2.5 bg-zinc-50 border border-zinc-400 text-xs font-mono text-zinc-950 focus:bg-white focus:border-zinc-950 focus:outline-none"
-                    />
-                    <Lock class="absolute right-3.5 top-3 w-3.5 h-3.5 text-zinc-400 stroke-[1.8]" />
-                  </div>
+                  <input 
+                    type="text" 
+                    placeholder="123" 
+                    value="123"
+                    class="w-full px-4 py-3 bg-[#f3efe7] border border-[#e0d9cc] rounded-xl text-xs font-normal text-[#1d1d1f] placeholder-[#86868b] focus:bg-white focus:ring-2 focus:ring-[#1a1a1a]/10 focus:outline-none"
+                  />
                 </div>
               </div>
+            </div>
+
+            <!-- Desktop Pay Button -->
+            <div class="pt-2 hidden sm:block">
+              <button 
+                type="button"
+                @click="completeOrder"
+                :disabled="isProcessing"
+                class="w-full h-13 py-3.5 bg-[#1a1a1a] hover:bg-black text-white font-semibold text-sm rounded-full transition-all cursor-pointer flex items-center justify-between px-6 shadow-md active:scale-[0.99]"
+              >
+                <div class="flex items-center gap-2">
+                  <Lock class="w-4 h-4 stroke-[2.2]" />
+                  <span>{{ isProcessing ? 'Authorizing Payment...' : `Pay · ${currentSlot.label}` }}</span>
+                </div>
+                <span class="font-serif font-medium text-base">${{ checkoutTotal }}</span>
+              </button>
             </div>
 
           </div>
 
         </div>
 
-        <!-- RIGHT COLUMN: Order Summary & Desktop Pay Button (lg:col-span-5) -->
+        <!-- RIGHT COLUMN: Order Review on Desktop -->
         <div class="lg:col-span-5 space-y-4">
-          
-          <div class="bg-white border-2 border-zinc-950 p-4 sm:p-6 space-y-4 shadow-sm">
-            <div class="border-b border-zinc-200 pb-3 flex items-center justify-between">
-              <h2 class="font-caprasimo text-lg sm:text-xl text-zinc-950 tracking-tight leading-none">
+          <div class="bg-white rounded-3xl border border-[#e0d9cc] p-6 space-y-4 shadow-xs">
+            <div class="border-b border-[#e0d9cc]/60 pb-3 flex items-center justify-between">
+              <h2 class="text-base font-serif font-medium text-[#1d1d1f] tracking-tight leading-none">
                 Order Review
               </h2>
-              <span class="text-xs font-figtree font-semibold text-zinc-500">
+              <span class="text-xs font-normal text-[#6e6e73]">
                 {{ store.totalItemCount }} items
               </span>
             </div>
 
-            <!-- Items Quick View with Device's Built-in Monospace Photo Placeholder Labels -->
-            <div class="max-h-56 sm:max-h-64 overflow-y-auto divide-y divide-zinc-100 pr-1">
+            <!-- Items Quick View -->
+            <div class="max-h-60 overflow-y-auto divide-y divide-[#e0d9cc]/60 pr-1">
               <div 
                 v-for="item in store.cartItems" 
                 :key="item.id"
                 class="py-2.5 flex items-center justify-between gap-3 text-xs"
               >
                 <div class="flex items-center gap-3">
-                  <!-- Photo placeholder label strictly using device built-in mono -->
-                  <div class="w-11 h-11 bg-zinc-100 border border-zinc-300 p-1 flex items-center justify-center text-center bg-stripes shrink-0">
-                    <span class="photo-label text-[8px] text-zinc-600 font-bold uppercase tracking-tight leading-tight">
-                      {{ item.name.toLowerCase().includes('atta') ? 'atta bag' : (item.name.toLowerCase().includes('ghee') ? 'ghee jar' : (item.name.toLowerCase().includes('paneer') ? 'paneer block' : (item.name.toLowerCase().includes('mithai') ? 'mithai box' : 'photo label'))) }}
-                    </span>
+                  <div class="w-11 h-11 rounded-xl bg-[#f3efe7] border border-[#e0d9cc] overflow-hidden shrink-0 relative">
+                    <img 
+                      :src="item.image || (item.name.toLowerCase().includes('atta') ? '/images/products/atta.jpg' : (item.name.toLowerCase().includes('ghee') ? '/images/products/ghee.jpg' : (item.name.toLowerCase().includes('paneer') ? '/images/products/paneer.jpg' : (item.name.toLowerCase().includes('rice') ? '/images/products/rice.jpg' : (item.name.toLowerCase().includes('biscuit') ? '/images/products/biscuits.jpg' : (item.name.toLowerCase().includes('masala') ? '/images/products/garam_masala.jpg' : '/images/products/sweets.jpg'))))))" 
+                      :alt="item.name" 
+                      class="w-full h-full object-cover object-center"
+                    />
                   </div>
 
                   <div>
-                    <div class="font-figtree font-bold text-zinc-950 leading-snug">{{ item.name }}</div>
-                    <div class="text-[11px] text-zinc-500 font-figtree font-medium">{{ item.quantity }}x · {{ item.weight }}</div>
+                    <div class="font-semibold text-[#1d1d1f] leading-snug">{{ item.name }}</div>
+                    <div class="text-[11px] text-[#6e6e73] font-normal">{{ item.quantity }}x · {{ item.weight }}</div>
                   </div>
                 </div>
 
-                <div class="font-figtree font-bold text-zinc-950 shrink-0 text-right">
+                <div class="font-serif font-medium text-[#1d1d1f] shrink-0 text-right">
                   ${{ (item.price * item.quantity).toFixed(2) }}
                 </div>
               </div>
             </div>
 
-            <!-- Price Breakdown: Caprasimo for Big Total Price, Figtree for labels -->
-            <div class="pt-3 border-t border-zinc-200 space-y-2 text-xs">
-              <div class="flex justify-between text-zinc-600 font-figtree font-medium">
+            <!-- Price Breakdown -->
+            <div class="pt-3 border-t border-[#e0d9cc]/60 space-y-2 text-xs">
+              <div class="flex justify-between text-[#6e6e73] font-normal">
                 <span>Subtotal</span>
-                <span class="font-figtree font-semibold text-zinc-950">${{ store.subtotal.toFixed(2) }}</span>
+                <span class="font-serif font-medium text-[#1d1d1f]">${{ store.subtotal.toFixed(2) }}</span>
               </div>
-              <div class="flex justify-between text-zinc-600 font-figtree font-medium">
+              <div class="flex justify-between text-[#6e6e73] font-normal">
                 <span>Fulfillment (Pickup)</span>
-                <span class="text-emerald-700 font-figtree font-bold">FREE</span>
+                <span class="text-[#7a5620] font-semibold">FREE</span>
               </div>
               
-              <!-- Big Total Due in Caprasimo -->
-              <div class="pt-2.5 border-t border-zinc-200 flex justify-between items-baseline text-zinc-950">
-                <span class="font-figtree font-bold text-sm sm:text-base">Total Due</span>
-                <span class="big-price font-caprasimo text-2xl sm:text-3xl text-zinc-950">
+              <div class="pt-2.5 border-t border-[#e0d9cc]/60 flex justify-between items-baseline text-[#1d1d1f]">
+                <span class="font-serif font-medium text-sm">Total Due</span>
+                <span class="font-serif font-medium text-2xl text-[#1d1d1f]">
                   ${{ store.total.toFixed(2) }}
                 </span>
               </div>
             </div>
-
-            <!-- Desktop Pay Now Button: Figtree 700 Bold -->
-            <button 
-              type="button"
-              @click="completeOrder"
-              :disabled="isProcessing"
-              class="hidden sm:flex w-full py-4 bg-[#E52E04] hover:bg-[#CC2500] text-white font-figtree font-bold text-center text-sm uppercase tracking-wider border border-[#B82200] transition-colors cursor-pointer items-center justify-center gap-2 shadow-sm"
-            >
-              <Loader2 v-if="isProcessing" class="w-4 h-4 animate-spin text-white" />
-              <span>{{ isProcessing ? 'Authorizing Payment...' : `Pay $${store.total.toFixed(2)}` }}</span>
-            </button>
-
-            <div class="flex items-center justify-center gap-1.5 text-[11px] font-figtree font-medium text-zinc-500 pt-1">
-              <ShieldCheck class="w-4 h-4 text-emerald-600 stroke-[2]" />
-              <span>256-Bit SSL Encrypted & Stripe Secured</span>
-            </div>
           </div>
-
         </div>
 
       </div>
 
-      <!-- Mobile Sticky Bottom Pay Bar: Big Price in Caprasimo, Button in Figtree Bold -->
+      <!-- Mobile Sticky Bottom Pay Bar (Exact Match to Screen 1e) -->
       <div 
         v-if="!orderPlaced"
-        class="sm:hidden fixed bottom-0 left-0 right-0 z-40 bg-white border-t border-zinc-300 p-3 shadow-2xl flex items-center justify-between gap-3"
+        class="sm:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-[#e0d9cc] p-3.5 shadow-2xl"
       >
-        <div>
-          <div class="text-[10px] font-figtree font-semibold text-zinc-500 uppercase leading-none">Total Due</div>
-          <div class="big-price font-caprasimo text-xl text-zinc-950 mt-1 leading-none">
-            ${{ store.total.toFixed(2) }}
-          </div>
-        </div>
-
         <button 
           type="button"
           @click="completeOrder"
           :disabled="isProcessing"
-          class="flex-1 py-3 bg-[#E52E04] active:bg-[#CC2500] text-white font-figtree font-bold text-xs uppercase tracking-wider text-center border border-[#B82200] cursor-pointer flex items-center justify-center gap-2 shadow-sm"
+          class="w-full h-13 py-3.5 bg-[#1a1a1a] active:bg-black text-white font-semibold text-sm rounded-full cursor-pointer flex items-center justify-between px-6 shadow-md"
         >
-          <Loader2 v-if="isProcessing" class="w-4 h-4 animate-spin text-white" />
-          <span>{{ isProcessing ? 'Authorizing...' : `Pay $${store.total.toFixed(2)}` }}</span>
+          <div class="flex items-center gap-2">
+            <Lock class="w-4 h-4 stroke-[2.2]" />
+            <span v-if="isProcessing">Authorizing...</span>
+            <span v-else>Pay · {{ currentSlot.label }}</span>
+          </div>
+          <span class="font-serif font-medium text-base">${{ checkoutTotal }}</span>
         </button>
       </div>
 

@@ -1,18 +1,24 @@
 <?php
 
 use App\Http\Controllers\ProfileController;
+use App\Models\Product;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
 // 1a: Home / Storefront
 Route::get('/', function () {
-    return Inertia::render('Home');
+    return Inertia::render('Home', [
+        'products' => Product::all(),
+    ]);
 })->name('home');
 
 // 1b & 1c: Product detail pages (e.g. /products/paneer, /products/rice, /products/atta)
 Route::get('/products/{slug}', function (string $slug) {
+    $product = Product::where('slug', $slug)->first();
+
     return Inertia::render('ProductDetail', [
         'slug' => $slug,
+        'product' => $product,
     ]);
 })->name('products.show');
 

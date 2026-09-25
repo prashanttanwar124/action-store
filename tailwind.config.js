@@ -13,12 +13,30 @@ export default {
     theme: {
         extend: {
             fontFamily: {
-                sans: ['Archivo', ...defaultTheme.fontFamily.sans],
-                archivo: ['Archivo', ...defaultTheme.fontFamily.sans],
-                caprasimo: ['Caprasimo', 'serif'],
-                figtree: ['Figtree', ...defaultTheme.fontFamily.sans],
+                sans: ['"Plus Jakarta Sans"', ...defaultTheme.fontFamily.sans],
+                serif: ['"Newsreader"', 'Georgia', 'serif'],
+                newsreader: ['"Newsreader"', 'Georgia', 'serif'],
+                devanagari: ['"Noto Sans Devanagari"', ...defaultTheme.fontFamily.sans],
+                display: ['"Newsreader"', 'Georgia', 'serif'],
+                heading: ['"Newsreader"', 'Georgia', 'serif'],
                 mono: ['ui-monospace', 'SFMono-Regular', 'Menlo', 'Monaco', 'Consolas', 'monospace'],
             },
+            colors: {
+                brand: {
+                    primary: '#1a1a1a',
+                    'primary-hover': '#000000',
+                    brass: '#a47a3c',
+                    'brass-text': '#7a5620',
+                    'brass-tint': '#f5eee2',
+                    bg: '#fbf9f5',
+                    card: '#f3efe7',
+                    fill: '#ece7de',
+                    border: '#e0d9cc',
+                    main: '#1d1d1f',
+                    secondary: '#6e6e73',
+                    hint: '#86868b',
+                }
+            }
         },
     },
 
