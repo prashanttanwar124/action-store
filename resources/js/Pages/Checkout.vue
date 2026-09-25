@@ -290,7 +290,7 @@ function completeOrder() {
             <!-- Items Quick View -->
             <div class="max-h-60 overflow-y-auto divide-y divide-zinc-100 pr-1">
               <div 
-                v-for="item in store.cart" 
+                v-for="item in store.cartItems" 
                 :key="item.id"
                 class="py-2.5 flex items-center justify-between text-xs"
               >

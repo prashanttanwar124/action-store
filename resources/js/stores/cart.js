@@ -253,12 +253,38 @@ export const useStore = defineStore('masalaStore', () => {
     }
   ]);
 
+  // Masala Points Rewards (Matching Screen 1f: 1,240 pts)
+  const masalaPoints = ref(1240);
+
   // Cart State (Exact match to PDF: 3 items initially = Paneer $5.99, Atta $18.04, Garam Masala $3.49 => Total $27.52)
   const cart = ref([
     { id: 5, quantity: 1, isSubscribed: false }, // Malai Paneer ($5.99)
     { id: 2, quantity: 1, isSubscribed: true },  // Chakki Atta ($18.04 after 5% sub discount)
     { id: 9, quantity: 1, isSubscribed: false }  // Garam Masala ($3.49)
   ]);
+
+  // Resolve ID whether passed as number (2), string slug ('atta'), or object
+  function resolveProductId(input) {
+    if (typeof input === 'number') return input;
+    if (typeof input === 'string') {
+      const num = Number(input);
+      if (!isNaN(num) && num > 0) return num;
+
+      const prod = products.value.find(p => p.slug === input || p.label === input || String(p.id) === input);
+      if (prod) return prod.id;
+
+      const impulse = impulseItems.value.find(i => i.label === input || String(i.id) === input);
+      if (impulse) return impulse.id;
+
+      const kit = recipeKits.value.find(k => k.label === input || String(k.id) === input);
+      if (kit) return kit.id;
+    }
+    if (typeof input === 'object' && input !== null) {
+      if (input.id) return resolveProductId(input.id);
+      if (input.slug) return resolveProductId(input.slug);
+    }
+    return input;
+  }
 
   // Computed Cart Items
   const cartItems = computed(() => {
@@ -280,6 +306,8 @@ export const useStore = defineStore('masalaStore', () => {
         quantity: item.quantity,
         isSubscribed: !!item.isSubscribed,
         unitCost: unitCost,
+        price: unitCost,
+        weight: prod.sizeMain || prod.size || '',
         total: Number((unitCost * item.quantity).toFixed(2))
       };
     }).filter(Boolean);
@@ -314,6 +342,10 @@ export const useStore = defineStore('masalaStore', () => {
     return Number((rawSubtotal.value - subscribeSavings.value).toFixed(2));
   });
 
+  const total = computed(() => {
+    return subtotal.value;
+  });
+
   const freeDeliveryThreshold = 40.0;
   const amountToFreeDelivery = computed(() => {
     const rem = Number((freeDeliveryThreshold - subtotal.value).toFixed(2));
@@ -325,22 +357,57 @@ export const useStore = defineStore('masalaStore', () => {
   });
 
   function getQuantity(productId) {
-    const item = cart.value.find(i => i.id === productId);
+    const id = resolveProductId(productId);
+    const item = cart.value.find(i => i.id === id);
     return item ? item.quantity : 0;
   }
 
-  function addToCart(productId, count = 1, isSub = false) {
-    const item = cart.value.find(i => i.id === productId);
-    if (item) {
-      item.quantity += count;
-      if (isSub) item.isSubscribed = true;
+  function getItemQuantity(productId) {
+    return getQuantity(productId);
+  }
+
+  function addToCart(itemOrId, count = 1, isSub = false) {
+    let id = itemOrId;
+    let sub = isSub;
+    let qty = count;
+
+    if (typeof itemOrId === 'object' && itemOrId !== null) {
+      id = itemOrId.id || itemOrId.slug;
+      if (itemOrId.quantity) qty = itemOrId.quantity;
+      if (itemOrId.isSubscribed !== undefined) sub = itemOrId.isSubscribed;
+    }
+
+    const resolvedId = resolveProductId(id);
+    const existing = cart.value.find(i => i.id === resolvedId);
+    if (existing) {
+      existing.quantity += qty;
+      if (sub) existing.isSubscribed = true;
     } else {
-      cart.value.push({ id: productId, quantity: count, isSubscribed: isSub });
+      // If object passed was a dynamically created kit or product
+      if (typeof itemOrId === 'object' && !products.value.some(p => p.id === resolvedId)) {
+        products.value.push({
+          id: resolvedId,
+          slug: String(resolvedId),
+          name: itemOrId.name || 'Pantry Item',
+          price: itemOrId.price || 0,
+          sizeMain: itemOrId.weight || '',
+          size: itemOrId.weight || '',
+          category: 'grocery',
+          label: 'item',
+        });
+      }
+      cart.value.push({ id: resolvedId, quantity: qty, isSubscribed: sub });
     }
   }
 
+  function addImpulseItem(impulseId) {
+    const resolvedId = resolveProductId(impulseId);
+    addToCart(resolvedId, 1);
+  }
+
   function removeFromCart(productId) {
-    const index = cart.value.findIndex(i => i.id === productId);
+    const id = resolveProductId(productId);
+    const index = cart.value.findIndex(i => i.id === id);
     if (index !== -1) {
       if (cart.value[index].quantity > 1) {
         cart.value[index].quantity -= 1;
@@ -351,7 +418,8 @@ export const useStore = defineStore('masalaStore', () => {
   }
 
   function deleteItem(productId) {
-    cart.value = cart.value.filter(i => i.id !== productId);
+    const id = resolveProductId(productId);
+    cart.value = cart.value.filter(i => i.id !== id);
   }
 
   function clearCart() {
@@ -401,11 +469,15 @@ export const useStore = defineStore('masalaStore', () => {
     rawSubtotal,
     subscribeSavings,
     subtotal,
+    total,
+    masalaPoints,
     freeDeliveryThreshold,
     amountToFreeDelivery,
     freeDeliveryProgressPercent,
     getQuantity,
+    getItemQuantity,
     addToCart,
+    addImpulseItem,
     removeFromCart,
     deleteItem,
     clearCart,
@@ -415,3 +487,4 @@ export const useStore = defineStore('masalaStore', () => {
     getProductBySlug,
   };
 });
+

@@ -74,7 +74,7 @@ const store = useStore();
         <div class="lg:col-span-8 space-y-6">
           
           <!-- Empty State -->
-          <div v-if="store.cart.length === 0" class="bg-white border border-zinc-300 p-12 text-center space-y-4">
+          <div v-if="store.cartItems.length === 0" class="bg-white border border-zinc-300 p-12 text-center space-y-4">
             <ShoppingBag class="w-12 h-12 text-zinc-400 mx-auto" />
             <h2 class="text-xl font-black text-zinc-950">Your cart is empty</h2>
             <p class="text-xs text-zinc-500 max-w-sm mx-auto">
@@ -91,14 +91,14 @@ const store = useStore();
           <!-- Items Table / List -->
           <div v-else class="bg-white border border-zinc-300 divide-y divide-zinc-200">
             <div 
-              v-for="item in store.cart" 
+              v-for="item in store.cartItems" 
               :key="item.id"
               class="p-4 sm:p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4"
             >
               <!-- Item Details -->
               <div class="flex items-center gap-4">
                 <div class="w-16 h-16 bg-[#EAEAEA] border border-zinc-300 p-1 flex items-center justify-center font-mono text-[10px] text-zinc-600 bg-stripes shrink-0">
-                  {{ item.name.split(' ').slice(-1)[0].toLowerCase() }}
+                  {{ item.name ? item.name.split(' ').slice(-1)[0].toLowerCase() : 'item' }}
                 </div>
                 
                 <div>
