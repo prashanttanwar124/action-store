@@ -113,27 +113,102 @@ const prevSlide = () => {
   currentSlideIndex.value = (currentSlideIndex.value - 1 + bannerSlides.length) % bannerSlides.length;
 };
 
-let touchStartX = 0;
-const handleTouchStart = (e) => {
-  if (e.changedTouches && e.changedTouches[0]) {
-    touchStartX = e.changedTouches[0].screenX;
-  }
+// Drag & Swipe State for Hero Slider (Both Touch & Mouse)
+const dragOffset = ref(0);
+const isPointerDown = ref(false);
+const isDragging = ref(false);
+let startX = 0;
+let dragThresholdPassed = false;
+
+const handleDragStart = (e) => {
+  if (e.type === 'mousedown' && e.button !== 0) return;
+  isPointerDown.value = true;
+  dragThresholdPassed = false;
+  startX = e.clientX;
+  dragOffset.value = 0;
   pauseAutoplay();
 };
 
-const handleTouchEnd = (e) => {
-  if (e.changedTouches && e.changedTouches[0]) {
-    const touchEndX = e.changedTouches[0].screenX;
-    const diff = touchStartX - touchEndX;
-    if (Math.abs(diff) > 40) {
-      if (diff > 0) {
-        nextSlide();
-      } else {
-        prevSlide();
-      }
+const handleDragMove = (e) => {
+  if (!isPointerDown.value) return;
+  const currentX = e.clientX;
+  const diff = currentX - startX;
+  
+  if (Math.abs(diff) > 8) {
+    isDragging.value = true;
+    dragThresholdPassed = true;
+  }
+
+  if (isDragging.value) {
+    if ((currentSlideIndex.value === 0 && diff > 0) || (currentSlideIndex.value === bannerSlides.length - 1 && diff < 0)) {
+      dragOffset.value = diff * 0.3;
+    } else {
+      dragOffset.value = diff;
     }
   }
+};
+
+const handleDragEnd = () => {
+  if (!isPointerDown.value) return;
+  isPointerDown.value = false;
+
+  if (isDragging.value) {
+    if (dragOffset.value < -45) {
+      nextSlide();
+    } else if (dragOffset.value > 45) {
+      prevSlide();
+    }
+    dragOffset.value = 0;
+    setTimeout(() => {
+      isDragging.value = false;
+      dragThresholdPassed = false;
+    }, 120);
+  } else {
+    dragOffset.value = 0;
+  }
+
   resumeAutoplay();
+};
+
+// Touch Handlers
+const handleTouchStart = (e) => {
+  if (e.touches && e.touches[0]) {
+    isPointerDown.value = true;
+    dragThresholdPassed = false;
+    startX = e.touches[0].clientX;
+    dragOffset.value = 0;
+    pauseAutoplay();
+  }
+};
+
+const handleTouchMove = (e) => {
+  if (!isPointerDown.value || !e.touches || !e.touches[0]) return;
+  const currentX = e.touches[0].clientX;
+  const diff = currentX - startX;
+
+  if (Math.abs(diff) > 8) {
+    isDragging.value = true;
+    dragThresholdPassed = true;
+  }
+
+  if (isDragging.value) {
+    if ((currentSlideIndex.value === 0 && diff > 0) || (currentSlideIndex.value === bannerSlides.length - 1 && diff < 0)) {
+      dragOffset.value = diff * 0.3;
+    } else {
+      dragOffset.value = diff;
+    }
+  }
+};
+
+const handleTouchEnd = () => {
+  handleDragEnd();
+};
+
+const handleSlideClick = (e) => {
+  if (dragThresholdPassed || isDragging.value) {
+    e.preventDefault();
+    e.stopPropagation();
+  }
 };
 
 onMounted(() => {
@@ -209,74 +284,110 @@ const recipeKitItems = computed(() => {
 
       <!-- HERO SECTION: Split Festival Banner (Screen 1a Specification) -->
       <section class="grid grid-cols-1 lg:grid-cols-12 gap-4">
-        <!-- Main Festival Pre-Order Banner (Interactive Carousel with Clickable Card) -->
-        <div 
-          class="lg:col-span-8 relative overflow-hidden rounded-3xl shadow-sm min-h-[180px] sm:min-h-[200px] group bg-[#222428]"
-          @mouseenter="pauseAutoplay"
-          @mouseleave="resumeAutoplay"
-          @touchstart.passive="handleTouchStart"
-          @touchend.passive="handleTouchEnd"
-        >
-          <Transition name="fade-banner" mode="out-in">
-            <Link 
-              :key="currentSlideIndex"
-              :href="currentSlide.link"
-              class="w-full h-full text-white grid grid-cols-12 overflow-hidden cursor-pointer select-none min-h-[180px] sm:min-h-[200px]"
-              :class="currentSlide.bg"
+        <!-- Main Festival Pre-Order Banner (Interactive Sliding Carousel with Drag & Swipe) -->
+        <div class="lg:col-span-8 flex flex-col">
+          <div 
+            class="relative overflow-hidden rounded-3xl shadow-sm min-h-[180px] sm:min-h-[200px] group bg-[#1a1a1a] select-none cursor-grab active:cursor-grabbing"
+            @mouseenter="pauseAutoplay"
+            @mousedown="handleDragStart"
+            @mousemove="handleDragMove"
+            @mouseup="handleDragEnd"
+            @mouseleave="handleDragEnd"
+            @touchstart.passive="handleTouchStart"
+            @touchmove="handleTouchMove"
+            @touchend="handleTouchEnd"
+          >
+            <!-- Horizontal sliding track -->
+            <div 
+              class="flex h-full w-full"
+              :class="{ 'transition-transform duration-500 ease-out': !isPointerDown }"
+              :style="{ 
+                transform: `translateX(calc(-${currentSlideIndex * 100}% + ${dragOffset}px))` 
+              }"
             >
-              <!-- Banner Copy -->
-              <div class="col-span-7 p-4 sm:p-7 flex flex-col justify-between">
-                <div>
-                  <div class="text-[9px] sm:text-[10px] font-semibold tracking-wider uppercase text-[#a47a3c] leading-tight mb-1">
-                    {{ currentSlide.tag }}
+              <div 
+                v-for="slide in bannerSlides"
+                :key="slide.id"
+                class="w-full shrink-0 h-full text-white grid grid-cols-12 overflow-hidden min-h-[180px] sm:min-h-[200px]"
+                :class="slide.bg"
+              >
+                <Link 
+                  :href="slide.link"
+                  @click="handleSlideClick"
+                  class="contents cursor-pointer"
+                  draggable="false"
+                >
+                  <!-- Banner Copy -->
+                  <div class="col-span-7 p-4 sm:p-7 flex flex-col justify-between select-none">
+                    <div>
+                      <div class="text-[9px] sm:text-[10px] font-semibold tracking-wider uppercase text-[#a47a3c] leading-tight mb-1">
+                        {{ slide.tag }}
+                      </div>
+                      <h1 class="text-2xl sm:text-3xl lg:text-4xl font-serif font-medium leading-tight tracking-tight text-white whitespace-pre-line">
+                        {{ slide.title }}
+                      </h1>
+                    </div>
+
+                    <div>
+                      <span class="inline-flex items-center gap-1 text-xs font-semibold text-white group-hover:text-white/90 mt-2 sm:mt-4">
+                        <span>{{ slide.cta }}</span>
+                        <ChevronRight class="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                      </span>
+                    </div>
                   </div>
-                  <h1 class="text-2xl sm:text-3xl lg:text-4xl font-serif font-medium leading-tight tracking-tight text-white whitespace-pre-line">
-                    {{ currentSlide.title }}
-                  </h1>
-                </div>
 
-                <div>
-                  <span class="inline-flex items-center gap-1 text-xs font-semibold text-white group-hover:text-white/90 mt-2 sm:mt-4">
-                    <span>{{ currentSlide.cta }}</span>
-                    <ChevronRight class="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-                  </span>
-                </div>
+                  <!-- Banner Visual Texture (Photo Area with Real Product & Label) -->
+                  <div class="col-span-5 relative bg-stone-900 overflow-hidden img-zoom-container select-none">
+                    <img 
+                      :src="slide.image" 
+                      :alt="slide.alt" 
+                      class="w-full h-full object-cover object-center absolute inset-0 pointer-events-none select-none"
+                      draggable="false"
+                    />
+                    <div class="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent pointer-events-none"></div>
+                    <div class="relative z-10 p-2.5 sm:p-3 h-full flex flex-col justify-end items-end pointer-events-none">
+                      <span class="photo-label text-[10px] text-white/80 font-normal">
+                        {{ slide.photoLabel }}
+                      </span>
+                    </div>
+                  </div>
+                </Link>
               </div>
+            </div>
 
-              <!-- Banner Visual Texture (Photo Area with Real Product & Label) -->
-              <div class="col-span-5 relative bg-stone-900 overflow-hidden img-zoom-container">
-                <img 
-                  :src="currentSlide.image" 
-                  :alt="currentSlide.alt" 
-                  class="w-full h-full object-cover object-center absolute inset-0"
-                />
-                <div class="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent"></div>
-                <div class="relative z-10 p-2.5 sm:p-3 h-full flex flex-col justify-end items-end">
-                  <span class="photo-label text-[10px] text-white/80 font-normal">
-                    {{ currentSlide.photoLabel }}
-                  </span>
-                </div>
-              </div>
-            </Link>
-          </Transition>
+            <!-- Prev/Next desktop hover arrows -->
+            <button 
+              type="button"
+              @click.stop.prevent="prevSlide"
+              class="hidden sm:flex absolute left-2.5 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-black/40 hover:bg-black/75 text-white items-center justify-center backdrop-blur-xs opacity-0 group-hover:opacity-100 transition-opacity duration-200 cursor-pointer z-20 shadow-md"
+              aria-label="Previous slide"
+            >
+              <ChevronLeft class="w-4 h-4" />
+            </button>
+            <button 
+              type="button"
+              @click.stop.prevent="nextSlide"
+              class="hidden sm:flex absolute right-2.5 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-black/40 hover:bg-black/75 text-white items-center justify-center backdrop-blur-xs opacity-0 group-hover:opacity-100 transition-opacity duration-200 cursor-pointer z-20 shadow-md"
+              aria-label="Next slide"
+            >
+              <ChevronRight class="w-4 h-4" />
+            </button>
+          </div>
 
-          <!-- Prev/Next desktop hover arrows -->
-          <button 
-            type="button"
-            @click.stop.prevent="prevSlide"
-            class="hidden sm:flex absolute left-2.5 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-black/40 hover:bg-black/70 text-white items-center justify-center backdrop-blur-xs opacity-0 group-hover:opacity-100 transition-opacity duration-200 cursor-pointer z-20"
-            aria-label="Previous slide"
-          >
-            <ChevronLeft class="w-4 h-4" />
-          </button>
-          <button 
-            type="button"
-            @click.stop.prevent="nextSlide"
-            class="hidden sm:flex absolute right-2.5 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-black/40 hover:bg-black/70 text-white items-center justify-center backdrop-blur-xs opacity-0 group-hover:opacity-100 transition-opacity duration-200 cursor-pointer z-20"
-            aria-label="Next slide"
-          >
-            <ChevronRight class="w-4 h-4" />
-          </button>
+          <!-- Banner Pagination Indicator Dots Tightly Docked Directly Below Banner -->
+          <div class="flex items-center gap-1.5 mt-2.5 pl-1" role="tablist" aria-label="Hero banner pagination">
+            <button
+              v-for="(slide, idx) in bannerSlides"
+              :key="slide.id"
+              type="button"
+              @click="setSlide(idx)"
+              :aria-label="`Slide ${idx + 1}: ${slide.tag}`"
+              :aria-selected="currentSlideIndex === idx"
+              role="tab"
+              class="h-1.5 rounded-full transition-all duration-300 cursor-pointer focus:outline-none focus-visible:ring-1 focus-visible:ring-[#1a1a1a]"
+              :class="currentSlideIndex === idx ? 'w-5 bg-[#a47a3c]' : 'w-1.5 bg-[#e0d9cc] hover:bg-[#86868b]'"
+            ></button>
+          </div>
         </div>
 
         <!-- Desktop Click & Collect Guarantee Card -->
@@ -309,21 +420,6 @@ const recipeKitItems = computed(() => {
           </div>
         </div>
       </section>
-
-      <!-- Banner Pagination Indicator Dots -->
-      <div class="flex items-center gap-2 -mt-4 sm:-mt-6 pl-1" role="tablist" aria-label="Hero banner pagination">
-        <button
-          v-for="(slide, idx) in bannerSlides"
-          :key="slide.id"
-          type="button"
-          @click="setSlide(idx)"
-          :aria-label="`Slide ${idx + 1}: ${slide.tag}`"
-          :aria-selected="currentSlideIndex === idx"
-          role="tab"
-          class="h-2 rounded-full transition-all duration-300 cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-[#1a1a1a]"
-          :class="currentSlideIndex === idx ? 'w-7 bg-[#a47a3c]' : 'w-2 bg-[#e0d9cc] hover:bg-[#86868b]'"
-        ></button>
-      </div>
 
       <!-- SECTION: "Buy it again" (Screen 1a Specification with Devanagari badge) -->
       <section class="space-y-3.5">
