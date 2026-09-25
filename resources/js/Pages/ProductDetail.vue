@@ -3,7 +3,9 @@ import { ref, computed } from 'vue';
 import { Head, Link } from '@inertiajs/vue3';
 import StoreLayout from '../Layouts/StoreLayout.vue';
 import { useStore } from '../stores/cart';
-import { ChevronLeft, ShoppingBag, Clock, Plus, Minus, Check, Sparkles, RefreshCw, CheckCircle2 } from 'lucide-vue-next';
+import { ChevronLeft, ChevronRight, Clock, Plus, Minus, Check, Sparkles, RefreshCw, CheckCircle2, ShieldCheck } from 'lucide-vue-next';
+import IconBag from '../Components/Icons/IconBag.vue';
+import IconCold from '../Components/Icons/IconCold.vue';
 
 const props = defineProps({
   slug: {
@@ -90,7 +92,7 @@ function handleAction() {
           class="relative p-1 text-zinc-950"
           aria-label="Cart"
         >
-          <ShoppingBag class="w-5 h-5 stroke-[2.2]" />
+          <IconBag :size="20" />
           <span 
             v-if="store.totalItemCount > 0"
             class="absolute -top-1 -right-1 bg-[#E52E04] text-white text-[9px] font-mono font-bold w-4 h-4 flex items-center justify-center border border-white"
@@ -127,7 +129,7 @@ function handleAction() {
               <span class="bg-[#FFEFEA] text-[#B82200] border border-[#FFCCBC] px-2 py-0.5 text-[11px] font-mono font-bold tracking-tight">
                 {{ product.stockBadge }}
               </span>
-              <span class="text-[11px] font-mono text-zinc-700 bg-white/95 border border-zinc-300 px-2 py-0.5">
+              <span class="photo-label text-[11px] text-zinc-700 bg-white/95 border border-zinc-300 px-2 py-0.5">
                 {{ product.photoLabel }}
               </span>
             </div>
@@ -143,19 +145,28 @@ function handleAction() {
             </div>
           </div>
 
-          <!-- Product Assurance Strip -->
-          <div class="grid grid-cols-3 gap-2 text-center text-[10px] sm:text-[11px] font-mono text-zinc-600 bg-white border border-zinc-300 p-2 sm:p-2.5">
-            <div>
-              <span class="font-bold text-zinc-950 block">Cold Storage</span>
-              <span>Temp Monitored</span>
+          <!-- Product Assurance Strip with Crisp Icons -->
+          <div class="grid grid-cols-3 gap-2 text-center text-[10px] sm:text-[11px] font-mono text-zinc-600 bg-white border border-zinc-300 p-2.5 sm:p-3 shadow-xs">
+            <div class="flex flex-col items-center justify-center gap-1">
+              <IconCold :size="16" class="text-sky-600" />
+              <div>
+                <span class="font-bold text-zinc-950 block leading-tight">Cold Storage</span>
+                <span class="text-zinc-500 text-[10px]">Temp Monitored</span>
+              </div>
             </div>
-            <div class="border-x border-zinc-200">
-              <span class="font-bold text-zinc-950 block">Same Day</span>
-              <span>Pickup in 1 Hr</span>
+            <div class="border-x border-zinc-200 flex flex-col items-center justify-center gap-1 px-1">
+              <Clock class="w-4 h-4 text-amber-600 stroke-[2.2]" />
+              <div>
+                <span class="font-bold text-zinc-950 block leading-tight">Same Day</span>
+                <span class="text-zinc-500 text-[10px]">Pickup in 1 Hr</span>
+              </div>
             </div>
-            <div>
-              <span class="font-bold text-zinc-950 block">Money Back</span>
-              <span>Fresh Guarantee</span>
+            <div class="flex flex-col items-center justify-center gap-1">
+              <ShieldCheck class="w-4 h-4 text-emerald-600 stroke-[2.2]" />
+              <div>
+                <span class="font-bold text-zinc-950 block leading-tight">Fresh Guarantee</span>
+                <span class="text-zinc-500 text-[10px]">100% Refundable</span>
+              </div>
             </div>
           </div>
         </div>
@@ -285,26 +296,26 @@ function handleAction() {
                 <div class="w-36 h-12 bg-zinc-100 border-2 border-zinc-950 flex items-center justify-between px-3">
                   <button 
                     @click="quantity = Math.max(1, quantity - 1)" 
-                    class="p-1 font-black text-base text-zinc-950 hover:text-[#E52E04] cursor-pointer"
+                    class="p-1 hover:text-[#E52E04] cursor-pointer flex items-center justify-center text-zinc-950"
                     aria-label="Decrease quantity"
                   >
-                    -
+                    <Minus class="w-4 h-4 stroke-[3]" />
                   </button>
                   <span class="text-sm font-black font-mono">{{ quantity }}</span>
                   <button 
                     @click="quantity = quantity + 1" 
-                    class="p-1 font-black text-base text-zinc-950 hover:text-[#E52E04] cursor-pointer"
+                    class="p-1 hover:text-[#E52E04] cursor-pointer flex items-center justify-center text-zinc-950"
                     aria-label="Increase quantity"
                   >
-                    +
+                    <Plus class="w-4 h-4 stroke-[3]" />
                   </button>
                 </div>
 
                 <button 
                   @click="handleAction"
-                  class="flex-1 h-12 bg-[#E52E04] hover:bg-[#CC2500] text-white font-black text-sm uppercase tracking-wider flex items-center justify-center gap-2 border border-[#B82200] transition-colors cursor-pointer active:scale-[0.99]"
+                  class="flex-1 h-12 bg-[#E52E04] hover:bg-[#CC2500] text-white font-black text-sm uppercase tracking-wider flex items-center justify-center gap-2 border border-[#B82200] transition-colors cursor-pointer active:scale-[0.99] shadow-xs"
                 >
-                  <ShoppingBag class="w-4 h-4 stroke-[2.4]" />
+                  <IconBag :size="18" />
                   <span>{{ product.actionLabel }} ${{ displayPrice }}</span>
                 </button>
               </div>
@@ -317,8 +328,9 @@ function handleAction() {
                   <CheckCircle2 class="w-4 h-4 text-emerald-600" />
                   <span>Added {{ quantity }}x {{ product.name }} to cart!</span>
                 </div>
-                <Link href="/cart" class="underline text-emerald-900 font-mono">
-                  View Cart &rsaquo;
+                <Link href="/cart" class="underline text-emerald-900 font-mono inline-flex items-center gap-1">
+                  <span>View Cart</span>
+                  <ChevronRight class="w-3.5 h-3.5" />
                 </Link>
               </div>
             </div>
@@ -344,13 +356,13 @@ function handleAction() {
           >
             <div>
               <div class="w-full h-20 sm:h-28 bg-[#EAEAEA] border border-zinc-200 mb-1.5 p-1.5 bg-stripes flex flex-col justify-between">
-                <span class="text-[9px] sm:text-[10px] font-mono text-zinc-700">{{ item.tag }}</span>
+                <span class="photo-label text-[9px] sm:text-[10px] text-zinc-700">{{ item.tag }}</span>
                 <button 
                   @click="store.addToCart({ id: item.id, name: item.name, weight: item.weight, price: item.price, originalPrice: item.price })"
-                  class="self-end w-6 h-6 sm:w-7 sm:h-7 bg-[#E52E04] hover:bg-[#CC2500] text-white flex items-center justify-center border border-[#B82200] font-black cursor-pointer active:scale-95"
+                  class="self-end w-6 h-6 sm:w-7 sm:h-7 bg-[#E52E04] hover:bg-[#CC2500] text-white flex items-center justify-center border border-[#B82200] cursor-pointer active:scale-95 shadow-xs"
                   aria-label="Add pairing item"
                 >
-                  +
+                  <Plus class="w-3.5 h-3.5 stroke-[3]" />
                 </button>
               </div>
 
@@ -368,27 +380,27 @@ function handleAction() {
         <div class="w-28 h-11 bg-zinc-100 border border-zinc-950 flex items-center justify-between px-2.5">
           <button 
             @click="quantity = Math.max(1, quantity - 1)" 
-            class="p-1 font-black text-base text-zinc-950 active:text-[#E52E04]"
+            class="p-1 hover:text-[#E52E04] flex items-center justify-center text-zinc-950"
             aria-label="Decrease quantity"
           >
-            -
+            <Minus class="w-4 h-4 stroke-[3]" />
           </button>
           <span class="text-xs font-black font-mono">{{ quantity }}</span>
           <button 
             @click="quantity = quantity + 1" 
-            class="p-1 font-black text-base text-zinc-950 active:text-[#E52E04]"
+            class="p-1 hover:text-[#E52E04] flex items-center justify-center text-zinc-950"
             aria-label="Increase quantity"
           >
-            +
+            <Plus class="w-4 h-4 stroke-[3]" />
           </button>
         </div>
 
         <!-- Add to cart CTA -->
         <button 
           @click="handleAction"
-          class="flex-1 h-11 bg-[#E52E04] active:bg-[#CC2500] text-white font-black text-xs uppercase tracking-wider flex items-center justify-center gap-1.5 border border-[#B82200]"
+          class="flex-1 h-11 bg-[#E52E04] active:bg-[#CC2500] text-white font-black text-xs uppercase tracking-wider flex items-center justify-center gap-2 border border-[#B82200] shadow-sm"
         >
-          <ShoppingBag class="w-4 h-4 stroke-[2.4]" />
+          <IconBag :size="18" />
           <span>{{ product.actionLabel }} ${{ displayPrice }}</span>
         </button>
       </div>
@@ -402,8 +414,9 @@ function handleAction() {
           <CheckCircle2 class="w-4 h-4 text-emerald-400" />
           <span>Added to cart!</span>
         </div>
-        <Link href="/cart" class="underline text-amber-400 font-mono">
-          View Cart &rsaquo;
+        <Link href="/cart" class="underline text-amber-400 font-mono inline-flex items-center gap-1">
+          <span>View Cart</span>
+          <ChevronRight class="w-3.5 h-3.5" />
         </Link>
       </div>
 

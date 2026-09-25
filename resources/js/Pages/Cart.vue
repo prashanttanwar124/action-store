@@ -9,12 +9,12 @@ import {
   Plus, 
   Minus, 
   Sparkles, 
-  ShoppingBag, 
   ArrowRight,
   ShieldCheck,
   CheckCircle2,
   Clock
 } from 'lucide-vue-next';
+import IconBag from '../Components/Icons/IconBag.vue';
 
 const store = useStore();
 </script>
@@ -47,7 +47,10 @@ const store = useStore();
                 Add ${{ store.amountToFreeDelivery.toFixed(2) }} more to unlock free delivery
               </template>
               <template v-else>
-                🎉 You've unlocked FREE Home Delivery!
+                <span class="text-amber-400 flex items-center gap-1.5">
+                  <Sparkles class="w-4 h-4 text-amber-400" />
+                  <span>You've unlocked FREE Home Delivery!</span>
+                </span>
               </template>
             </div>
           </div>
@@ -75,16 +78,17 @@ const store = useStore();
           
           <!-- Empty State -->
           <div v-if="store.cartItems.length === 0" class="bg-white border border-zinc-300 p-12 text-center space-y-4">
-            <ShoppingBag class="w-12 h-12 text-zinc-400 mx-auto" />
+            <IconBag :size="48" class="text-zinc-400 mx-auto" />
             <h2 class="text-xl font-black text-zinc-950">Your cart is empty</h2>
             <p class="text-xs text-zinc-500 max-w-sm mx-auto">
               Add some freshly batched paneer, authentic spices, or fragrant basmati rice to get started.
             </p>
             <Link 
               href="/"
-              class="inline-block px-6 py-3 bg-[#E52E04] text-white text-xs font-black uppercase tracking-wider border border-[#B82200]"
+              class="inline-flex items-center gap-1.5 px-6 py-3 bg-[#E52E04] text-white text-xs font-black uppercase tracking-wider border border-[#B82200]"
             >
-              Start Shopping
+              <span>Start Shopping</span>
+              <ArrowRight class="w-3.5 h-3.5" />
             </Link>
           </div>
 
@@ -97,8 +101,10 @@ const store = useStore();
             >
               <!-- Item Details -->
               <div class="flex items-center gap-3 sm:gap-4 w-full sm:w-auto">
-                <div class="w-14 h-14 sm:w-16 sm:h-16 bg-[#EAEAEA] border border-zinc-300 p-1 flex items-center justify-center font-mono text-[9px] sm:text-[10px] text-zinc-600 bg-stripes shrink-0">
-                  {{ item.name ? item.name.split(' ').slice(-1)[0].toLowerCase() : 'item' }}
+                <div class="w-14 h-14 sm:w-16 sm:h-16 bg-[#EAEAEA] border border-zinc-300 p-1 flex items-center justify-center text-zinc-600 bg-stripes shrink-0">
+                  <span class="photo-label text-[9px] sm:text-[10px] text-center leading-tight font-bold">
+                    {{ item.name.toLowerCase().includes('atta') ? 'atta bag' : (item.name.toLowerCase().includes('ghee') ? 'ghee jar' : (item.name.toLowerCase().includes('paneer') ? 'paneer block' : (item.name.toLowerCase().includes('rice') ? 'rice sack' : 'photo label'))) }}
+                  </span>
                 </div>
                 
                 <div class="flex-1">
@@ -126,18 +132,18 @@ const store = useStore();
                 <div class="w-24 sm:w-28 h-8 sm:h-9 bg-zinc-100 border border-zinc-400 flex items-center justify-between px-2">
                   <button 
                     @click="store.removeFromCart(item.id)" 
-                    class="p-1 font-black text-sm text-zinc-950 hover:text-[#E52E04] cursor-pointer"
+                    class="p-1 hover:text-[#E52E04] cursor-pointer flex items-center justify-center text-zinc-950"
                     aria-label="Decrease quantity"
                   >
-                    -
+                    <Minus class="w-3.5 h-3.5 stroke-[3]" />
                   </button>
                   <span class="text-xs font-black font-mono">{{ item.quantity }}</span>
                   <button 
                     @click="store.addToCart({ id: item.id, name: item.name, weight: item.weight, price: item.price, originalPrice: item.originalPrice, isSubscribed: item.isSubscribed })" 
-                    class="p-1 font-black text-sm text-zinc-950 hover:text-[#E52E04] cursor-pointer"
+                    class="p-1 hover:text-[#E52E04] cursor-pointer flex items-center justify-center text-zinc-950"
                     aria-label="Increase quantity"
                   >
-                    +
+                    <Plus class="w-3.5 h-3.5 stroke-[3]" />
                   </button>
                 </div>
 
@@ -180,10 +186,10 @@ const store = useStore();
                 </div>
                 <button 
                   @click="store.addImpulseItem(impulse.id)"
-                  class="w-7 h-7 bg-zinc-950 hover:bg-[#E52E04] text-white flex items-center justify-center font-black text-xs transition-colors shrink-0 active:scale-95 cursor-pointer"
+                  class="w-7 h-7 bg-zinc-950 hover:bg-[#E52E04] text-white flex items-center justify-center transition-colors shrink-0 active:scale-95 cursor-pointer"
                   aria-label="Add impulse item"
                 >
-                  +
+                  <Plus class="w-3.5 h-3.5 stroke-[3]" />
                 </button>
               </div>
             </div>
@@ -231,13 +237,16 @@ const store = useStore();
             <!-- Desktop Checkout CTA Button -->
             <Link 
               href="/checkout"
-              class="hidden sm:block w-full py-4 bg-[#E52E04] hover:bg-[#CC2500] text-white font-black text-center text-sm uppercase tracking-wider border border-[#B82200] transition-colors shadow-sm cursor-pointer"
+              class="hidden sm:flex w-full py-4 bg-[#E52E04] hover:bg-[#CC2500] text-white font-black text-center text-sm uppercase tracking-wider border border-[#B82200] transition-colors shadow-sm cursor-pointer items-center justify-center gap-2"
             >
-              Go to checkout ${{ store.total.toFixed(2) }}
+              <span>Go to checkout</span>
+              <ArrowRight class="w-4 h-4" />
+              <span>${{ store.total.toFixed(2) }}</span>
             </Link>
 
-            <div class="pt-1 text-center text-[10px] font-mono text-zinc-500">
-              ⚡ Curbside Click & Collect Ready in 1 Hr
+            <div class="pt-1 text-center text-[10px] font-mono text-zinc-500 flex items-center justify-center gap-1.5">
+              <Clock class="w-3.5 h-3.5 text-[#E52E04]" />
+              <span>Curbside Click & Collect Ready in 1 Hr</span>
             </div>
           </div>
 
@@ -270,9 +279,11 @@ const store = useStore();
 
         <Link 
           href="/checkout"
-          class="flex-1 py-3 bg-[#E52E04] active:bg-[#CC2500] text-white font-black text-xs uppercase tracking-wider text-center border border-[#B82200] cursor-pointer"
+          class="flex-1 py-3 bg-[#E52E04] active:bg-[#CC2500] text-white font-black text-xs uppercase tracking-wider text-center border border-[#B82200] cursor-pointer flex items-center justify-center gap-2"
         >
-          Go to checkout ${{ store.total.toFixed(2) }}
+          <span>Go to checkout</span>
+          <ArrowRight class="w-4 h-4" />
+          <span>${{ store.total.toFixed(2) }}</span>
         </Link>
       </div>
 

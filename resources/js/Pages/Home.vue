@@ -55,17 +55,17 @@ function addRecipeKit(name, price) {
             <div>
               <Link 
                 href="/products/sweets-box" 
-                class="inline-flex items-center gap-1 text-xs font-black text-white hover:underline mt-2 sm:mt-4 group"
+                class="inline-flex items-center gap-1.5 text-xs font-black text-white hover:underline mt-2 sm:mt-4 group"
               >
                 <span>Pre-order from $24.99</span>
-                <span class="text-base leading-none group-hover:translate-x-0.5 transition-transform">&rsaquo;</span>
+                <ChevronRight class="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
               </Link>
             </div>
           </div>
 
           <!-- Banner Visual Texture (5 cols: Diagonal Stripe Box labeled "mithai box") -->
           <div class="col-span-5 relative bg-red-900/40 border-l border-white/20 p-2 sm:p-4 flex flex-col justify-end overflow-hidden bg-stripes-bold">
-            <span class="relative z-10 text-[10px] font-mono text-white/95 font-semibold">
+            <span class="photo-label relative z-10 text-[10px] text-white/95 font-semibold">
               mithai box
             </span>
           </div>
@@ -93,9 +93,10 @@ function addRecipeKit(name, price) {
             </div>
             <Link 
               href="/cart"
-              class="px-3 py-1.5 bg-zinc-100 hover:bg-zinc-200 text-xs font-black text-zinc-950 border border-zinc-300"
+              class="px-3 py-1.5 bg-zinc-100 hover:bg-zinc-200 text-xs font-black text-zinc-950 border border-zinc-300 inline-flex items-center gap-1"
             >
-              Start Order &rsaquo;
+              <span>Start Order</span>
+              <ChevronRight class="w-3.5 h-3.5" />
             </Link>
           </div>
         </div>
@@ -127,24 +128,24 @@ function addRecipeKit(name, price) {
           <div class="w-[130px] sm:w-auto shrink-0 snap-start flex flex-col justify-between bg-white border border-zinc-300 p-2 group hover:border-zinc-950 transition-colors">
             <div>
               <div class="relative w-full aspect-square bg-[#EAEAEA] border border-zinc-200 p-1.5 flex flex-col justify-between bg-stripes mb-1.5">
-                <span class="text-[10px] font-mono text-zinc-700">atta bag</span>
+                <span class="photo-label text-[10px] text-zinc-700">atta bag</span>
                 
-                <!-- Bottom red [- 1 +] control matching Screen 1a -->
+                <!-- Bottom red [- 1 +] control matching Screen 1a with Lucide icons -->
                 <div class="w-full bg-[#E52E04] text-white h-7 sm:h-8 flex items-center justify-between px-1.5 border border-[#B82200]">
                   <button 
                     @click.stop="store.removeFromCart('atta')" 
-                    class="p-0.5 font-black hover:bg-[#CC2500] cursor-pointer"
+                    class="p-0.5 hover:bg-[#CC2500] cursor-pointer flex items-center justify-center"
                     aria-label="Decrease quantity"
                   >
-                    -
+                    <Minus class="w-3.5 h-3.5 stroke-[3]" />
                   </button>
                   <span class="text-xs font-black font-mono">{{ store.getItemQuantity('atta') }}</span>
                   <button 
                     @click.stop="store.addToCart({ id: 'atta', name: 'Aashirvaad Chakki Atta', weight: '20 lb', price: 18.04, originalPrice: 18.99, isSubscribed: true })" 
-                    class="p-0.5 font-black hover:bg-[#CC2500] cursor-pointer"
+                    class="p-0.5 hover:bg-[#CC2500] cursor-pointer flex items-center justify-center"
                     aria-label="Increase quantity"
                   >
-                    +
+                    <Plus class="w-3.5 h-3.5 stroke-[3]" />
                   </button>
                 </div>
               </div>
@@ -161,14 +162,14 @@ function addRecipeKit(name, price) {
           <div class="w-[130px] sm:w-auto shrink-0 snap-start flex flex-col justify-between bg-white border border-zinc-300 p-2 group hover:border-zinc-950 transition-colors">
             <div>
               <div class="relative w-full aspect-square bg-[#EAEAEA] border border-zinc-200 p-1.5 flex flex-col justify-between bg-stripes mb-1.5">
-                <span class="text-[10px] font-mono text-zinc-700">ghee jar</span>
+                <span class="photo-label text-[10px] text-zinc-700">ghee jar</span>
                 
                 <button 
                   @click="store.addToCart({ id: 'ghee', name: 'Amul Pure Desi Ghee', weight: '500 ml', price: 9.99, originalPrice: 9.99 })"
-                  class="self-end w-7 h-7 sm:w-8 sm:h-8 bg-[#E52E04] hover:bg-[#CC2500] text-white flex items-center justify-center border border-[#B82200] font-black cursor-pointer active:scale-95"
+                  class="self-end w-7 h-7 sm:w-8 sm:h-8 bg-[#E52E04] hover:bg-[#CC2500] text-white flex items-center justify-center border border-[#B82200] font-black cursor-pointer active:scale-95 shadow-xs"
                   aria-label="Add Desi Ghee"
                 >
-                  +
+                  <Plus class="w-4 h-4 stroke-[3]" />
                 </button>
               </div>
 
@@ -184,14 +185,14 @@ function addRecipeKit(name, price) {
           <div class="w-[130px] sm:w-auto shrink-0 snap-start flex flex-col justify-between bg-white border border-zinc-300 p-2 group hover:border-zinc-950 transition-colors">
             <div>
               <div class="relative w-full aspect-square bg-[#EAEAEA] border border-zinc-200 p-1.5 flex flex-col justify-between bg-stripes mb-1.5">
-                <span class="text-[10px] font-mono text-zinc-700">biscuits</span>
+                <span class="photo-label text-[10px] text-zinc-700">biscuits</span>
                 
                 <button 
                   @click="store.addToCart({ id: 'biscuits', name: 'Parle-G Glucose Biscuits', weight: '800 g', price: 3.49, originalPrice: 3.49 })"
-                  class="self-end w-7 h-7 sm:w-8 sm:h-8 bg-[#E52E04] hover:bg-[#CC2500] text-white flex items-center justify-center border border-[#B82200] font-black cursor-pointer active:scale-95"
+                  class="self-end w-7 h-7 sm:w-8 sm:h-8 bg-[#E52E04] hover:bg-[#CC2500] text-white flex items-center justify-center border border-[#B82200] font-black cursor-pointer active:scale-95 shadow-xs"
                   aria-label="Add Biscuits"
                 >
-                  +
+                  <Plus class="w-4 h-4 stroke-[3]" />
                 </button>
               </div>
 
@@ -207,14 +208,14 @@ function addRecipeKit(name, price) {
           <div class="w-[130px] sm:w-auto shrink-0 snap-start flex flex-col justify-between bg-white border border-zinc-300 p-2 group hover:border-zinc-950 transition-colors">
             <div>
               <div class="relative w-full aspect-square bg-[#EAEAEA] border border-zinc-200 p-1.5 flex flex-col justify-between bg-stripes mb-1.5">
-                <span class="text-[10px] font-mono text-zinc-700">paneer block</span>
+                <span class="photo-label text-[10px] text-zinc-700">paneer block</span>
                 
                 <button 
                   @click="store.addToCart({ id: 'paneer', name: 'Amul Malai Paneer', weight: '400 g', price: 5.99, originalPrice: 5.99 })"
-                  class="self-end w-7 h-7 sm:w-8 sm:h-8 bg-[#E52E04] hover:bg-[#CC2500] text-white flex items-center justify-center border border-[#B82200] font-black cursor-pointer active:scale-95"
+                  class="self-end w-7 h-7 sm:w-8 sm:h-8 bg-[#E52E04] hover:bg-[#CC2500] text-white flex items-center justify-center border border-[#B82200] font-black cursor-pointer active:scale-95 shadow-xs"
                   aria-label="Add Malai Paneer"
                 >
-                  +
+                  <Plus class="w-4 h-4 stroke-[3]" />
                 </button>
               </div>
 
@@ -230,14 +231,14 @@ function addRecipeKit(name, price) {
           <div class="w-[130px] sm:w-auto shrink-0 snap-start flex flex-col justify-between bg-white border border-zinc-300 p-2 group hover:border-zinc-950 transition-colors">
             <div>
               <div class="relative w-full aspect-square bg-[#EAEAEA] border border-zinc-200 p-1.5 flex flex-col justify-between bg-stripes mb-1.5">
-                <span class="text-[10px] font-mono text-zinc-700">rice sack</span>
+                <span class="photo-label text-[10px] text-zinc-700">rice sack</span>
                 
                 <button 
                   @click="store.addToCart({ id: 'rice', name: 'Royal Aged Basmati Rice', weight: '20 lb', price: 24.99, originalPrice: 24.99 })"
-                  class="self-end w-7 h-7 sm:w-8 sm:h-8 bg-[#E52E04] hover:bg-[#CC2500] text-white flex items-center justify-center border border-[#B82200] font-black cursor-pointer active:scale-95"
+                  class="self-end w-7 h-7 sm:w-8 sm:h-8 bg-[#E52E04] hover:bg-[#CC2500] text-white flex items-center justify-center border border-[#B82200] font-black cursor-pointer active:scale-95 shadow-xs"
                   aria-label="Add Basmati Rice"
                 >
-                  +
+                  <Plus class="w-4 h-4 stroke-[3]" />
                 </button>
               </div>
 
@@ -270,13 +271,13 @@ function addRecipeKit(name, price) {
           <div class="bg-white border border-zinc-300 p-2 sm:p-4 flex flex-col justify-between hover:border-zinc-950 transition-colors">
             <div>
               <div class="w-full h-20 sm:h-32 bg-[#EAEAEA] border border-zinc-200 mb-1.5 p-1.5 bg-stripes flex flex-col justify-between">
-                <span class="text-[9px] sm:text-[10px] font-mono text-zinc-700">paneer kit</span>
+                <span class="photo-label text-[9px] sm:text-[10px] text-zinc-700">paneer kit</span>
                 <button 
                   @click="addRecipeKit('Paneer Butter Masala Kit', 14.99)"
-                  class="self-end w-6 h-6 sm:w-7 sm:h-7 bg-[#E52E04] hover:bg-[#CC2500] text-white flex items-center justify-center font-black text-xs active:scale-95 cursor-pointer"
+                  class="self-end w-6 h-6 sm:w-7 sm:h-7 bg-[#E52E04] hover:bg-[#CC2500] text-white flex items-center justify-center active:scale-95 cursor-pointer border border-[#B82200]"
                   aria-label="Add Paneer kit"
                 >
-                  +
+                  <Plus class="w-3.5 h-3.5 stroke-[3]" />
                 </button>
               </div>
 
@@ -291,13 +292,13 @@ function addRecipeKit(name, price) {
           <div class="bg-white border border-zinc-300 p-2 sm:p-4 flex flex-col justify-between hover:border-zinc-950 transition-colors">
             <div>
               <div class="w-full h-20 sm:h-32 bg-[#EAEAEA] border border-zinc-200 mb-1.5 p-1.5 bg-stripes flex flex-col justify-between">
-                <span class="text-[9px] sm:text-[10px] font-mono text-zinc-700">biryani kit</span>
+                <span class="photo-label text-[9px] sm:text-[10px] text-zinc-700">biryani kit</span>
                 <button 
                   @click="addRecipeKit('Royal Dum Biryani Kit', 19.99)"
-                  class="self-end w-6 h-6 sm:w-7 sm:h-7 bg-[#E52E04] hover:bg-[#CC2500] text-white flex items-center justify-center font-black text-xs active:scale-95 cursor-pointer"
+                  class="self-end w-6 h-6 sm:w-7 sm:h-7 bg-[#E52E04] hover:bg-[#CC2500] text-white flex items-center justify-center active:scale-95 cursor-pointer border border-[#B82200]"
                   aria-label="Add Biryani kit"
                 >
-                  +
+                  <Plus class="w-3.5 h-3.5 stroke-[3]" />
                 </button>
               </div>
 
@@ -312,13 +313,13 @@ function addRecipeKit(name, price) {
           <div class="bg-white border border-zinc-300 p-2 sm:p-4 flex flex-col justify-between hover:border-zinc-950 transition-colors">
             <div>
               <div class="w-full h-20 sm:h-32 bg-[#EAEAEA] border border-zinc-200 mb-1.5 p-1.5 bg-stripes flex flex-col justify-between">
-                <span class="text-[9px] sm:text-[10px] font-mono text-zinc-700">chana kit</span>
+                <span class="photo-label text-[9px] sm:text-[10px] text-zinc-700">chana kit</span>
                 <button 
                   @click="addRecipeKit('Punjabi Chana Masala Kit', 11.99)"
-                  class="self-end w-6 h-6 sm:w-7 sm:h-7 bg-[#E52E04] hover:bg-[#CC2500] text-white flex items-center justify-center font-black text-xs active:scale-95 cursor-pointer"
+                  class="self-end w-6 h-6 sm:w-7 sm:h-7 bg-[#E52E04] hover:bg-[#CC2500] text-white flex items-center justify-center active:scale-95 cursor-pointer border border-[#B82200]"
                   aria-label="Add Chana kit"
                 >
-                  +
+                  <Plus class="w-3.5 h-3.5 stroke-[3]" />
                 </button>
               </div>
 
@@ -333,13 +334,13 @@ function addRecipeKit(name, price) {
           <div class="bg-white border border-zinc-300 p-2 sm:p-4 flex flex-col justify-between hover:border-zinc-950 transition-colors">
             <div>
               <div class="w-full h-20 sm:h-32 bg-[#EAEAEA] border border-zinc-200 mb-1.5 p-1.5 bg-stripes flex flex-col justify-between">
-                <span class="text-[9px] sm:text-[10px] font-mono text-zinc-700">dal kit</span>
+                <span class="photo-label text-[9px] sm:text-[10px] text-zinc-700">dal kit</span>
                 <button 
                   @click="addRecipeKit('Dal Tadka & Jeera Rice Kit', 10.99)"
-                  class="self-end w-6 h-6 sm:w-7 sm:h-7 bg-[#E52E04] hover:bg-[#CC2500] text-white flex items-center justify-center font-black text-xs active:scale-95 cursor-pointer"
+                  class="self-end w-6 h-6 sm:w-7 sm:h-7 bg-[#E52E04] hover:bg-[#CC2500] text-white flex items-center justify-center active:scale-95 cursor-pointer border border-[#B82200]"
                   aria-label="Add Dal kit"
                 >
-                  +
+                  <Plus class="w-3.5 h-3.5 stroke-[3]" />
                 </button>
               </div>
 

@@ -6,9 +6,10 @@
 
         <title inertia>{{ config('app.name', 'Laravel') }}</title>
 
-        <!-- Local Self-Hosted Modernist Fonts -->
-        <link rel="preload" href="/fonts/plus-jakarta-sans.woff2" as="font" type="font/woff2" crossorigin>
-        <link rel="preload" href="/fonts/jetbrains-mono.woff2" as="font" type="font/woff2" crossorigin>
+        <!-- Local Self-Hosted Design System Fonts -->
+        <link rel="preload" href="/fonts/archivo.woff2" as="font" type="font/woff2" crossorigin>
+        <link rel="preload" href="/fonts/caprasimo.woff2" as="font" type="font/woff2" crossorigin>
+        <link rel="preload" href="/fonts/figtree.woff2" as="font" type="font/woff2" crossorigin>
 
         <!-- Scripts -->
         @routes

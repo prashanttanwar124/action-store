@@ -13,8 +13,11 @@ export default {
     theme: {
         extend: {
             fontFamily: {
-                sans: ['"Plus Jakarta Sans"', ...defaultTheme.fontFamily.sans],
-                mono: ['"JetBrains Mono"', ...defaultTheme.fontFamily.mono],
+                sans: ['Archivo', ...defaultTheme.fontFamily.sans],
+                archivo: ['Archivo', ...defaultTheme.fontFamily.sans],
+                caprasimo: ['Caprasimo', 'serif'],
+                figtree: ['Figtree', ...defaultTheme.fontFamily.sans],
+                mono: ['ui-monospace', 'SFMono-Regular', 'Menlo', 'Monaco', 'Consolas', 'monospace'],
             },
         },
     },

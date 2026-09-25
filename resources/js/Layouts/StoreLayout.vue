@@ -18,8 +18,10 @@ import {
   ArrowRight,
   ShieldCheck,
   Truck,
-  Home
+  Home,
+  Check
 } from 'lucide-vue-next';
+import IconBag from '../Components/Icons/IconBag.vue';
 
 const props = defineProps({
   title: {
@@ -122,7 +124,7 @@ const navTabs = computed(() => [
                 <span class="font-medium text-zinc-700">
                   Pickup · {{ store.selectedStore }} · {{ store.readyTime }}
                 </span>
-                <span class="text-zinc-400 text-[10px]">▾</span>
+                <ChevronDown class="w-3.5 h-3.5 text-zinc-500" />
               </div>
             </div>
 
@@ -205,11 +207,11 @@ const navTabs = computed(() => [
               class="relative p-2 sm:px-3.5 sm:py-2 bg-white sm:bg-zinc-950 text-zinc-950 sm:text-white border-2 border-zinc-950 sm:border-zinc-950 transition-colors cursor-pointer group flex items-center gap-2"
               aria-label="Shopping Cart"
             >
-              <div class="relative">
-                <ShoppingBag class="w-5 h-5 sm:w-4 sm:h-4 stroke-[2.2]" />
+              <div class="relative w-5 h-5 sm:w-4 sm:h-4">
+                <IconBag />
                 <span 
                   v-if="store.totalItemCount > 0"
-                  class="absolute -top-2 -right-2 bg-[#E52E04] text-white text-[10px] font-black w-4 h-4 flex items-center justify-center border border-white sm:border-zinc-950"
+                  class="absolute -top-2 -right-2 bg-[#E52E04] text-white text-[10px] font-bold w-4 h-4 flex items-center justify-center border border-white sm:border-zinc-950 font-mono"
                 >
                   {{ store.totalItemCount }}
                 </span>
@@ -239,7 +241,7 @@ const navTabs = computed(() => [
               <span class="font-bold text-zinc-950">{{ st.name }}</span>
               <span class="text-zinc-500 font-mono text-[10px] block">{{ st.readyTime }}</span>
             </div>
-            <span v-if="store.selectedStore === st.name" class="text-[#E52E04] font-black">✓</span>
+            <Check v-if="store.selectedStore === st.name" class="w-4 h-4 text-[#E52E04] stroke-[3]" />
           </button>
         </div>
 
@@ -346,7 +348,10 @@ const navTabs = computed(() => [
                 ${{ store.amountToFreeDelivery.toFixed(2) }} to free delivery
               </template>
               <template v-else>
-                <span class="text-amber-400 font-bold">🎉 Free Delivery Unlocked!</span>
+                <span class="text-amber-400 font-bold flex items-center gap-1">
+                  <Sparkles class="w-3.5 h-3.5" />
+                  <span>Free Delivery Unlocked!</span>
+                </span>
               </template>
             </div>
           </div>

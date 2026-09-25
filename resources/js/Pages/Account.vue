@@ -13,7 +13,10 @@ import {
   Calendar,
   Clock,
   ArrowRight,
-  CheckCircle2
+  CheckCircle2,
+  SkipForward,
+  Pause,
+  Play
 } from 'lucide-vue-next';
 
 const store = useStore();
@@ -43,8 +46,9 @@ function reorderPastOrder() {
           <CheckCircle2 class="w-4 h-4 text-emerald-400" />
           <span>Reordered all 6 past items into your cart!</span>
         </div>
-        <Link href="/cart" class="underline text-amber-400 font-mono">
-          View Cart &rsaquo;
+        <Link href="/cart" class="underline text-amber-400 font-mono inline-flex items-center gap-1">
+          <span>View Cart</span>
+          <ChevronRight class="w-3.5 h-3.5" />
         </Link>
       </div>
 
@@ -154,23 +158,26 @@ function reorderPastOrder() {
               <template v-if="sub.status === 'active'">
                 <button 
                   @click="store.skipSubscription(sub.id)"
-                  class="flex-1 sm:flex-none px-3 py-1.5 border border-zinc-400 bg-white hover:bg-zinc-100 active:bg-zinc-200 text-xs font-bold text-zinc-900 transition-colors cursor-pointer"
+                  class="flex-1 sm:flex-none px-3 py-1.5 border border-zinc-400 bg-white hover:bg-zinc-100 active:bg-zinc-200 text-xs font-bold text-zinc-900 transition-colors cursor-pointer flex items-center justify-center gap-1.5"
                 >
-                  ▷| Skip next
+                  <SkipForward class="w-3.5 h-3.5 text-zinc-700" />
+                  <span>Skip next</span>
                 </button>
                 <button 
                   @click="store.toggleSubscription(sub.id)"
-                  class="flex-1 sm:flex-none px-3 py-1.5 border border-zinc-400 bg-white hover:bg-zinc-100 active:bg-zinc-200 text-xs font-bold text-zinc-900 transition-colors cursor-pointer"
+                  class="flex-1 sm:flex-none px-3 py-1.5 border border-zinc-400 bg-white hover:bg-zinc-100 active:bg-zinc-200 text-xs font-bold text-zinc-900 transition-colors cursor-pointer flex items-center justify-center gap-1.5"
                 >
-                  Pause
+                  <Pause class="w-3.5 h-3.5 text-zinc-700" />
+                  <span>Pause</span>
                 </button>
               </template>
               <template v-else>
                 <button 
                   @click="store.toggleSubscription(sub.id)"
-                  class="w-full sm:w-auto px-4 py-1.5 bg-zinc-950 text-white hover:bg-zinc-800 active:bg-black text-xs font-bold transition-colors cursor-pointer"
+                  class="w-full sm:w-auto px-4 py-1.5 bg-zinc-950 text-white hover:bg-zinc-800 active:bg-black text-xs font-bold transition-colors cursor-pointer flex items-center justify-center gap-1.5"
                 >
-                  Resume Subscription
+                  <Play class="w-3.5 h-3.5 text-white" />
+                  <span>Resume Subscription</span>
                 </button>
               </template>
             </div>
@@ -210,7 +217,7 @@ function reorderPastOrder() {
               class="w-full sm:w-auto px-5 py-3 bg-[#E52E04] hover:bg-[#CC2500] active:bg-[#B82200] text-white font-black text-xs uppercase tracking-wider border border-[#B82200] transition-colors flex items-center justify-center gap-2 cursor-pointer shadow-sm"
             >
               <RotateCcw class="w-4 h-4 stroke-[2.5]" />
-              <span>🔁 Reorder all 6 items into cart</span>
+              <span>Reorder all 6 items into cart</span>
             </button>
           </div>
         </div>
