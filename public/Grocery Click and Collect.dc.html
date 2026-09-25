@@ -1,0 +1,735 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Masala Mart — Shopping Flow (Click-and-Collect Mobile Web V1)</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="./_ds/modernist-7555aeb4-b620-4b84-a715-07a153cd6e8f/styles.css">
+  <script type="module" src="./_ds/modernist-7555aeb4-b620-4b84-a715-07a153cd6e8f/_ds_bundle.js"></script>
+  <script type="module" src="./support.js"></script>
+  <style>
+    :root {
+      --bg: #F4F4F5;
+      --ink: #18181B;
+      --red: #E52E04;
+      --red-hover: #CC2500;
+      --border: #D4D4D8;
+      --subtle: #EAEAEA;
+    }
+    * {
+      border-radius: 0px !important;
+      -webkit-font-smoothing: antialiased;
+    }
+    body {
+      background-color: #EBEBEB;
+      color: var(--ink);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    }
+    .mono {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    }
+    .bg-stripes {
+      background-image: repeating-linear-gradient(45deg, rgba(0, 0, 0, 0.04) 0px, rgba(0, 0, 0, 0.04) 2px, transparent 2px, transparent 8px);
+    }
+    .bg-stripes-bold {
+      background-image: repeating-linear-gradient(135deg, rgba(255, 255, 255, 0.18) 0px, rgba(255, 255, 255, 0.18) 3px, transparent 3px, transparent 12px);
+    }
+    .no-scrollbar::-webkit-scrollbar { display: none; }
+    .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+  </style>
+</head>
+<body class="min-h-screen p-0 sm:py-8 flex flex-col items-center">
+
+  <!-- Screen Switcher Navigation Bar for Testing/Figma Flow -->
+  <div class="w-full max-w-[420px] bg-zinc-900 text-white p-2 flex items-center justify-between text-[11px] font-mono mb-2 shadow-md">
+    <span class="text-zinc-400 font-bold uppercase">Screen:</span>
+    <div class="flex gap-1 overflow-x-auto no-scrollbar">
+      <button onclick="setScreen('home')" id="btn-home" class="px-2 py-1 bg-[#E52E04] text-white font-bold cursor-pointer">1a Home</button>
+      <button onclick="setScreen('pdp-paneer')" id="btn-pdp-paneer" class="px-2 py-1 bg-zinc-800 text-zinc-300 hover:text-white cursor-pointer">1b PDP</button>
+      <button onclick="setScreen('pdp-rice')" id="btn-pdp-rice" class="px-2 py-1 bg-zinc-800 text-zinc-300 hover:text-white cursor-pointer">1c Staple</button>
+      <button onclick="setScreen('cart')" id="btn-cart" class="px-2 py-1 bg-zinc-800 text-zinc-300 hover:text-white cursor-pointer">1d Cart</button>
+      <button onclick="setScreen('checkout')" id="btn-checkout" class="px-2 py-1 bg-zinc-800 text-zinc-300 hover:text-white cursor-pointer">1e Pay</button>
+      <button onclick="setScreen('account')" id="btn-account" class="px-2 py-1 bg-zinc-800 text-zinc-300 hover:text-white cursor-pointer">1f Acct</button>
+    </div>
+  </div>
+
+  <!-- Mobile Web Device Container (420px max width matching PDF) -->
+  <div class="w-full max-w-[420px] bg-white min-h-[840px] border-x border-zinc-300 shadow-2xl flex flex-col relative overflow-hidden">
+
+    <!-- Mobile System Status Bar (9:41 · 5G) -->
+    <div class="px-4 pt-3 pb-2 flex justify-between items-center text-xs font-bold text-zinc-950 bg-white border-b border-zinc-100 select-none">
+      <span>9:41</span>
+      <div class="flex items-center gap-1.5 font-mono text-[10px]">
+        <span class="tracking-widest font-black">5G</span>
+        <div class="flex items-end gap-0.5 h-3">
+          <span class="w-1 h-1.5 bg-zinc-950"></span>
+          <span class="w-1 h-2.5 bg-zinc-950"></span>
+          <span class="w-1 h-3 bg-zinc-950"></span>
+        </div>
+      </div>
+    </div>
+
+    <!-- SCREEN 1A: HOME / STOREFRONT -->
+    <div id="screen-home" class="screen flex-1 flex flex-col pb-28">
+      <div class="px-4 pt-3 pb-2 flex items-start justify-between bg-white">
+        <div>
+          <h1 class="text-2xl font-black tracking-tight text-zinc-950 leading-none">
+            Masala Mart
+          </h1>
+          <div class="flex items-center gap-1 text-xs text-zinc-600 mt-1">
+            <span>Pickup · Main St. store · ready in 1 hr</span>
+            <span>▾</span>
+          </div>
+        </div>
+        <button onclick="setScreen('cart')" class="relative p-2 border-2 border-zinc-950 bg-white text-zinc-950 hover:bg-zinc-100 cursor-pointer">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
+          <span class="cart-badge-count absolute -top-1.5 -right-1.5 bg-[#E52E04] text-white text-[11px] font-black w-5 h-5 flex items-center justify-center border border-white">3</span>
+        </button>
+      </div>
+
+      <div class="px-4 py-2 sticky top-0 z-30 bg-white border-b border-zinc-200">
+        <div class="relative flex items-center">
+          <svg class="w-4 h-4 text-zinc-600 absolute left-3" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+          <input type="text" placeholder="Search paneer, atta, curry leaves…" class="w-full pl-9 pr-3 py-2 bg-zinc-100 border border-zinc-400 text-xs text-zinc-950 focus:outline-none focus:bg-white" />
+        </div>
+      </div>
+
+      <div class="px-4 py-3 space-y-5">
+        <div class="bg-[#E52E04] text-white grid grid-cols-12 min-h-[160px] border border-[#B82200] overflow-hidden relative">
+          <div class="col-span-7 p-3.5 flex flex-col justify-between">
+            <div>
+              <div class="text-[9px] mono font-bold tracking-wider uppercase text-white/95 mb-1">
+                FESTIVAL PRE-ORDER · CLOSES OCT 30
+              </div>
+              <h2 class="text-xl font-black leading-tight tracking-tight">
+                Diwali<br />sweets,<br />boxed &<br />ready.
+              </h2>
+            </div>
+            <a href="javascript:void(0)" onclick="setScreen('pdp-paneer')" class="inline-flex items-center gap-1 text-xs font-black text-white hover:underline mt-2">
+              Pre-order from $24.99 &rsaquo;
+            </a>
+          </div>
+          <div class="col-span-5 relative bg-red-900/40 border-l border-white/20 flex flex-col justify-end p-2 overflow-hidden bg-stripes-bold">
+            <span class="relative z-10 text-[10px] mono text-white/95">mithai box</span>
+          </div>
+        </div>
+        <div class="flex items-center gap-1">
+          <span class="w-4 h-1 bg-zinc-950"></span>
+          <span class="w-2 h-1 bg-zinc-300"></span>
+          <span class="w-2 h-1 bg-zinc-300"></span>
+        </div>
+
+        <div>
+          <div class="flex items-center justify-between mb-2.5">
+            <h3 class="text-lg font-black text-zinc-950 tracking-tight">Buy it again</h3>
+            <span onclick="setScreen('account')" class="text-xs font-bold text-[#E52E04] cursor-pointer">See all</span>
+          </div>
+          <div class="flex gap-2.5 overflow-x-auto no-scrollbar pb-1 -mx-4 px-4">
+            <div class="w-[125px] shrink-0 flex flex-col">
+              <div class="relative w-full h-[135px] bg-[#EAEAEA] border border-zinc-300 flex flex-col justify-between p-1.5 bg-stripes">
+                <span class="text-[10px] mono text-zinc-700">atta bag</span>
+                <div class="w-full bg-[#E52E04] text-white h-8 flex items-center justify-between px-2 border border-[#B82200]">
+                  <button onclick="changeQty('atta', -1)" class="p-0.5 cursor-pointer">-</button>
+                  <span id="qty-atta-root" class="text-xs font-black">1</span>
+                  <button onclick="changeQty('atta', 1)" class="p-0.5 cursor-pointer">+</button>
+                </div>
+              </div>
+              <div class="mt-1.5 text-left cursor-pointer" onclick="setScreen('pdp-rice')">
+                <div class="text-sm font-black text-zinc-950 leading-none">$18.99</div>
+                <div class="text-xs font-bold text-zinc-950 mt-0.5">Chakki Atta</div>
+                <div class="text-[10px] text-zinc-500 mono">20 lb</div>
+              </div>
+            </div>
+
+            <div class="w-[125px] shrink-0 flex flex-col">
+              <div class="relative w-full h-[135px] bg-[#EAEAEA] border border-zinc-300 flex flex-col justify-between p-1.5 bg-stripes">
+                <span class="text-[10px] mono text-zinc-700">ghee jar</span>
+                <button onclick="changeQty('ghee', 1)" class="ml-auto w-8 h-8 bg-[#E52E04] hover:bg-[#CC2500] text-white flex items-center justify-center border border-[#B82200] cursor-pointer">+</button>
+              </div>
+              <div class="mt-1.5 text-left">
+                <div class="text-sm font-black text-zinc-950 leading-none">$9.99</div>
+                <div class="text-xs font-bold text-zinc-950 mt-0.5">Desi Ghee</div>
+                <div class="text-[10px] text-zinc-500 mono">500 ml</div>
+              </div>
+            </div>
+
+            <div class="w-[125px] shrink-0 flex flex-col">
+              <div class="relative w-full h-[135px] bg-[#EAEAEA] border border-zinc-300 flex flex-col justify-between p-1.5 bg-stripes">
+                <span class="text-[10px] mono text-zinc-700">biscuits</span>
+                <button onclick="changeQty('biscuits', 1)" class="ml-auto w-8 h-8 bg-[#E52E04] hover:bg-[#CC2500] text-white flex items-center justify-center border border-[#B82200] cursor-pointer">+</button>
+              </div>
+              <div class="mt-1.5 text-left">
+                <div class="text-sm font-black text-zinc-950 leading-none">$3.49</div>
+                <div class="text-xs font-bold text-zinc-950 mt-0.5 truncate">Glucose Biscuits</div>
+                <div class="text-[10px] text-zinc-500 mono">800 g</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <div class="flex items-center justify-between mb-1">
+            <h3 class="text-lg font-black text-zinc-950 tracking-tight">Recipe kits</h3>
+            <span class="text-xs font-bold text-[#E52E04] cursor-pointer">All 14 kits</span>
+          </div>
+          <p class="text-xs text-zinc-500 font-medium mb-2.5">
+            Every ingredient for one dish, added in one tap.
+          </p>
+          <div class="grid grid-cols-2 gap-2.5">
+            <div class="bg-white border border-zinc-300 p-2 flex flex-col justify-between cursor-pointer" onclick="setScreen('pdp-paneer')">
+              <div class="w-full h-20 bg-[#EAEAEA] border border-zinc-200 mb-1.5 p-1 bg-stripes flex flex-col justify-between">
+                <span class="text-[9px] mono text-zinc-700">paneer kit</span>
+                <button class="self-end w-6 h-6 bg-[#E52E04] text-white flex items-center justify-center">+</button>
+              </div>
+              <div>
+                <div class="font-black text-xs text-zinc-950">$14.99</div>
+                <div class="font-bold text-[11px] text-zinc-950">Paneer Butter Masala</div>
+              </div>
+            </div>
+            <div class="bg-white border border-zinc-300 p-2 flex flex-col justify-between cursor-pointer" onclick="setScreen('pdp-rice')">
+              <div class="w-full h-20 bg-[#EAEAEA] border border-zinc-200 mb-1.5 p-1 bg-stripes flex flex-col justify-between">
+                <span class="text-[9px] mono text-zinc-700">biryani kit</span>
+                <button class="self-end w-6 h-6 bg-[#E52E04] text-white flex items-center justify-center">+</button>
+              </div>
+              <div>
+                <div class="font-black text-xs text-zinc-950">$19.99</div>
+                <div class="font-bold text-[11px] text-zinc-950">Royal Dum Biryani</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SCREEN 1B: PRODUCT DETAIL — FRESH ITEM -->
+    <div id="screen-pdp-paneer" class="screen hidden flex-1 flex flex-col pb-20">
+      <div class="px-4 py-3 bg-white border-b border-zinc-200 flex items-center justify-between">
+        <button onclick="setScreen('home')" class="p-1 font-bold text-zinc-950 cursor-pointer">&lsaquo;</button>
+        <span class="font-extrabold text-xs mono text-zinc-950">Dairy & Paneer</span>
+        <button onclick="setScreen('cart')" class="relative p-1.5 border-2 border-zinc-950 bg-white">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
+          <span class="cart-badge-count absolute -top-1.5 -right-1.5 bg-[#E52E04] text-white text-[10px] font-black w-4 h-4 flex items-center justify-center border border-white">3</span>
+        </button>
+      </div>
+
+      <div class="relative w-full h-[280px] bg-[#EAEAEA] border-b border-zinc-300 flex flex-col justify-between p-3 bg-stripes">
+        <div class="flex items-center justify-between">
+          <span class="bg-[#FFEFEA] text-[#B82200] border border-[#FFCCBC] px-2 py-0.5 text-[11px] mono font-bold">
+            In stock · 24 left
+          </span>
+          <span class="text-[11px] mono text-zinc-700 bg-white/95 border border-zinc-300 px-2 py-0.5">
+            product photo · paneer block
+          </span>
+        </div>
+        <div class="self-start bg-zinc-950 text-white p-2.5 border border-zinc-800">
+          <div class="text-2xl font-black leading-none">400 g</div>
+          <div class="text-[10px] mono text-zinc-400 mt-1">14.1 oz · 1 block</div>
+        </div>
+      </div>
+
+      <div class="p-4 space-y-4">
+        <div>
+          <div class="text-[10px] mono font-bold uppercase text-[#E52E04]">FRESH · MADE LOCALLY</div>
+          <h1 class="text-2xl font-black text-zinc-950 mt-0.5">Malai Paneer</h1>
+          <div class="flex items-baseline gap-2 mt-1">
+            <span class="text-2xl font-black text-zinc-950">$5.99</span>
+            <span class="text-xs mono text-zinc-500">$14.98 / kg</span>
+          </div>
+          <div class="flex items-center gap-1.5 mt-2.5 text-xs text-zinc-700 font-medium">
+            <span>🕒 Pickup today from 4 pm · Best before Oct 2</span>
+          </div>
+          <p class="text-xs text-zinc-600 leading-relaxed mt-2">
+            Soft, full-cream paneer pressed in small batches. Holds its shape in tikka and melts into makhani.
+          </p>
+        </div>
+
+        <div class="pt-3 border-t border-zinc-200">
+          <h3 class="text-sm font-black text-zinc-950">Frequently bought together</h3>
+          <p class="text-[11px] text-zinc-500 mb-2.5">68% of paneer shoppers add these</p>
+          <div class="p-2.5 border border-zinc-300 bg-zinc-50 flex items-center justify-between">
+            <div class="flex items-center gap-2.5">
+              <div class="w-10 h-10 bg-[#EAEAEA] border border-zinc-300 bg-stripes"></div>
+              <div>
+                <div class="font-black text-xs text-zinc-950">Garam Masala</div>
+                <div class="text-[10px] mono text-zinc-500">100 g</div>
+              </div>
+            </div>
+            <div class="flex items-center gap-2.5">
+              <span class="font-black text-xs text-zinc-950">$3.49</span>
+              <div class="w-6 h-6 bg-[#E52E04] text-white flex items-center justify-center font-bold text-xs border border-[#B82200]">✓</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="fixed bottom-0 left-0 right-0 max-w-[420px] mx-auto p-3 bg-white border-t border-zinc-300 flex items-center gap-2">
+        <div class="flex items-center border border-zinc-950 bg-white h-11 px-1">
+          <button class="w-7 h-7 flex items-center justify-center font-bold">-</button>
+          <span class="w-7 text-center font-black text-sm">1</span>
+          <button class="w-7 h-7 flex items-center justify-center font-bold">+</button>
+        </div>
+        <button onclick="setScreen('cart')" class="flex-1 h-11 bg-[#E52E04] text-white font-black text-xs uppercase tracking-wider flex items-center justify-between px-4 border border-[#B82200]">
+          <span>Add another</span>
+          <span class="font-black text-sm">$5.99</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- SCREEN 1C: PRODUCT DETAIL — STAPLE -->
+    <div id="screen-pdp-rice" class="screen hidden flex-1 flex flex-col pb-20">
+      <div class="px-4 py-3 bg-white border-b border-zinc-200 flex items-center justify-between">
+        <button onclick="setScreen('home')" class="p-1 font-bold text-zinc-950 cursor-pointer">&lsaquo;</button>
+        <span class="font-extrabold text-xs mono text-zinc-950">Staples · Rice</span>
+        <button onclick="setScreen('cart')" class="relative p-1.5 border-2 border-zinc-950 bg-white">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
+          <span class="cart-badge-count absolute -top-1.5 -right-1.5 bg-[#E52E04] text-white text-[10px] font-black w-4 h-4 flex items-center justify-center border border-white">3</span>
+        </button>
+      </div>
+
+      <div class="relative w-full h-[280px] bg-[#EAEAEA] border-b border-zinc-300 flex flex-col justify-between p-3 bg-stripes">
+        <div class="flex items-center justify-between">
+          <span class="bg-[#FFEFEA] text-[#B82200] border border-[#FFCCBC] px-2 py-0.5 text-[11px] mono font-bold">
+            Staple · buy monthly
+          </span>
+          <span class="text-[11px] mono text-zinc-700 bg-white/95 border border-zinc-300 px-2 py-0.5">
+            product photo · rice sack
+          </span>
+        </div>
+        <div class="self-start bg-zinc-950 text-white p-2.5 border border-zinc-800">
+          <div class="text-2xl font-black leading-none">20 lb</div>
+          <div class="text-[10px] mono text-zinc-400 mt-1">9.07 kg · ~100 servings</div>
+        </div>
+      </div>
+
+      <div class="p-4 space-y-4">
+        <div>
+          <div class="text-[10px] mono font-bold uppercase text-[#E52E04]">AGED 2 YEARS · EXTRA LONG GRAIN</div>
+          <h1 class="text-2xl font-black text-zinc-950 mt-0.5">Aged Basmati Rice</h1>
+          <div class="flex items-baseline gap-2 mt-1">
+            <span class="text-2xl font-black text-zinc-950">$24.99</span>
+            <span class="text-xs mono text-zinc-500">$1.25 / lb</span>
+          </div>
+        </div>
+
+        <div class="p-3 border-2 border-zinc-950 bg-white flex items-center justify-between">
+          <div>
+            <div class="font-black text-xs text-zinc-950">Subscribe & Save 5%</div>
+            <div class="text-[10px] text-zinc-500 font-medium mt-0.5">Auto-reorder. Skip, pause or cancel anytime.</div>
+          </div>
+          <div class="w-12 h-6 border-2 border-zinc-950 bg-zinc-200 p-0.5 flex items-center cursor-pointer">
+            <div class="w-4 h-4 bg-white border border-zinc-950"></div>
+          </div>
+        </div>
+
+        <div class="pt-3 border-t border-zinc-200">
+          <h3 class="text-sm font-black text-zinc-950 mb-2.5">Goes with it</h3>
+          <div class="grid grid-cols-2 gap-2.5">
+            <div class="border border-zinc-300 p-2 bg-zinc-50">
+              <div class="w-full h-16 bg-[#EAEAEA] border border-zinc-200 mb-1.5 p-1 bg-stripes flex justify-between">
+                <span class="text-[9px] mono text-zinc-700">toor dal</span>
+                <button class="w-5 h-5 bg-[#E52E04] text-white flex items-center justify-center self-end">+</button>
+              </div>
+              <div class="font-black text-xs">$7.99</div>
+              <div class="text-[11px] text-zinc-900 font-bold">Toor Dal · 4 lb</div>
+            </div>
+            <div class="border border-zinc-300 p-2 bg-zinc-50">
+              <div class="w-full h-16 bg-[#EAEAEA] border border-zinc-200 mb-1.5 p-1 bg-stripes flex justify-between">
+                <span class="text-[9px] mono text-zinc-700">ghee jar</span>
+                <button class="w-5 h-5 bg-[#E52E04] text-white flex items-center justify-center self-end">+</button>
+              </div>
+              <div class="font-black text-xs">$9.99</div>
+              <div class="text-[11px] text-zinc-900 font-bold">Desi Ghee · 500 ml</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="fixed bottom-0 left-0 right-0 max-w-[420px] mx-auto p-3 bg-white border-t border-zinc-300">
+        <button onclick="setScreen('cart')" class="w-full h-11 bg-[#E52E04] text-white font-black text-xs uppercase tracking-wider flex items-center justify-between px-4 border border-[#B82200]">
+          <span>Add to cart</span>
+          <span class="font-black text-sm">$24.99</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- SCREEN 1D: SMART CART -->
+    <div id="screen-cart" class="screen hidden flex-1 flex flex-col pb-20">
+      <div class="px-4 py-3 bg-white border-b border-zinc-200 flex items-center justify-between">
+        <h1 class="text-xl font-black text-zinc-950 tracking-tight flex items-baseline gap-2">
+          <span>Your cart</span>
+          <span class="text-xs font-normal text-zinc-500 mono">3 items</span>
+        </h1>
+        <button onclick="setScreen('home')" class="w-8 h-8 border border-zinc-950 flex items-center justify-center font-bold">✕</button>
+      </div>
+
+      <div class="p-4 space-y-4">
+        <div class="bg-zinc-950 text-white p-3.5 border border-zinc-800 space-y-2.5">
+          <div class="text-xs font-bold leading-tight flex items-center gap-2">
+            <span>🚚</span>
+            <span>Add $12.48 more to unlock free delivery</span>
+          </div>
+          <div class="w-full bg-zinc-800 h-1.5 relative">
+            <div class="bg-[#E52E04] h-full w-[68.8%]"></div>
+          </div>
+          <div class="flex justify-between text-[11px] mono text-zinc-400">
+            <span>$27.52</span>
+            <span>$40.00 · free delivery</span>
+          </div>
+        </div>
+
+        <div class="divide-y divide-zinc-200 border-y border-zinc-200">
+          <div class="py-3 flex items-start justify-between gap-3">
+            <div class="w-12 h-12 bg-[#EAEAEA] border border-zinc-300 bg-stripes shrink-0"></div>
+            <div class="flex-1 min-w-0">
+              <div class="font-black text-sm text-zinc-950">Malai Paneer</div>
+              <div class="text-xs mono text-zinc-500">400 g</div>
+            </div>
+            <div class="text-right flex flex-col items-end gap-1">
+              <div class="font-black text-sm text-zinc-950 mono">$5.99</div>
+              <div class="flex items-center border border-zinc-950 h-6 px-1">
+                <span class="px-1 text-xs">-</span>
+                <span class="px-1.5 text-xs font-black">1</span>
+                <span class="px-1 text-xs">+</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="py-3 flex items-start justify-between gap-3">
+            <div class="w-12 h-12 bg-[#EAEAEA] border border-zinc-300 bg-stripes shrink-0"></div>
+            <div class="flex-1 min-w-0">
+              <div class="font-black text-sm text-zinc-950">Chakki Atta</div>
+              <div class="text-xs mono text-zinc-500">20 lb</div>
+              <div class="text-[10px] mono text-[#E52E04] font-bold">🔁 Monthly · −5%</div>
+            </div>
+            <div class="text-right flex flex-col items-end gap-1">
+              <div class="font-black text-sm text-zinc-950 mono">$18.04</div>
+              <div class="flex items-center border border-zinc-950 h-6 px-1">
+                <span class="px-1 text-xs">-</span>
+                <span class="px-1.5 text-xs font-black">1</span>
+                <span class="px-1 text-xs">+</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="py-3 flex items-start justify-between gap-3">
+            <div class="w-12 h-12 bg-[#EAEAEA] border border-zinc-300 bg-stripes shrink-0"></div>
+            <div class="flex-1 min-w-0">
+              <div class="font-black text-sm text-zinc-950">Garam Masala</div>
+              <div class="text-xs mono text-zinc-500">100 g</div>
+            </div>
+            <div class="text-right flex flex-col items-end gap-1">
+              <div class="font-black text-sm text-zinc-950 mono">$3.49</div>
+              <div class="flex items-center border border-zinc-950 h-6 px-1">
+                <span class="px-1 text-xs">-</span>
+                <span class="px-1.5 text-xs font-black">1</span>
+                <span class="px-1 text-xs">+</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <h3 class="text-sm font-black text-zinc-950">Don’t forget these</h3>
+          <p class="text-[11px] text-zinc-500 mb-2">Under $2 · one tap to add</p>
+          <div class="flex gap-2 overflow-x-auto no-scrollbar pb-1">
+            <div class="w-[95px] shrink-0 border border-zinc-300 p-1.5 bg-white">
+              <div class="w-full h-12 bg-[#EAEAEA] bg-stripes mb-1 flex justify-end p-0.5">
+                <button class="w-4 h-4 bg-[#E52E04] text-white text-[10px]">+</button>
+              </div>
+              <div class="font-black text-xs mono">$0.99</div>
+              <div class="text-[10px] text-zinc-900 truncate font-bold">Fresh Coriander</div>
+            </div>
+            <div class="w-[95px] shrink-0 border border-zinc-300 p-1.5 bg-white">
+              <div class="w-full h-12 bg-[#EAEAEA] bg-stripes mb-1 flex justify-end p-0.5">
+                <button class="w-4 h-4 bg-[#E52E04] text-white text-[10px]">+</button>
+              </div>
+              <div class="font-black text-xs mono">$1.49</div>
+              <div class="text-[10px] text-zinc-900 truncate font-bold">Saunf Mints</div>
+            </div>
+            <div class="w-[95px] shrink-0 border border-zinc-300 p-1.5 bg-white">
+              <div class="w-full h-12 bg-[#EAEAEA] bg-stripes mb-1 flex justify-end p-0.5">
+                <button class="w-4 h-4 bg-[#E52E04] text-white text-[10px]">+</button>
+              </div>
+              <div class="font-black text-xs mono">$0.89</div>
+              <div class="text-[10px] text-zinc-900 truncate font-bold">Green Chillies</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="pt-3 border-t border-zinc-200 space-y-1 text-xs">
+          <div class="flex justify-between text-zinc-700">
+            <span>Subtotal</span>
+            <span class="mono font-bold">$28.47</span>
+          </div>
+          <div class="flex justify-between text-[#E52E04] font-bold">
+            <span>Subscribe & Save</span>
+            <span class="mono">−$0.95</span>
+          </div>
+          <div class="flex justify-between text-zinc-700">
+            <span>Store pickup</span>
+            <span class="text-emerald-700 font-bold">Free</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="fixed bottom-0 left-0 right-0 max-w-[420px] mx-auto p-3 bg-white border-t border-zinc-300">
+        <button onclick="setScreen('checkout')" class="w-full h-11 bg-[#E52E04] text-white font-black text-xs uppercase tracking-wider flex items-center justify-between px-4 border border-[#B82200]">
+          <span>Go to checkout</span>
+          <span class="font-black text-sm">$27.52</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- SCREEN 1E: CHECKOUT -->
+    <div id="screen-checkout" class="screen hidden flex-1 flex flex-col pb-20">
+      <div class="px-4 py-3 bg-white border-b border-zinc-200 flex items-center gap-2">
+        <button onclick="setScreen('cart')" class="p-1 font-bold text-zinc-950 cursor-pointer">&lsaquo;</button>
+        <h1 class="text-xl font-black text-zinc-950">Checkout</h1>
+      </div>
+
+      <div class="p-4 space-y-5">
+        <div>
+          <div class="text-[10px] mono font-bold uppercase text-zinc-500 mb-2">01 · HOW DO YOU WANT IT?</div>
+          <div class="grid grid-cols-2 border-2 border-zinc-950">
+            <div class="p-3 bg-zinc-950 text-white cursor-pointer">
+              <div class="font-black text-xs">In-store pickup</div>
+              <div class="text-[10px] mono text-zinc-300 mt-1">Free · ready in 1 hr</div>
+            </div>
+            <div class="p-3 bg-white text-zinc-900 border-l border-zinc-950 cursor-pointer">
+              <div class="font-black text-xs">Local delivery</div>
+              <div class="text-[10px] mono text-zinc-500 mt-1">$4.99 · free over $40.00</div>
+            </div>
+          </div>
+          <div class="mt-2.5 p-2.5 bg-zinc-50 border border-zinc-300 text-xs">
+            <div class="font-black text-zinc-950">Masala Mart — Main St.</div>
+            <div class="text-zinc-600 mono text-[11px]">214 Main St. · curbside bay or counter</div>
+          </div>
+
+          <div class="mt-3">
+            <div class="text-xs font-bold text-zinc-900 mb-2">Pick a time slot</div>
+            <div class="grid grid-cols-3 gap-2">
+              <div class="p-2 border border-[#E52E04] bg-[#E52E04] text-white text-center">
+                <span class="text-[9px] mono uppercase block text-white/80">TODAY</span>
+                <span class="text-xs font-black">4–5 pm</span>
+              </div>
+              <div class="p-2 border border-zinc-200 bg-zinc-100 text-zinc-400 text-center">
+                <span class="text-[9px] mono uppercase block">TODAY</span>
+                <span class="text-xs font-bold">Full</span>
+              </div>
+              <div class="p-2 border border-zinc-400 bg-white text-center">
+                <span class="text-[9px] mono uppercase block text-zinc-500">TODAY</span>
+                <span class="text-xs font-bold">6–7 pm</span>
+              </div>
+              <div class="p-2 border border-zinc-400 bg-white text-center">
+                <span class="text-[9px] mono uppercase block text-zinc-500">TOMORROW</span>
+                <span class="text-xs font-bold">10–11 am</span>
+              </div>
+              <div class="p-2 border border-zinc-400 bg-white text-center">
+                <span class="text-[9px] mono uppercase block text-zinc-500">TOMORROW</span>
+                <span class="text-xs font-bold">11–12 pm</span>
+              </div>
+              <div class="p-2 border border-zinc-400 bg-white text-center">
+                <span class="text-[9px] mono uppercase block text-zinc-500">TOMORROW</span>
+                <span class="text-xs font-bold">12–1 pm</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <div class="text-[10px] mono font-bold uppercase text-zinc-500 mb-2">02 · PAYMENT</div>
+          <div class="grid grid-cols-2 gap-2 mb-2.5">
+            <button class="py-2.5 bg-zinc-950 text-white font-black text-xs"> Pay</button>
+            <button class="py-2.5 bg-zinc-950 text-white font-black text-xs">G Pay</button>
+          </div>
+          <div class="text-center text-[10px] mono text-zinc-400 uppercase tracking-widest my-2">or pay by card</div>
+          <div class="space-y-2">
+            <div>
+              <label class="block text-[10px] mono text-zinc-600 mb-0.5">Card number</label>
+              <div class="relative flex items-center">
+                <input type="text" value="1234 1234 1234 1234" class="w-full px-3 py-2 border border-zinc-400 text-xs mono" />
+                <div class="absolute right-2 text-[9px] mono text-zinc-500">VISA MC AMEX</div>
+              </div>
+            </div>
+            <div class="grid grid-cols-2 gap-2">
+              <div>
+                <label class="block text-[10px] mono text-zinc-600 mb-0.5">Expiry</label>
+                <input type="text" value="MM / YY" class="w-full px-3 py-2 border border-zinc-400 text-xs mono" />
+              </div>
+              <div>
+                <label class="block text-[10px] mono text-zinc-600 mb-0.5">CVC</label>
+                <input type="text" value="123" class="w-full px-3 py-2 border border-zinc-400 text-xs mono" />
+              </div>
+            </div>
+            <div>
+              <label class="block text-[10px] mono text-zinc-600 mb-0.5">Name on card</label>
+              <input type="text" value="Priya Sharma" class="w-full px-3 py-2 border border-zinc-400 text-xs" />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="fixed bottom-0 left-0 right-0 max-w-[420px] mx-auto p-3 bg-white border-t border-zinc-300">
+        <button onclick="setScreen('account')" class="w-full h-11 bg-[#E52E04] text-white font-black text-xs uppercase tracking-wider flex items-center justify-between px-4 border border-[#B82200]">
+          <span>🔒 Pay · Today 4–5 pm</span>
+          <span class="font-black text-sm">$27.52</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- SCREEN 1F: CUSTOMER DASHBOARD -->
+    <div id="screen-account" class="screen hidden flex-1 flex flex-col pb-28">
+      <div class="px-4 pt-3 pb-2 flex items-center justify-between bg-white">
+        <h1 class="text-2xl font-black tracking-tight text-zinc-950">Hi, Priya</h1>
+        <button onclick="setScreen('cart')" class="relative p-2 border-2 border-zinc-950 bg-white">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
+          <span class="cart-badge-count absolute -top-1.5 -right-1.5 bg-[#E52E04] text-white text-[11px] font-black w-5 h-5 flex items-center justify-center border border-white">3</span>
+        </button>
+      </div>
+
+      <div class="px-4 py-3 space-y-5">
+        <div class="bg-zinc-950 text-white p-4 border border-zinc-800 space-y-3">
+          <div class="flex justify-between text-[10px] mono">
+            <span class="font-bold uppercase text-zinc-400">MASALA POINTS</span>
+            <span class="text-zinc-400">Gold member</span>
+          </div>
+          <div class="text-4xl font-black leading-none">
+            1,240 <span class="text-sm font-normal text-zinc-400 mono">pts</span>
+          </div>
+          <div class="grid grid-cols-12 gap-1 h-3 py-0.5">
+            <span class="bg-[#E52E04] h-full col-span-10"></span>
+            <span class="bg-zinc-800 h-full col-span-2"></span>
+          </div>
+          <div class="flex justify-between text-[10px] mono text-zinc-400">
+            <span>260 pts to a $10 reward</span>
+            <span>1 pt per $1</span>
+          </div>
+        </div>
+
+        <div>
+          <div class="flex items-center justify-between mb-2">
+            <h2 class="text-lg font-black text-zinc-950">Subscriptions</h2>
+            <span class="text-xs mono text-zinc-500">1 active</span>
+          </div>
+          <div class="p-3 border-2 border-zinc-300 bg-white space-y-2.5 mb-2">
+            <div class="flex justify-between">
+              <div>
+                <div class="font-black text-xs text-zinc-950">Chakki Atta · 20 lb</div>
+                <div class="text-[11px] mono text-zinc-500">Monthly · $18.04</div>
+              </div>
+              <div class="text-[11px] mono font-bold">Next Oct 3</div>
+            </div>
+            <div class="flex gap-2 pt-1 border-t border-zinc-200">
+              <button class="px-3 py-1.5 border border-zinc-400 text-xs font-bold">▷| Skip next</button>
+              <button class="px-3 py-1.5 border border-zinc-400 text-xs font-bold">Pause</button>
+            </div>
+          </div>
+          <div class="p-3 border border-zinc-300 bg-zinc-50 space-y-2">
+            <div class="flex justify-between">
+              <div>
+                <div class="font-black text-xs text-zinc-950">Toor Dal · 4 lb</div>
+                <div class="text-[11px] mono text-zinc-500">Every 2 weeks · $7.59</div>
+              </div>
+              <div class="text-[11px] mono font-bold text-zinc-500">Paused</div>
+            </div>
+            <button class="px-3 py-1.5 border border-zinc-400 text-xs font-bold">Resume</button>
+          </div>
+        </div>
+
+        <div>
+          <h2 class="text-lg font-black text-zinc-950 mb-2">Past orders</h2>
+          <div class="p-3 border-2 border-zinc-300 bg-white space-y-2.5">
+            <div class="flex justify-between">
+              <span class="font-black text-xs">Sep 18 · Picked up</span>
+              <span class="font-black text-sm mono">$62.40</span>
+            </div>
+            <div class="text-[11px] text-zinc-600 leading-snug">
+              #10482 · Chakki Atta, Desi Ghee, Okra (Bhindi), Curry Leaves, Glucose Biscuits, Masala Noodles
+            </div>
+            <button onclick="setScreen('cart')" class="w-full py-2 bg-[#E52E04] text-white font-black text-xs uppercase border border-[#B82200]">
+              🔁 Reorder all 6 items
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Floating Dark Cart Bar -->
+    <div id="floating-cart-bar" class="fixed bottom-[62px] left-0 right-0 z-40 px-2.5 max-w-[420px] mx-auto cursor-pointer" onclick="setScreen('cart')">
+      <div class="w-full bg-[#18181B] text-white border border-zinc-800 shadow-2xl p-2.5">
+        <div class="flex items-center justify-between">
+          <div>
+            <div class="cart-count-text text-sm font-black tracking-tight">View cart · 3 items</div>
+            <div class="cart-remaining-text text-[11px] text-zinc-400 mono mt-0.5">$12.48 to free delivery</div>
+          </div>
+          <div class="cart-subtotal-text text-lg font-black tracking-tight">$27.52</div>
+        </div>
+        <div class="w-full bg-zinc-800 h-1 mt-1.5 relative overflow-hidden">
+          <div class="cart-progress-meter bg-[#E52E04] h-full w-[68.8%] transition-all duration-300"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Bottom Nav Bar -->
+    <nav class="fixed bottom-0 left-0 right-0 z-40 max-w-[420px] mx-auto bg-white border-t border-zinc-200">
+      <div class="flex items-center justify-around h-[62px] px-2 text-center text-xs">
+        <button onclick="setScreen('home')" id="nav-shop" class="w-full py-1 text-[#E52E04] font-black flex flex-col items-center">
+          <span class="text-base">⌂</span>
+          <span class="text-[11px]">Shop</span>
+        </button>
+        <button onclick="setScreen('home')" id="nav-search" class="w-full py-1 text-zinc-600 font-medium flex flex-col items-center">
+          <span class="text-base">⚲</span>
+          <span class="text-[11px]">Search</span>
+        </button>
+        <button onclick="setScreen('account')" id="nav-reorder" class="w-full py-1 text-zinc-600 font-medium flex flex-col items-center">
+          <span class="text-base">↻</span>
+          <span class="text-[11px]">Reorder</span>
+        </button>
+        <button onclick="setScreen('account')" id="nav-account" class="w-full py-1 text-zinc-600 font-medium flex flex-col items-center">
+          <span class="text-base">👤</span>
+          <span class="text-[11px]">Account</span>
+        </button>
+      </div>
+    </nav>
+
+  </div>
+
+  <script>
+    function setScreen(screenId) {
+      document.querySelectorAll('.screen').forEach(el => el.classList.add('hidden'));
+      const target = document.getElementById('screen-' + screenId);
+      if (target) target.classList.remove('hidden');
+
+      document.querySelectorAll('[id^="btn-"]').forEach(el => {
+        el.className = 'px-2 py-1 bg-zinc-800 text-zinc-300 hover:text-white cursor-pointer';
+      });
+      const activeBtn = document.getElementById('btn-' + screenId);
+      if (activeBtn) activeBtn.className = 'px-2 py-1 bg-[#E52E04] text-white font-bold cursor-pointer';
+
+      ['shop', 'search', 'reorder', 'account'].forEach(n => {
+        const el = document.getElementById('nav-' + n);
+        if (el) el.className = 'w-full py-1 text-zinc-600 font-medium flex flex-col items-center';
+      });
+
+      const floatBar = document.getElementById('floating-cart-bar');
+      if (screenId === 'home' || screenId === 'pdp-paneer' || screenId === 'pdp-rice') {
+        if (floatBar) floatBar.classList.remove('hidden');
+        if (screenId === 'home') document.getElementById('nav-shop').className = 'w-full py-1 text-[#E52E04] font-black flex flex-col items-center';
+      } else {
+        if (floatBar) floatBar.classList.add('hidden');
+        if (screenId === 'account') document.getElementById('nav-account').className = 'w-full py-1 text-[#E52E04] font-black flex flex-col items-center';
+      }
+
+      window.scrollTo(0, 0);
+    }
+
+    let quantities = { atta: 1, ghee: 0, biscuits: 0 };
+    function changeQty(item, delta) {
+      quantities[item] = Math.max(0, (quantities[item] || 0) + delta);
+      const el = document.getElementById('qty-' + item + '-root');
+      if (el) el.innerText = quantities[item];
+    }
+  </script>
+</body>
+</html>
