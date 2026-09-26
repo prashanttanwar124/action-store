@@ -648,7 +648,7 @@ const recipeKitItems = computed(() => {
                     ${{ Number(kit.originalPrice || kit.original_price || (Number(kit.price) + 2.45)).toFixed(2) }}
                   </span>
                   <span class="text-[11px] font-bold text-[#7a5620] bg-[#f5eee2] border border-[#e0d9cc] px-2 py-0.5 rounded-full">
-                    Save${{ (Number(kit.originalPrice || kit.original_price || (Number(kit.price) + 2.45)) - Number(kit.price)).toFixed(2) }}
+                    Save ${{ (Number(kit.originalPrice || kit.original_price || (Number(kit.price) + 2.45)) - Number(kit.price)).toFixed(2) }}
                   </span>
                 </div>
               </div>

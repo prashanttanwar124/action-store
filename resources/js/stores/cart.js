@@ -553,23 +553,25 @@ export const useStore = defineStore('masalaStore', () => {
   });
 
   const rawSubtotal = computed(() => {
-    return cart.value.reduce((sum, item) => {
+    const sum = cart.value.reduce((acc, item) => {
       const prod = products.value.find(p => p.id === item.id) || 
                    impulseItems.value.find(i => i.id === item.id);
-      return sum + (prod ? prod.price * item.quantity : 0);
+      return acc + (prod ? prod.price * item.quantity : 0);
     }, 0);
+    return Number(sum.toFixed(2));
   });
 
   const subscribeSavings = computed(() => {
-    return cart.value.reduce((sum, item) => {
+    const savings = cart.value.reduce((acc, item) => {
       if (item.isSubscribed) {
         const prod = products.value.find(p => p.id === item.id);
         if (prod) {
-          return sum + Number((prod.price * 0.05 * item.quantity).toFixed(2));
+          return acc + Number((prod.price * 0.05 * item.quantity).toFixed(2));
         }
       }
-      return sum;
+      return acc;
     }, 0);
+    return Number(savings.toFixed(2));
   });
 
   const subtotal = computed(() => {
@@ -587,7 +589,8 @@ export const useStore = defineStore('masalaStore', () => {
   });
 
   const freeDeliveryProgressPercent = computed(() => {
-    return Math.min(100, (subtotal.value / freeDeliveryThreshold) * 100);
+    if (subtotal.value <= 0) return 0;
+    return Math.min(100, Math.round((subtotal.value / freeDeliveryThreshold) * 100));
   });
 
   function getQuantity(productId) {

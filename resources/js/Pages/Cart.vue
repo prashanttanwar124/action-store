@@ -62,7 +62,7 @@ const store = useStore();
           <div class="text-left sm:text-right text-xs text-stone-400 font-normal">
             <span>Threshold: $40.00</span>
             <span class="mx-1.5">·</span>
-            <span class="text-white font-semibold">{{ store.freeDeliveryProgressPercent }}% complete</span>
+            <span class="text-white font-semibold">{{ Math.round(store.freeDeliveryProgressPercent) }}% complete</span>
           </div>
         </div>
 
