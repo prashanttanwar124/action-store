@@ -431,8 +431,8 @@ const recipeKitItems = computed(() => {
           </Link>
         </div>
 
-        <!-- Products Carousel / Grid (Clean container bounds, no side touching) -->
-        <div class="flex sm:grid sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3.5 sm:gap-5 overflow-x-auto no-scrollbar pb-2 snap-x">
+        <!-- Products Carousel / Grid (Full-bleed mobile scroll with padding so cards don't crop on the left) -->
+        <div class="-mx-4 px-4 sm:mx-0 sm:px-0 flex sm:grid sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3.5 sm:gap-5 overflow-x-auto no-scrollbar pb-2 pt-1 snap-x scroll-pl-4">
           
           <Link 
             v-for="item in buyAgainItems" 
@@ -515,7 +515,7 @@ const recipeKitItems = computed(() => {
           <span class="text-xs text-[#6e6e73]">7 Daily Kitchen Spices</span>
         </div>
 
-        <div class="flex sm:grid sm:grid-cols-4 lg:grid-cols-7 gap-3 sm:gap-4 overflow-x-auto no-scrollbar pb-2 snap-x sm:overflow-visible">
+        <div class="-mx-4 px-4 sm:mx-0 sm:px-0 flex sm:grid sm:grid-cols-4 lg:grid-cols-7 gap-3 sm:gap-4 overflow-x-auto no-scrollbar pb-2 pt-1 snap-x sm:overflow-visible scroll-pl-4">
           <Link 
             v-for="spice in masalaDabbaSpices" 
             :key="spice.id"
