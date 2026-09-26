@@ -41,16 +41,33 @@
 
 @layer base {
   :root {
-    --background: 40 33% 97%; /* Screen background (ivory): #fbf9f5 */
-    --foreground: 240 3% 12%; /* Main text: #1d1d1f */
-    --card: 40 24% 93%; /* Cards and surfaces (cream): #f3efe7 */
+    --background: 40 33% 97%; /* #fbf9f5 */
+    --foreground: 240 3% 12%; /* #1d1d1f */
+    --card: 40 24% 93%; /* #f3efe7 */
     --card-foreground: 240 3% 12%;
-    --primary: 0 0% 10%; /* Primary (buttons, badges, checks): #1a1a1a */
-    --primary-foreground: 0 0% 100%; /* #ffffff */
-    --muted: 38 18% 89%; /* Light fills: #ece7de */
-    --muted-foreground: 240 2% 44%; /* Secondary text: #6e6e73 */
-    --border: 39 21% 84%; /* Borders: #e0d9cc */
-    --radius: 1rem;
+    --popover: 40 33% 97%;
+    --popover-foreground: 240 3% 12%;
+    --primary: 0 0% 10%; /* #1a1a1a */
+    --primary-foreground: 0 0% 100%;
+    --secondary: 40 24% 93%; /* #f3efe7 */
+    --secondary-foreground: 240 3% 12%;
+    --muted: 38 18% 89%; /* #ece7de */
+    --muted-foreground: 240 2% 44%; /* #6e6e73 */
+    --accent: 38 46% 44%; /* #a47a3c */
+    --accent-foreground: 0 0% 100%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 39 21% 84%; /* #e0d9cc */
+    --input: 39 21% 84%;
+    --ring: 0 0% 10%;
+    --radius: 0.75rem;
+  }
+
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
   }
 }
 
@@ -153,36 +170,6 @@ button, .btn, .tab-label, .action-label {
   scrollbar-width: none;
 }
 
-/* Skeleton shimmer animation */
-@keyframes shimmer {
-  100% {
-    transform: translateX(100%);
-  }
-}
-
-.skeleton-shimmer {
-  position: relative;
-  overflow: hidden;
-  background-color: #ece7de;
-}
-
-.skeleton-shimmer::after {
-  position: absolute;
-  top: 0;
-  right: 0;
-  bottom: 0;
-  left: 0;
-  transform: translateX(-100%);
-  background-image: linear-gradient(
-    90deg,
-    rgba(255, 255, 255, 0) 0,
-    rgba(255, 255, 255, 0.35) 20%,
-    rgba(255, 255, 255, 0.6) 60%,
-    rgba(255, 255, 255, 0)
-  );
-  animation: shimmer 1.6s infinite;
-  content: '';
-}
 
 /* Fade Skeleton Transition */
 .fade-skeleton-enter-active,

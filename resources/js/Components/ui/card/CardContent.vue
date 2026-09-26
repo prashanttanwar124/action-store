@@ -2,10 +2,12 @@
 import { cn } from '@/lib/utils';
 
 const props = defineProps({
-  class: { type: null, required: false },
+  class: { type: null, default: '' },
 });
 </script>
 
 <template>
-  <div :class="cn('animate-pulse rounded-md bg-muted', props.class)" />
+  <div :class="cn('p-6 pt-0', props.class)">
+    <slot />
+  </div>
 </template>
