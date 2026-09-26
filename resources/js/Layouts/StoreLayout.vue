@@ -58,7 +58,7 @@ const props = defineProps({
 
 const store = useStore();
 const page = usePage();
-const { isPageLoading, targetPageType } = usePageLoading();
+const { isPageLoading, isNavigating, targetPageType } = usePageLoading();
 const storeSelectorOpen = ref(false);
 const searchInputRef = ref(null);
 
@@ -377,7 +377,7 @@ const navTabs = computed(() => [
 
     <!-- Top Navigating Indicator (Thin brass loading line) -->
     <div 
-      v-if="isPageLoading" 
+      v-if="isNavigating" 
       class="fixed top-0 left-0 right-0 h-0.5 bg-[#a47a3c] z-50 animate-pulse shadow-xs"
     ></div>
 

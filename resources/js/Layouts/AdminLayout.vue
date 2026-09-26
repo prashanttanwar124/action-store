@@ -18,7 +18,7 @@ defineProps({
 
 const page = usePage();
 const admin = computed(() => page.props.auth?.admin);
-const { isPageLoading } = usePageLoading();
+const { isPageLoading, isNavigating } = usePageLoading();
 const logoutForm = useForm({});
 
 const handleLogout = () => {
@@ -114,7 +114,7 @@ const handleLogout = () => {
 
     <!-- Top Navigating Indicator -->
     <div 
-      v-if="isPageLoading" 
+      v-if="isNavigating" 
       class="fixed top-0 left-0 right-0 h-0.5 bg-[#a47a3c] z-50 animate-pulse shadow-xs"
     ></div>
 
