@@ -16,30 +16,51 @@ const isNavigating = ref(false); // Active during in-flight page navigation
 const targetPageType = ref(detectPageType(initialPath));
 let timer = null;
 
+let isInitialVisit = true;
+
 if (typeof window !== 'undefined') {
   // Smooth initial reveal after first load skeleton
   timer = setTimeout(() => {
     isPageLoading.value = false;
+    isInitialVisit = false;
   }, 280);
 
-  // When Inertia starts navigating to a new URL, activate top progress indicator
-  router.on('start', (event) => {
+  // When Inertia starts navigating to a new URL, show top progress indicator
+  // (Keep current page intact without premature skeleton)
+  router.on('start', () => {
     isNavigating.value = true;
-    const path = event?.detail?.visit?.url?.pathname || window.location.pathname || '';
-    targetPageType.value = detectPageType(path);
+    isInitialVisit = false;
   });
 
-  // When navigation finishes or cancels, deactivate top indicator
+  // When the new page is mounted and navigated to, show skeleton for the incoming page
+  router.on('navigate', (event) => {
+    if (isInitialVisit) {
+      return;
+    }
+
+    const path = event?.detail?.page?.url || window.location.pathname || '';
+    targetPageType.value = detectPageType(path);
+    isPageLoading.value = true;
+
+    if (timer) clearTimeout(timer);
+    timer = setTimeout(() => {
+      isPageLoading.value = false;
+    }, 240);
+  });
+
+  // When navigation completes or cancels, deactivate top indicator
   router.on('finish', () => {
     isNavigating.value = false;
   });
 
   router.on('cancel', () => {
     isNavigating.value = false;
+    isPageLoading.value = false;
   });
 
   router.on('error', () => {
     isNavigating.value = false;
+    isPageLoading.value = false;
   });
 }
 
