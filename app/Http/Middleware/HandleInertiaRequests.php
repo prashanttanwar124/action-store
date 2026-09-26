@@ -15,6 +15,14 @@ class HandleInertiaRequests extends Middleware
     protected $rootView = 'app';
 
     /**
+     * Determine the root template that is loaded on the first page visit.
+     */
+    public function rootView(Request $request): string
+    {
+        return $request->is('admin*') ? 'admin' : 'app';
+    }
+
+    /**
      * Determine the current asset version.
      */
     public function version(Request $request): ?string
@@ -29,17 +37,23 @@ class HandleInertiaRequests extends Middleware
      */
     public function share(Request $request): array
     {
+        $isAdmin = $request->is('admin*');
+
         return [
             ...parent::share($request),
             'auth' => [
-                'user' => $request->user(),
-                'admin' => $request->user('admin') ? [
+                'user' => ! $isAdmin ? $request->user() : null,
+                'admin' => $isAdmin && $request->user('admin') ? [
                     'id' => $request->user('admin')->id,
                     'name' => $request->user('admin')->name,
                     'email' => $request->user('admin')->email,
                     'roles' => $request->user('admin')->getRoleNames(),
                     'permissions' => $request->user('admin')->getAllPermissions()->pluck('name'),
                 ] : null,
+            ],
+            'flash' => [
+                'success' => $request->session()->get('success'),
+                'error' => $request->session()->get('error'),
             ],
         ];
     }

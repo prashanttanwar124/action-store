@@ -1,0 +1,54 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 40 33% 97%; /* #fbf9f5 */
+    --foreground: 240 3% 12%; /* #1d1d1f */
+    --card: 0 0% 100%;
+    --card-foreground: 240 3% 12%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 240 3% 12%;
+    --primary: 0 0% 10%; /* #1a1a1a */
+    --primary-foreground: 0 0% 100%;
+    --secondary: 40 24% 93%; /* #f3efe7 */
+    --secondary-foreground: 240 3% 12%;
+    --muted: 38 18% 89%; /* #ece7de */
+    --muted-foreground: 240 2% 44%; /* #6e6e73 */
+    --accent: 38 46% 44%; /* #a47a3c */
+    --accent-foreground: 0 0% 100%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 39 21% 84%; /* #e0d9cc */
+    --input: 39 21% 84%;
+    --ring: 0 0% 10%;
+    --radius: 0.75rem;
+  }
+
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground font-sans;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+}
+
+/* Headings in Admin Console */
+h1, h2, h3, h4, h5, h6, .font-serif {
+  font-family: 'Newsreader', Georgia, serif;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+}
+
+/* Fade Skeleton Transition */
+.fade-skeleton-enter-active,
+.fade-skeleton-leave-active {
+  transition: opacity 0.12s ease-out;
+}
+.fade-skeleton-enter-from,
+.fade-skeleton-leave-to {
+  opacity: 0;
+}
