@@ -8,15 +8,8 @@ import {
   RefreshCw, 
   RotateCcw, 
   ChevronRight, 
-  Check, 
-  Package, 
-  Calendar, 
-  Clock, 
-  ArrowRight, 
   CheckCircle2, 
-  SkipForward, 
-  Pause, 
-  Play 
+  SkipForward 
 } from 'lucide-vue-next';
 
 const store = useStore();

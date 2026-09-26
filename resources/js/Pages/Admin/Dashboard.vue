@@ -6,14 +6,10 @@ import {
   Package, 
   Users, 
   Shield, 
-  Key, 
   CheckCircle2, 
   Plus, 
   UserCheck, 
-  Sparkles,
-  Lock,
-  Layers,
-  ArrowUpRight
+  Layers 
 } from 'lucide-vue-next';
 
 const props = defineProps({

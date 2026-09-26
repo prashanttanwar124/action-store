@@ -1,5 +1,4 @@
 <script setup>
-import { computed } from 'vue';
 import { Head, Link } from '@inertiajs/vue3';
 import StoreLayout from '../Layouts/StoreLayout.vue';
 import { useStore } from '../stores/cart';

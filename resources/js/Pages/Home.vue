@@ -8,12 +8,7 @@ import {
   ChevronLeft,
   Plus, 
   Minus, 
-  Sparkles, 
-  Clock, 
-  Check, 
-  ShoppingBag, 
-  ArrowRight,
-  ShieldCheck
+  Sparkles 
 } from 'lucide-vue-next';
 
 const props = defineProps({

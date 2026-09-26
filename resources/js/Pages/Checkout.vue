@@ -9,14 +9,11 @@ import {
   Clock, 
   CreditCard, 
   ShieldCheck, 
-  Check, 
   CheckCircle2, 
   Truck, 
-  Store, 
   Lock, 
   Loader2, 
-  Sparkles, 
-  ArrowRight 
+  Sparkles 
 } from 'lucide-vue-next';
 import IconApplePay from '../Components/Icons/IconApplePay.vue';
 import IconGooglePay from '../Components/Icons/IconGooglePay.vue';

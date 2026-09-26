@@ -1,16 +1,12 @@
 <script setup>
 import { computed } from 'vue';
 import { Head, Link, useForm, usePage } from '@inertiajs/vue3';
+import { usePageLoading } from '@/composables/usePageLoading';
+import PageSkeleton from '@/Components/PageSkeleton.vue';
 import { 
   ShieldCheck, 
   LogOut, 
-  ExternalLink, 
-  Users, 
-  Shield, 
-  Package, 
-  ShoppingBag,
-  Store,
-  ChevronRight
+  ExternalLink 
 } from 'lucide-vue-next';
 
 defineProps({
@@ -22,6 +18,7 @@ defineProps({
 
 const page = usePage();
 const admin = computed(() => page.props.auth?.admin);
+const { isPageLoading } = usePageLoading();
 const logoutForm = useForm({});
 
 const handleLogout = () => {
@@ -115,9 +112,20 @@ const handleLogout = () => {
       <span>{{ $page.props.flash.success }}</span>
     </div>
 
+    <!-- Top Navigating Indicator -->
+    <div 
+      v-if="isPageLoading" 
+      class="fixed top-0 left-0 right-0 h-0.5 bg-[#a47a3c] z-50 animate-pulse shadow-xs"
+    ></div>
+
     <!-- Main Content Area -->
-    <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
-      <slot />
+    <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 relative">
+      <Transition name="fade-skeleton" mode="out-in">
+        <PageSkeleton v-if="isPageLoading" type="admin" key="skeleton" />
+        <div v-else key="content">
+          <slot />
+        </div>
+      </Transition>
     </main>
 
     <!-- Footer -->

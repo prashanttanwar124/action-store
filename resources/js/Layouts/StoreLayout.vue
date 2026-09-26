@@ -2,6 +2,8 @@
 import { ref, computed } from 'vue';
 import { Link, usePage } from '@inertiajs/vue3';
 import { useStore } from '../stores/cart';
+import { usePageLoading } from '@/composables/usePageLoading';
+import PageSkeleton from '@/Components/PageSkeleton.vue';
 import { 
   ShoppingBag, 
   Search, 
@@ -14,8 +16,6 @@ import {
   User, 
   RefreshCw, 
   UtensilsCrossed, 
-  Package, 
-  ArrowRight, 
   Truck, 
   Home, 
   Check 
@@ -58,6 +58,7 @@ const props = defineProps({
 
 const store = useStore();
 const page = usePage();
+const { isPageLoading, targetPageType } = usePageLoading();
 const storeSelectorOpen = ref(false);
 const searchInputRef = ref(null);
 
@@ -374,9 +375,20 @@ const navTabs = computed(() => [
       </div>
     </header>
 
+    <!-- Top Navigating Indicator (Thin brass loading line) -->
+    <div 
+      v-if="isPageLoading" 
+      class="fixed top-0 left-0 right-0 h-0.5 bg-[#a47a3c] z-50 animate-pulse shadow-xs"
+    ></div>
+
     <!-- Main Page Content Body -->
-    <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-5 sm:py-8 pb-56 sm:pb-20">
-      <slot />
+    <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-5 sm:py-8 pb-56 sm:pb-20 relative">
+      <Transition name="fade-skeleton" mode="out-in">
+        <PageSkeleton v-if="isPageLoading" :type="targetPageType" key="skeleton" />
+        <div v-else key="content">
+          <slot />
+        </div>
+      </Transition>
     </main>
 
     <!-- Floating Dark Cart Bar (Screen 1a match) -->

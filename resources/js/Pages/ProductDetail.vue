@@ -3,7 +3,7 @@ import { ref, computed } from 'vue';
 import { Head, Link } from '@inertiajs/vue3';
 import StoreLayout from '../Layouts/StoreLayout.vue';
 import { useStore } from '../stores/cart';
-import { ChevronLeft, ChevronRight, Clock, Plus, Minus, Check, Sparkles, RefreshCw, CheckCircle2, ShieldCheck, Snowflake } from 'lucide-vue-next';
+import { ChevronLeft, ChevronRight, Clock, Plus, Minus, Sparkles, RefreshCw, CheckCircle2, ShieldCheck, Snowflake } from 'lucide-vue-next';
 
 const props = defineProps({
   slug: {
