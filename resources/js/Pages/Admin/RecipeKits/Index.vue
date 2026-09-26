@@ -18,6 +18,7 @@ import {
   ChevronRight,
   TrendingDown
 } from 'lucide-vue-next';
+import { Input } from '@/Components/ui/input';
 
 const props = defineProps({
   recipeKits: {
@@ -126,13 +127,13 @@ const handleDelete = () => {
       <!-- Search & Filters -->
       <div class="bg-white border border-[#e0d9cc] rounded-2xl p-3 shadow-2xs flex items-center gap-3">
         <div class="relative flex-1">
-          <Search class="w-4 h-4 text-stone-400 absolute left-3 top-3" />
-          <input
+          <Search class="w-4 h-4 text-stone-400 absolute left-3 top-3 pointer-events-none z-10" />
+          <Input
             type="text"
             v-model="searchQuery"
             @input="handleSearchInput"
             placeholder="Search recipe kits by name, subtitle, or cooking tag..."
-            class="w-full pl-9 pr-4 py-2 bg-[#fbfaf8] border border-[#e0d9cc] rounded-xl text-xs focus:outline-none focus:bg-white focus:border-[#a47a3c] transition-all"
+            class="w-full pl-9 pr-4 h-10 bg-[#fbfaf8] rounded-xl text-xs"
           />
         </div>
       </div>

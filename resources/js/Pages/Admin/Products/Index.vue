@@ -15,6 +15,7 @@ import {
   Filter,
   Sparkles
 } from 'lucide-vue-next';
+import { Input } from '@/Components/ui/input';
 
 const props = defineProps({
   products: {
@@ -171,13 +172,13 @@ const getCategoryBadgeClass = (category) => {
         <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <!-- Search Input -->
           <div class="relative w-full sm:w-80">
-            <Search class="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-[#86868b]" />
-            <input 
+            <Search class="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-[#86868b] pointer-events-none z-10" />
+            <Input 
               v-model="searchQuery"
               @input="handleSearchInput"
               type="text"
               placeholder="Search products by title, slug, tag..."
-              class="w-full pl-9 pr-4 py-2 text-xs bg-[#faf8f5] border border-[#e0d9cc] rounded-full focus:outline-none focus:ring-2 focus:ring-[#1a1a1a]"
+              class="w-full pl-9 pr-4 h-9 text-xs bg-[#faf8f5] rounded-full"
             />
           </div>
 

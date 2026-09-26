@@ -11,6 +11,11 @@ import {
   Check,
   Link as LinkIcon
 } from 'lucide-vue-next';
+import { Input } from '@/Components/ui/input';
+import { Textarea } from '@/Components/ui/textarea';
+import { Label } from '@/Components/ui/label';
+import { Button } from '@/Components/ui/button';
+import { Checkbox } from '@/Components/ui/checkbox';
 
 const props = defineProps({
   slider: {
@@ -179,17 +184,17 @@ const submit = () => {
           
           <!-- Title -->
           <div class="md:col-span-2">
-            <label class="block text-xs font-semibold uppercase tracking-wider text-stone-700 mb-1.5">
+            <Label class="mb-1.5 block">
               Headline Title <span class="text-rose-500">*</span>
-            </label>
-            <textarea
+            </Label>
+            <Textarea
               v-model="form.title"
               rows="3"
               placeholder="e.g. Restaurant curry,&#10;cooked at&#10;home."
-              class="w-full px-3.5 py-2.5 bg-[#fbfaf8] border rounded-2xl text-sm font-serif focus:bg-white focus:outline-none transition-all resize-y"
-              :class="form.errors.title ? 'border-rose-400 focus:border-rose-500' : 'border-[#e0d9cc] focus:border-[#a47a3c]'"
+              class="font-serif text-sm"
+              :class="{ 'border-rose-400 focus-visible:ring-rose-400': form.errors.title }"
               required
-            ></textarea>
+            />
             <div class="flex items-center justify-between mt-1 text-[11px] text-[#86868b]">
               <span>Tip: Hit Enter for line breaks to format multi-line editorial typography.</span>
               <span v-if="form.errors.title" class="text-rose-600 font-medium">{{ form.errors.title }}</span>
@@ -198,30 +203,28 @@ const submit = () => {
 
           <!-- Tagline -->
           <div>
-            <label class="block text-xs font-semibold uppercase tracking-wider text-stone-700 mb-1.5">
+            <Label class="mb-1.5 block">
               Eyebrow Tag / Subtitle
-            </label>
-            <input
+            </Label>
+            <Input
               type="text"
               v-model="form.tag"
               placeholder="e.g. CHEF-CRAFTED · DINNER IN 20 MINS"
-              class="w-full px-3.5 py-2.5 bg-[#fbfaf8] border rounded-2xl text-xs focus:bg-white focus:outline-none transition-all"
-              :class="form.errors.tag ? 'border-rose-400 focus:border-rose-500' : 'border-[#e0d9cc] focus:border-[#a47a3c]'"
+              :class="{ 'border-rose-400 focus-visible:ring-rose-400': form.errors.tag }"
             />
             <div v-if="form.errors.tag" class="text-rose-600 text-[11px] mt-1">{{ form.errors.tag }}</div>
           </div>
 
           <!-- CTA Text -->
           <div>
-            <label class="block text-xs font-semibold uppercase tracking-wider text-stone-700 mb-1.5">
+            <Label class="mb-1.5 block">
               Call to Action Button <span class="text-rose-500">*</span>
-            </label>
-            <input
+            </Label>
+            <Input
               type="text"
               v-model="form.cta_text"
               placeholder="e.g. Order kit for $14.99"
-              class="w-full px-3.5 py-2.5 bg-[#fbfaf8] border rounded-2xl text-xs focus:bg-white focus:outline-none transition-all"
-              :class="form.errors.cta_text ? 'border-rose-400 focus:border-rose-500' : 'border-[#e0d9cc] focus:border-[#a47a3c]'"
+              :class="{ 'border-rose-400 focus-visible:ring-rose-400': form.errors.cta_text }"
               required
             />
             <div v-if="form.errors.cta_text" class="text-rose-600 text-[11px] mt-1">{{ form.errors.cta_text }}</div>
@@ -229,16 +232,16 @@ const submit = () => {
 
           <!-- Target Link URL -->
           <div class="md:col-span-2">
-            <label class="block text-xs font-semibold uppercase tracking-wider text-stone-700 mb-1.5">
+            <Label class="mb-1.5 block">
               Target Destination Link <span class="text-rose-500">*</span>
-            </label>
+            </Label>
             <div class="relative">
-              <input
+              <Input
                 type="text"
                 v-model="form.link_url"
                 placeholder="e.g. /recipe-kits/paneer-curry or /products/atta"
-                class="w-full pl-9 pr-3.5 py-2.5 bg-[#fbfaf8] border rounded-2xl text-xs font-mono focus:bg-white focus:outline-none transition-all"
-                :class="form.errors.link_url ? 'border-rose-400 focus:border-rose-500' : 'border-[#e0d9cc] focus:border-[#a47a3c]'"
+                class="pl-9 font-mono text-xs"
+                :class="{ 'border-rose-400 focus-visible:ring-rose-400': form.errors.link_url }"
                 required
               />
               <LinkIcon class="w-4 h-4 text-stone-400 absolute left-3 top-3" />
@@ -271,39 +274,37 @@ const submit = () => {
 
           <!-- Photo Label -->
           <div>
-            <label class="block text-xs font-semibold uppercase tracking-wider text-stone-700 mb-1.5">
+            <Label class="mb-1.5 block">
               Photo Corner Badge / Label
-            </label>
-            <input
+            </Label>
+            <Input
               type="text"
               v-model="form.photo_label"
               placeholder="e.g. paneer kit, mithai box"
-              class="w-full px-3.5 py-2.5 bg-[#fbfaf8] border rounded-2xl text-xs focus:bg-white focus:outline-none transition-all"
-              :class="form.errors.photo_label ? 'border-rose-400 focus:border-rose-500' : 'border-[#e0d9cc] focus:border-[#a47a3c]'"
+              :class="{ 'border-rose-400 focus-visible:ring-rose-400': form.errors.photo_label }"
             />
             <div v-if="form.errors.photo_label" class="text-rose-600 text-[11px] mt-1">{{ form.errors.photo_label }}</div>
           </div>
 
           <!-- Sort Order -->
           <div>
-            <label class="block text-xs font-semibold uppercase tracking-wider text-stone-700 mb-1.5">
+            <Label class="mb-1.5 block">
               Sort Order (0 = First Slide)
-            </label>
-            <input
+            </Label>
+            <Input
               type="number"
               v-model.number="form.sort_order"
               min="0"
-              class="w-full px-3.5 py-2.5 bg-[#fbfaf8] border rounded-2xl text-xs focus:bg-white focus:outline-none transition-all"
-              :class="form.errors.sort_order ? 'border-rose-400 focus:border-rose-500' : 'border-[#e0d9cc] focus:border-[#a47a3c]'"
+              :class="{ 'border-rose-400 focus-visible:ring-rose-400': form.errors.sort_order }"
             />
             <div v-if="form.errors.sort_order" class="text-rose-600 text-[11px] mt-1">{{ form.errors.sort_order }}</div>
           </div>
 
           <!-- Background Color -->
           <div class="md:col-span-2 space-y-2">
-            <label class="block text-xs font-semibold uppercase tracking-wider text-stone-700">
+            <Label class="block">
               Slide Background Color
-            </label>
+            </Label>
             <div class="flex items-center gap-2 flex-wrap">
               <button
                 type="button"
@@ -322,11 +323,11 @@ const submit = () => {
                   v-model="form.bg_color" 
                   class="w-8 h-8 rounded-lg cursor-pointer border border-[#e0d9cc]" 
                 />
-                <input
+                <Input
                   type="text"
                   v-model="form.bg_color"
                   placeholder="#1a1a1a"
-                  class="w-24 px-2 py-1.5 text-xs font-mono border border-[#e0d9cc] rounded-lg bg-[#fbfaf8]"
+                  class="w-24 font-mono text-xs h-8"
                 />
               </div>
             </div>
@@ -335,9 +336,9 @@ const submit = () => {
           <!-- Slide Image Uploader -->
           <div class="md:col-span-2 space-y-3 pt-2 border-t border-[#e0d9cc]/60">
             <div>
-              <label class="block text-xs font-semibold uppercase tracking-wider text-stone-700 mb-1">
+              <Label class="mb-1 block">
                 Replace Slide Image
-              </label>
+              </Label>
               <p class="text-xs text-[#6e6e73]">
                 Leave empty to retain existing image, or upload a new photo / URL.
               </p>
@@ -364,12 +365,12 @@ const submit = () => {
               <!-- Or Paste URL -->
               <div class="flex flex-col justify-center space-y-2 p-4 bg-[#fbfaf8] border border-[#e0d9cc] rounded-2xl">
                 <span class="text-xs font-semibold text-stone-800">Or New Image URL / Path:</span>
-                <input
+                <Input
                   type="text"
                   v-model="form.image_url"
                   @input="handleUrlChanged"
                   placeholder="Leave empty or enter new URL"
-                  class="w-full px-3 py-2 bg-white border border-[#e0d9cc] rounded-xl text-xs font-mono focus:outline-none focus:border-[#a47a3c]"
+                  class="font-mono text-xs bg-white"
                 />
                 <span class="text-[10px] text-stone-500">Current: {{ slider.image }}</span>
               </div>
@@ -382,10 +383,9 @@ const submit = () => {
           <!-- Active Toggle -->
           <div class="md:col-span-2 pt-2 border-t border-[#e0d9cc]/60">
             <label class="flex items-center gap-3 cursor-pointer select-none">
-              <input 
-                type="checkbox" 
-                v-model="form.is_active" 
-                class="w-4 h-4 rounded text-[#a47a3c] focus:ring-[#a47a3c] cursor-pointer"
+              <Checkbox 
+                :checked="form.is_active" 
+                @update:checked="form.is_active = $event" 
               />
               <div>
                 <span class="text-xs font-semibold text-stone-800">Active on Storefront</span>
@@ -404,13 +404,13 @@ const submit = () => {
           >
             Cancel
           </Link>
-          <button
+          <Button
             type="submit"
             :disabled="form.processing"
-            class="px-6 py-2.5 bg-[#1a1a1a] hover:bg-black text-white text-xs font-semibold rounded-full shadow-sm hover:shadow transition-all active:scale-98 cursor-pointer disabled:opacity-50"
+            class="rounded-full px-6 py-2.5 text-xs font-semibold"
           >
             {{ form.processing ? 'Updating Slide...' : 'Save Changes' }}
-          </button>
+          </Button>
         </div>
 
       </form>

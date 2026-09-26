@@ -12,6 +12,18 @@ import {
   Sparkles,
   Link as LinkIcon
 } from 'lucide-vue-next';
+import { Input } from '@/Components/ui/input';
+import { Textarea } from '@/Components/ui/textarea';
+import { Label } from '@/Components/ui/label';
+import { Checkbox } from '@/Components/ui/checkbox';
+import { Button } from '@/Components/ui/button';
+import { 
+  Select, 
+  SelectTrigger, 
+  SelectValue, 
+  SelectContent, 
+  SelectItem 
+} from '@/Components/ui/select';
 
 const props = defineProps({
   defaultCategories: {
@@ -175,31 +187,33 @@ const submit = () => {
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <!-- Product Name -->
             <div class="sm:col-span-2">
-              <label class="block text-xs font-semibold uppercase tracking-wider text-[#6e6e73] mb-1">
+              <Label class="block mb-1">
                 Product Title <span class="text-red-500">*</span>
-              </label>
-              <input 
+              </Label>
+              <Input 
                 v-model="form.name"
                 type="text"
                 placeholder="e.g. Malai Paneer Block"
                 required
-                class="w-full px-3.5 py-2.5 text-xs bg-[#faf8f5] border border-[#e0d9cc] rounded-xl focus:outline-none focus:ring-2 focus:ring-[#1a1a1a]"
+                class="w-full bg-[#faf8f5] rounded-xl text-xs"
+                :class="{ 'border-rose-400 focus-visible:ring-rose-500': form.errors.name }"
               />
               <p v-if="form.errors.name" class="text-xs text-red-600 mt-1">{{ form.errors.name }}</p>
             </div>
 
             <!-- Slug -->
             <div>
-              <label class="block text-xs font-semibold uppercase tracking-wider text-[#6e6e73] mb-1">
+              <Label class="block mb-1">
                 URL Slug <span class="text-red-500">*</span>
-              </label>
-              <input 
+              </Label>
+              <Input 
                 v-model="form.slug"
                 @input="isSlugManuallyEdited = true"
                 type="text"
                 placeholder="e.g. malai-paneer"
                 required
-                class="w-full px-3.5 py-2.5 text-xs bg-[#faf8f5] border border-[#e0d9cc] rounded-xl font-mono focus:outline-none focus:ring-2 focus:ring-[#1a1a1a]"
+                class="w-full bg-[#faf8f5] rounded-xl text-xs font-mono"
+                :class="{ 'border-rose-400 focus-visible:ring-rose-500': form.errors.slug }"
               />
               <p class="text-[10px] text-[#86868b] mt-1 font-mono">
                 Storefront route: /products/{{ form.slug || 'slug' }}
@@ -209,48 +223,49 @@ const submit = () => {
 
             <!-- Subtitle Tag -->
             <div>
-              <label class="block text-xs font-semibold uppercase tracking-wider text-[#6e6e73] mb-1">
+              <Label class="block mb-1">
                 Subtitle Tag
-              </label>
-              <input 
+              </Label>
+              <Input 
                 v-model="form.subtitle_tag"
                 type="text"
                 placeholder="e.g. Fresh Dairy · Rich & Soft"
-                class="w-full px-3.5 py-2.5 text-xs bg-[#faf8f5] border border-[#e0d9cc] rounded-xl focus:outline-none focus:ring-2 focus:ring-[#1a1a1a]"
+                class="w-full bg-[#faf8f5] rounded-xl text-xs"
               />
               <p v-if="form.errors.subtitle_tag" class="text-xs text-red-600 mt-1">{{ form.errors.subtitle_tag }}</p>
             </div>
 
             <!-- Category -->
             <div>
-              <label class="block text-xs font-semibold uppercase tracking-wider text-[#6e6e73] mb-1">
+              <Label class="block mb-1">
                 Category <span class="text-red-500">*</span>
-              </label>
-              <select 
-                v-model="form.category"
-                required
-                class="w-full px-3.5 py-2.5 text-xs bg-[#faf8f5] border border-[#e0d9cc] rounded-xl focus:outline-none focus:ring-2 focus:ring-[#1a1a1a]"
-              >
-                <option value="grocery">Pantry & Groceries (grocery)</option>
-                <option value="spices">Fresh Spices & Masalas (spices)</option>
-                <option value="dairy">Dairy, Paneer & Ghee (dairy)</option>
-                <option value="sweets">Indian Sweets & Snacks (sweets)</option>
-                <option value="vegetables">Fresh Herbs & Produce (vegetables)</option>
-                <option value="recipe-kits">Artisanal Meal Kits (recipe-kits)</option>
-              </select>
+              </Label>
+              <Select v-model="form.category">
+                <SelectTrigger class="w-full h-10 bg-[#faf8f5] rounded-xl text-xs">
+                  <SelectValue placeholder="Select category..." />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="grocery">Pantry & Groceries (grocery)</SelectItem>
+                  <SelectItem value="spices">Fresh Spices & Masalas (spices)</SelectItem>
+                  <SelectItem value="dairy">Dairy, Paneer & Ghee (dairy)</SelectItem>
+                  <SelectItem value="sweets">Indian Sweets & Snacks (sweets)</SelectItem>
+                  <SelectItem value="vegetables">Fresh Herbs & Produce (vegetables)</SelectItem>
+                  <SelectItem value="recipe-kits">Artisanal Meal Kits (recipe-kits)</SelectItem>
+                </SelectContent>
+              </Select>
               <p v-if="form.errors.category" class="text-xs text-red-600 mt-1">{{ form.errors.category }}</p>
             </div>
 
             <!-- Category Title -->
             <div>
-              <label class="block text-xs font-semibold uppercase tracking-wider text-[#6e6e73] mb-1">
+              <Label class="block mb-1">
                 Category Display Title
-              </label>
-              <input 
+              </Label>
+              <Input 
                 v-model="form.category_title"
                 type="text"
                 placeholder="e.g. Dairy, Paneer & Ghee"
-                class="w-full px-3.5 py-2.5 text-xs bg-[#faf8f5] border border-[#e0d9cc] rounded-xl focus:outline-none focus:ring-2 focus:ring-[#1a1a1a]"
+                class="w-full bg-[#faf8f5] rounded-xl text-xs"
               />
               <p v-if="form.errors.category_title" class="text-xs text-red-600 mt-1">{{ form.errors.category_title }}</p>
             </div>
@@ -300,22 +315,24 @@ const submit = () => {
           <!-- Manual URL Add Option -->
           <div class="flex items-center gap-2 pt-1">
             <div class="relative flex-1">
-              <LinkIcon class="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-[#86868b]" />
-              <input 
+              <LinkIcon class="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-[#86868b] pointer-events-none" />
+              <Input 
                 v-model="manualUrlInput"
                 type="text" 
                 placeholder="Or paste an existing image URL / path (e.g. /images/products/paneer.jpg)..."
-                class="w-full pl-8 pr-3 py-2 text-xs bg-[#faf8f5] border border-[#e0d9cc] rounded-xl focus:outline-none focus:ring-2 focus:ring-[#1a1a1a]"
+                class="w-full pl-8 pr-3 h-9 text-xs bg-[#faf8f5] rounded-xl"
                 @keydown.enter.prevent="addManualUrl"
               />
             </div>
-            <button 
+            <Button 
               type="button"
+              variant="outline"
+              size="sm"
               @click="addManualUrl"
-              class="px-3.5 py-2 bg-[#f3efe7] hover:bg-[#ece7de] text-[#1d1d1f] text-xs font-medium rounded-xl border border-[#e0d9cc] transition-colors cursor-pointer shrink-0"
+              class="h-9 px-3.5 bg-[#f3efe7] hover:bg-[#ece7de] text-[#1d1d1f] text-xs font-medium rounded-xl border-[#e0d9cc] cursor-pointer shrink-0"
             >
               Add URL
-            </button>
+            </Button>
           </div>
 
           <!-- Gallery Image Previews -->
@@ -375,86 +392,87 @@ const submit = () => {
           <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <!-- Price -->
             <div>
-              <label class="block text-xs font-semibold uppercase tracking-wider text-[#6e6e73] mb-1">
+              <Label class="block mb-1">
                 Selling Price ($) <span class="text-red-500">*</span>
-              </label>
-              <input 
+              </Label>
+              <Input 
                 v-model="form.price"
                 type="number"
                 step="0.01"
                 min="0"
                 placeholder="e.g. 5.99"
                 required
-                class="w-full px-3.5 py-2.5 text-xs bg-[#faf8f5] border border-[#e0d9cc] rounded-xl focus:outline-none focus:ring-2 focus:ring-[#1a1a1a]"
+                class="w-full bg-[#faf8f5] rounded-xl text-xs"
+                :class="{ 'border-rose-400 focus-visible:ring-rose-500': form.errors.price }"
               />
               <p v-if="form.errors.price" class="text-xs text-red-600 mt-1">{{ form.errors.price }}</p>
             </div>
 
             <!-- Original Price -->
             <div>
-              <label class="block text-xs font-semibold uppercase tracking-wider text-[#6e6e73] mb-1">
+              <Label class="block mb-1">
                 MSRP / Strike Price ($)
-              </label>
-              <input 
+              </Label>
+              <Input 
                 v-model="form.original_price"
                 type="number"
                 step="0.01"
                 min="0"
                 placeholder="e.g. 7.49"
-                class="w-full px-3.5 py-2.5 text-xs bg-[#faf8f5] border border-[#e0d9cc] rounded-xl focus:outline-none focus:ring-2 focus:ring-[#1a1a1a]"
+                class="w-full bg-[#faf8f5] rounded-xl text-xs"
               />
               <p v-if="form.errors.original_price" class="text-xs text-red-600 mt-1">{{ form.errors.original_price }}</p>
             </div>
 
             <!-- Unit Price -->
             <div>
-              <label class="block text-xs font-semibold uppercase tracking-wider text-[#6e6e73] mb-1">
+              <Label class="block mb-1">
                 Unit Price Tag
-              </label>
-              <input 
+              </Label>
+              <Input 
                 v-model="form.unit_price"
                 type="text"
                 placeholder="e.g. ($0.45/oz)"
-                class="w-full px-3.5 py-2.5 text-xs bg-[#faf8f5] border border-[#e0d9cc] rounded-xl focus:outline-none focus:ring-2 focus:ring-[#1a1a1a]"
+                class="w-full bg-[#faf8f5] rounded-xl text-xs"
               />
             </div>
 
             <!-- Size Main -->
             <div>
-              <label class="block text-xs font-semibold uppercase tracking-wider text-[#6e6e73] mb-1">
+              <Label class="block mb-1">
                 Main Size / Weight
-              </label>
-              <input 
+              </Label>
+              <Input 
                 v-model="form.size_main"
                 type="text"
                 placeholder="e.g. 400 g or 10 lb"
-                class="w-full px-3.5 py-2.5 text-xs bg-[#faf8f5] border border-[#e0d9cc] rounded-xl focus:outline-none focus:ring-2 focus:ring-[#1a1a1a]"
+                class="w-full bg-[#faf8f5] rounded-xl text-xs"
               />
             </div>
 
             <!-- Size Sub -->
             <div>
-              <label class="block text-xs font-semibold uppercase tracking-wider text-[#6e6e73] mb-1">
+              <Label class="block mb-1">
                 Size Subtitle
-              </label>
-              <input 
+              </Label>
+              <Input 
                 v-model="form.size_sub"
                 type="text"
                 placeholder="e.g. Approx 2 cups"
-                class="w-full px-3.5 py-2.5 text-xs bg-[#faf8f5] border border-[#e0d9cc] rounded-xl focus:outline-none focus:ring-2 focus:ring-[#1a1a1a]"
+                class="w-full bg-[#faf8f5] rounded-xl text-xs"
               />
             </div>
 
             <!-- Stock Badge -->
             <div>
-              <label class="block text-xs font-semibold uppercase tracking-wider text-[#6e6e73] mb-1">
+              <Label class="block mb-1">
                 Stock Status Badge
-              </label>
-              <input 
+              </Label>
+              <Input 
                 v-model="form.stock_badge"
                 type="text"
                 placeholder="e.g. In Stock or Limited Stock"
-                class="w-full px-3.5 py-2.5 text-xs bg-[#faf8f5] border border-[#e0d9cc] rounded-xl focus:outline-none focus:ring-2 focus:ring-[#1a1a1a]"
+                class="w-full bg-[#faf8f5] rounded-xl text-xs"
               />
             </div>
           </div>
@@ -469,37 +487,36 @@ const submit = () => {
           <div class="space-y-4">
             <!-- Freshness Line -->
             <div>
-              <label class="block text-xs font-semibold uppercase tracking-wider text-[#6e6e73] mb-1">
+              <Label class="block mb-1">
                 Freshness / Sourcing Line
-              </label>
-              <input 
+              </Label>
+              <Input 
                 v-model="form.freshness_line"
                 type="text"
                 placeholder="e.g. Freshly packed within 48 hours of dispatch from certified organic mills"
-                class="w-full px-3.5 py-2.5 text-xs bg-[#faf8f5] border border-[#e0d9cc] rounded-xl focus:outline-none focus:ring-2 focus:ring-[#1a1a1a]"
+                class="w-full bg-[#faf8f5] rounded-xl text-xs"
               />
             </div>
 
             <!-- Description -->
             <div>
-              <label class="block text-xs font-semibold uppercase tracking-wider text-[#6e6e73] mb-1">
+              <Label class="block mb-1">
                 Full Product Description
-              </label>
-              <textarea 
+              </Label>
+              <Textarea 
                 v-model="form.description"
                 rows="4"
                 placeholder="Detailed information about the ingredients, texture, flavor profile, and culinary uses..."
-                class="w-full px-3.5 py-2.5 text-xs bg-[#faf8f5] border border-[#e0d9cc] rounded-xl focus:outline-none focus:ring-2 focus:ring-[#1a1a1a]"
-              ></textarea>
+                class="w-full bg-[#faf8f5] rounded-xl text-xs"
+              />
             </div>
 
             <!-- Toggles for Options -->
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
-              <label class="flex items-center gap-2.5 p-3 rounded-2xl border border-[#e0d9cc] bg-[#faf8f5] cursor-pointer hover:bg-stone-50">
-                <input 
-                  type="checkbox" 
-                  v-model="form.buy_again"
-                  class="rounded border-[#e0d9cc] text-[#1a1a1a] focus:ring-[#1a1a1a]"
+              <label class="flex items-center gap-2.5 p-3 rounded-2xl border border-[#e0d9cc] bg-[#faf8f5] cursor-pointer hover:bg-stone-50 select-none">
+                <Checkbox 
+                  :checked="form.buy_again" 
+                  @update:checked="form.buy_again = $event"
                 />
                 <div>
                   <div class="text-xs font-semibold text-[#1d1d1f]">Buy It Again</div>
@@ -507,11 +524,10 @@ const submit = () => {
                 </div>
               </label>
 
-              <label class="flex items-center gap-2.5 p-3 rounded-2xl border border-[#e0d9cc] bg-[#faf8f5] cursor-pointer hover:bg-stone-50">
-                <input 
-                  type="checkbox" 
-                  v-model="form.has_subscription"
-                  class="rounded border-[#e0d9cc] text-[#1a1a1a] focus:ring-[#1a1a1a]"
+              <label class="flex items-center gap-2.5 p-3 rounded-2xl border border-[#e0d9cc] bg-[#faf8f5] cursor-pointer hover:bg-stone-50 select-none">
+                <Checkbox 
+                  :checked="form.has_subscription" 
+                  @update:checked="form.has_subscription = $event"
                 />
                 <div>
                   <div class="text-xs font-semibold text-[#1d1d1f]">Subscribe & Save</div>
@@ -530,13 +546,13 @@ const submit = () => {
           >
             Cancel
           </Link>
-          <button 
+          <Button 
             type="submit"
             :disabled="form.processing"
             class="px-7 py-2.5 bg-[#1a1a1a] hover:bg-black text-white text-xs font-semibold rounded-full shadow-xs transition-all cursor-pointer disabled:opacity-50 inline-flex items-center gap-2"
           >
             <span>{{ form.processing ? 'Creating Product...' : 'Save Product' }}</span>
-          </button>
+          </Button>
         </div>
 
       </form>

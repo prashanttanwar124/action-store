@@ -19,6 +19,18 @@ import {
   TrendingDown,
   Info
 } from 'lucide-vue-next';
+import { Input } from '@/Components/ui/input';
+import { Textarea } from '@/Components/ui/textarea';
+import { Label } from '@/Components/ui/label';
+import { Checkbox } from '@/Components/ui/checkbox';
+import { Button } from '@/Components/ui/button';
+import { 
+  Select, 
+  SelectTrigger, 
+  SelectValue, 
+  SelectContent, 
+  SelectItem 
+} from '@/Components/ui/select';
 
 const props = defineProps({
   availableProducts: {
@@ -225,15 +237,15 @@ const submit = () => {
           <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
             <!-- Kit Name -->
             <div class="md:col-span-2">
-              <label class="block text-xs font-semibold uppercase tracking-wider text-stone-700 mb-1.5">
+              <Label class="block mb-1.5">
                 Recipe Kit Name <span class="text-rose-500">*</span>
-              </label>
-              <input
+              </Label>
+              <Input
                 type="text"
                 v-model="form.name"
                 placeholder="e.g. Paneer Butter Masala Kit"
-                class="w-full px-3.5 py-2.5 bg-[#fbfaf8] border rounded-2xl text-sm font-serif focus:bg-white focus:outline-none transition-all"
-                :class="form.errors.name ? 'border-rose-400 focus:border-rose-500' : 'border-[#e0d9cc] focus:border-[#a47a3c]'"
+                class="w-full h-11 bg-[#fbfaf8] rounded-2xl text-sm font-serif"
+                :class="{ 'border-rose-400 focus-visible:ring-rose-500': form.errors.name }"
                 required
               />
               <div v-if="form.errors.name" class="text-rose-600 text-[11px] mt-1">{{ form.errors.name }}</div>
@@ -241,91 +253,92 @@ const submit = () => {
 
             <!-- Slug -->
             <div>
-              <label class="block text-xs font-semibold uppercase tracking-wider text-stone-700 mb-1.5">
+              <Label class="block mb-1.5">
                 URL Slug
-              </label>
-              <input
+              </Label>
+              <Input
                 type="text"
                 v-model="form.slug"
                 @input="isSlugManuallyEdited = true"
                 placeholder="paneer-curry"
-                class="w-full px-3.5 py-2.5 bg-[#fbfaf8] border rounded-2xl text-xs font-mono focus:bg-white focus:outline-none transition-all"
-                :class="form.errors.slug ? 'border-rose-400 focus:border-rose-500' : 'border-[#e0d9cc] focus:border-[#a47a3c]'"
+                class="w-full h-10 bg-[#fbfaf8] rounded-2xl text-xs font-mono"
+                :class="{ 'border-rose-400 focus-visible:ring-rose-500': form.errors.slug }"
               />
               <div v-if="form.errors.slug" class="text-rose-600 text-[11px] mt-1">{{ form.errors.slug }}</div>
             </div>
 
             <!-- Subtitle Tag -->
             <div>
-              <label class="block text-xs font-semibold uppercase tracking-wider text-stone-700 mb-1.5">
+              <Label class="block mb-1.5">
                 Eyebrow Subtitle Tag
-              </label>
-              <input
+              </Label>
+              <Input
                 type="text"
                 v-model="form.subtitle_tag"
                 placeholder="e.g. CHEF-CRAFTED · DINNER IN 20 MINS"
-                class="w-full px-3.5 py-2.5 bg-[#fbfaf8] border rounded-2xl text-xs focus:bg-white focus:outline-none transition-all"
-                :class="form.errors.subtitle_tag ? 'border-rose-400 focus:border-rose-500' : 'border-[#e0d9cc] focus:border-[#a47a3c]'"
+                class="w-full h-10 bg-[#fbfaf8] rounded-2xl text-xs"
+                :class="{ 'border-rose-400 focus-visible:ring-rose-500': form.errors.subtitle_tag }"
               />
               <div v-if="form.errors.subtitle_tag" class="text-rose-600 text-[11px] mt-1">{{ form.errors.subtitle_tag }}</div>
             </div>
 
             <!-- Cooking Time -->
             <div>
-              <label class="block text-xs font-semibold uppercase tracking-wider text-stone-700 mb-1.5">
+              <Label class="block mb-1.5">
                 Cooking Time
-              </label>
+              </Label>
               <div class="relative">
-                <input
+                <Input
                   type="text"
                   v-model="form.cooking_time"
                   placeholder="e.g. 20 mins, 35 mins"
-                  class="w-full pl-9 pr-3.5 py-2.5 bg-[#fbfaf8] border rounded-2xl text-xs focus:bg-white focus:outline-none transition-all"
-                  :class="form.errors.cooking_time ? 'border-rose-400 focus:border-rose-500' : 'border-[#e0d9cc] focus:border-[#a47a3c]'"
+                  class="w-full h-10 pl-9 bg-[#fbfaf8] rounded-2xl text-xs"
+                  :class="{ 'border-rose-400 focus-visible:ring-rose-500': form.errors.cooking_time }"
                 />
-                <Clock class="w-4 h-4 text-stone-400 absolute left-3 top-3" />
+                <Clock class="w-4 h-4 text-stone-400 absolute left-3 top-3 pointer-events-none" />
               </div>
             </div>
 
             <!-- Servings -->
             <div>
-              <label class="block text-xs font-semibold uppercase tracking-wider text-stone-700 mb-1.5">
+              <Label class="block mb-1.5">
                 Servings
-              </label>
+              </Label>
               <div class="relative">
-                <input
+                <Input
                   type="text"
                   v-model="form.servings"
                   placeholder="e.g. Serves 4, Feast for 6"
-                  class="w-full pl-9 pr-3.5 py-2.5 bg-[#fbfaf8] border rounded-2xl text-xs focus:bg-white focus:outline-none transition-all"
-                  :class="form.errors.servings ? 'border-rose-400 focus:border-rose-500' : 'border-[#e0d9cc] focus:border-[#a47a3c]'"
+                  class="w-full h-10 pl-9 bg-[#fbfaf8] rounded-2xl text-xs"
+                  :class="{ 'border-rose-400 focus-visible:ring-rose-500': form.errors.servings }"
                 />
-                <Users class="w-4 h-4 text-stone-400 absolute left-3 top-3" />
+                <Users class="w-4 h-4 text-stone-400 absolute left-3 top-3 pointer-events-none" />
               </div>
             </div>
 
             <!-- Difficulty Level -->
             <div>
-              <label class="block text-xs font-semibold uppercase tracking-wider text-stone-700 mb-1.5">
+              <Label class="block mb-1.5">
                 Difficulty Level
-              </label>
-              <select
-                v-model="form.difficulty"
-                class="w-full px-3.5 py-2.5 bg-[#fbfaf8] border border-[#e0d9cc] rounded-2xl text-xs focus:bg-white focus:border-[#a47a3c] focus:outline-none"
-              >
-                <option value="Easy">Easy (Beginner friendly)</option>
-                <option value="Medium">Medium (Weekend special)</option>
-                <option value="Chef-Level">Chef-Level (Multi-step dum cooking)</option>
-              </select>
+              </Label>
+              <Select v-model="form.difficulty">
+                <SelectTrigger class="w-full h-10 bg-[#fbfaf8] rounded-2xl">
+                  <SelectValue placeholder="Select difficulty..." />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Easy">Easy (Beginner friendly)</SelectItem>
+                  <SelectItem value="Medium">Medium (Weekend special)</SelectItem>
+                  <SelectItem value="Chef-Level">Chef-Level (Multi-step dum cooking)</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
 
             <!-- Status Toggle -->
-            <div class="flex items-center">
+            <div class="flex items-center pt-2">
               <label class="flex items-center gap-3 cursor-pointer select-none">
-                <input 
-                  type="checkbox" 
-                  v-model="form.is_active" 
-                  class="w-4 h-4 rounded text-[#a47a3c] focus:ring-[#a47a3c] cursor-pointer"
+                <Checkbox
+                  :checked="form.is_active"
+                  @update:checked="form.is_active = $event"
                 />
                 <div>
                   <span class="text-xs font-semibold text-stone-800">Publish Kit Immediately</span>
@@ -336,15 +349,15 @@ const submit = () => {
 
             <!-- Description -->
             <div class="md:col-span-2">
-              <label class="block text-xs font-semibold uppercase tracking-wider text-stone-700 mb-1.5">
+              <Label class="block mb-1.5">
                 Recipe Kit Story & Description
-              </label>
-              <textarea
+              </Label>
+              <Textarea
                 v-model="form.description"
                 rows="3"
                 placeholder="Detailed summary of the recipe, the flavor profile, and what is included..."
-                class="w-full px-3.5 py-2.5 bg-[#fbfaf8] border border-[#e0d9cc] rounded-2xl text-xs focus:bg-white focus:border-[#a47a3c] focus:outline-none transition-all resize-y"
-              ></textarea>
+                class="w-full bg-[#fbfaf8] rounded-2xl text-xs resize-y"
+              />
             </div>
           </div>
         </div>
@@ -371,29 +384,31 @@ const submit = () => {
 
             <!-- Add Product Selector -->
             <div class="flex items-center gap-2 shrink-0">
-              <select
-                v-model="selectedProductToAdd"
-                class="px-3 py-2 bg-[#fbfaf8] border border-[#e0d9cc] rounded-xl text-xs focus:outline-none focus:border-[#a47a3c] max-w-[220px]"
-              >
-                <option value="" disabled>Select catalog product...</option>
-                <option 
-                  v-for="p in availableProducts" 
-                  :key="p.id" 
-                  :value="p.id"
-                >
-                  {{ p.name }} (${{ Number(p.price).toFixed(2) }})
-                </option>
-              </select>
+              <Select v-model="selectedProductToAdd">
+                <SelectTrigger class="w-[230px] h-9 bg-[#fbfaf8] rounded-xl text-xs">
+                  <SelectValue placeholder="Select catalog product..." />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem 
+                    v-for="p in availableProducts" 
+                    :key="p.id" 
+                    :value="String(p.id)"
+                  >
+                    {{ p.name }} (${{ Number(p.price).toFixed(2) }})
+                  </SelectItem>
+                </SelectContent>
+              </Select>
 
-              <button
+              <Button
                 type="button"
                 @click="addProductToKit"
                 :disabled="!selectedProductToAdd"
-                class="inline-flex items-center gap-1.5 px-4 py-2 bg-[#1a1a1a] hover:bg-black text-white text-xs font-semibold rounded-xl disabled:opacity-40 transition-colors cursor-pointer"
+                size="sm"
+                class="rounded-xl h-9 bg-[#1a1a1a] hover:bg-black text-white text-xs font-semibold gap-1.5 cursor-pointer disabled:opacity-40"
               >
                 <Plus class="w-3.5 h-3.5 stroke-[2.5]" />
                 <span>Link Product</span>
-              </button>
+              </Button>
             </div>
           </div>
 
@@ -438,31 +453,31 @@ const submit = () => {
                 <!-- Qty -->
                 <div class="flex items-center gap-1.5">
                   <span class="text-[10px] font-mono uppercase text-stone-500">Qty:</span>
-                  <input
+                  <Input
                     type="number"
                     v-model.number="item.quantity"
                     min="1"
                     max="99"
-                    class="w-14 px-2 py-1 bg-white border border-[#e0d9cc] rounded-lg text-xs text-center font-bold focus:outline-none focus:border-[#a47a3c]"
+                    class="w-16 h-8 bg-white rounded-lg text-xs text-center font-bold px-1"
                   />
                 </div>
 
                 <!-- Unit preparation notes -->
                 <div class="flex-1 min-w-[160px]">
-                  <input
+                  <Input
                     type="text"
                     v-model="item.unit_notes"
                     placeholder="e.g. 400g cubed, for gravy"
-                    class="w-full px-2.5 py-1 bg-white border border-[#e0d9cc] rounded-lg text-xs placeholder:text-stone-400 focus:outline-none focus:border-[#a47a3c]"
+                    class="w-full h-8 bg-white rounded-lg text-xs placeholder:text-stone-400"
                   />
                 </div>
 
                 <!-- Optional toggle -->
                 <label class="inline-flex items-center gap-1.5 text-[11px] text-stone-600 cursor-pointer select-none">
-                  <input 
-                    type="checkbox" 
-                    v-model="item.is_optional" 
-                    class="w-3.5 h-3.5 rounded text-[#a47a3c] focus:ring-[#a47a3c]"
+                  <Checkbox 
+                    :checked="item.is_optional" 
+                    @update:checked="item.is_optional = $event"
+                    class="h-3.5 w-3.5"
                   />
                   <span>Optional</span>
                 </label>
@@ -473,14 +488,16 @@ const submit = () => {
                 </div>
 
                 <!-- Remove Button -->
-                <button
+                <Button
                   type="button"
+                  variant="ghost"
+                  size="icon"
                   @click="removeProductFromKit(idx)"
-                  class="p-1.5 text-stone-400 hover:text-rose-600 rounded-lg hover:bg-rose-50 transition-colors cursor-pointer"
+                  class="h-8 w-8 text-stone-400 hover:text-rose-600 hover:bg-rose-50 cursor-pointer"
                   title="Remove product from kit"
                 >
                   <Trash2 class="w-4 h-4" />
-                </button>
+                </Button>
               </div>
             </div>
 
@@ -525,16 +542,16 @@ const submit = () => {
           <div class="grid grid-cols-1 sm:grid-cols-3 gap-5">
             <!-- Bundle Price -->
             <div>
-              <label class="block text-xs font-semibold uppercase tracking-wider text-stone-700 mb-1.5">
+              <Label class="block mb-1.5">
                 Bundle Price ($) <span class="text-rose-500">*</span>
-              </label>
-              <input
+              </Label>
+              <Input
                 type="number"
                 step="0.01"
                 v-model="form.price"
                 placeholder="14.99"
-                class="w-full px-3.5 py-2.5 bg-[#fbfaf8] border rounded-2xl text-base font-serif font-medium focus:bg-white focus:outline-none transition-all"
-                :class="form.errors.price ? 'border-rose-400 focus:border-rose-500' : 'border-[#e0d9cc] focus:border-[#a47a3c]'"
+                class="w-full h-11 bg-[#fbfaf8] rounded-2xl text-base font-serif font-medium"
+                :class="{ 'border-rose-400 focus-visible:ring-rose-500': form.errors.price }"
                 required
               />
               <div v-if="form.errors.price" class="text-rose-600 text-[11px] mt-1">{{ form.errors.price }}</div>
@@ -542,16 +559,16 @@ const submit = () => {
 
             <!-- Original / Standalone Price -->
             <div>
-              <label class="block text-xs font-semibold uppercase tracking-wider text-stone-700 mb-1.5">
+              <Label class="block mb-1.5">
                 Original Standalone Price ($)
-              </label>
-              <input
+              </Label>
+              <Input
                 type="number"
                 step="0.01"
                 v-model="form.original_price"
                 placeholder="18.99"
-                class="w-full px-3.5 py-2.5 bg-[#fbfaf8] border rounded-2xl text-base font-serif font-medium focus:bg-white focus:outline-none transition-all"
-                :class="form.errors.original_price ? 'border-rose-400 focus:border-rose-500' : 'border-[#e0d9cc] focus:border-[#a47a3c]'"
+                class="w-full h-11 bg-[#fbfaf8] rounded-2xl text-base font-serif font-medium"
+                :class="{ 'border-rose-400 focus-visible:ring-rose-500': form.errors.original_price }"
               />
               <div v-if="form.errors.original_price" class="text-rose-600 text-[11px] mt-1">{{ form.errors.original_price }}</div>
             </div>
@@ -610,20 +627,21 @@ const submit = () => {
             <div class="flex flex-col justify-center space-y-2 p-5 bg-[#fbfaf8] border border-[#e0d9cc] rounded-2xl">
               <span class="text-xs font-semibold text-stone-800">Add Image by URL or Path:</span>
               <div class="flex items-center gap-2">
-                <input
+                <Input
                   type="text"
                   v-model="manualUrlInput"
                   @keydown.enter.prevent="addManualUrl"
                   placeholder="/images/products/paneer_curry.jpg"
-                  class="flex-1 px-3 py-2 bg-white border border-[#e0d9cc] rounded-xl text-xs font-mono focus:outline-none focus:border-[#a47a3c]"
+                  class="flex-1 h-9 bg-white rounded-xl text-xs font-mono"
                 />
-                <button
+                <Button
                   type="button"
                   @click="addManualUrl"
-                  class="px-3.5 py-2 bg-[#1a1a1a] hover:bg-black text-white text-xs font-semibold rounded-xl cursor-pointer"
+                  size="sm"
+                  class="h-9 px-3.5 bg-[#1a1a1a] hover:bg-black text-white text-xs font-semibold rounded-xl cursor-pointer"
                 >
                   Add
-                </button>
+                </Button>
               </div>
               <span class="text-[10px] text-stone-500">Supports catalog paths or web URLs. First image serves as primary cover.</span>
             </div>
@@ -670,14 +688,16 @@ const submit = () => {
               </p>
             </div>
 
-            <button
+            <Button
               type="button"
+              variant="outline"
+              size="sm"
               @click="addRecipeStep"
-              class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#f3efe7] hover:bg-[#ece7de] text-[#1d1d1f] text-xs font-semibold rounded-xl border border-[#e0d9cc] transition-colors cursor-pointer"
+              class="h-8 rounded-xl gap-1.5 bg-[#f3efe7] hover:bg-[#ece7de] text-[#1d1d1f] text-xs font-semibold border-[#e0d9cc] cursor-pointer"
             >
               <Plus class="w-3.5 h-3.5 stroke-[2.5]" />
               <span>Add Step</span>
-            </button>
+            </Button>
           </div>
 
           <div class="space-y-3">
@@ -689,20 +709,22 @@ const submit = () => {
               <span class="w-7 h-7 rounded-full bg-[#f5eee2] text-[#7a5620] border border-[#e0d9cc] flex items-center justify-center font-mono font-bold text-xs shrink-0">
                 {{ idx + 1 }}
               </span>
-              <input
+              <Input
                 type="text"
                 v-model="form.recipe_steps[idx]"
                 placeholder="Describe this cooking step..."
-                class="flex-1 px-3.5 py-2 bg-[#fbfaf8] border border-[#e0d9cc] rounded-xl text-xs focus:outline-none focus:bg-white focus:border-[#a47a3c]"
+                class="flex-1 h-9 bg-[#fbfaf8] rounded-xl text-xs"
               />
-              <button
+              <Button
                 type="button"
+                variant="ghost"
+                size="icon"
                 @click="removeRecipeStep(idx)"
-                class="p-2 text-stone-400 hover:text-rose-600 transition-colors cursor-pointer"
+                class="h-8 w-8 text-stone-400 hover:text-rose-600 cursor-pointer"
                 title="Remove step"
               >
                 <X class="w-4 h-4" />
-              </button>
+              </Button>
             </div>
           </div>
         </div>
@@ -716,13 +738,13 @@ const submit = () => {
             Cancel
           </Link>
 
-          <button
+          <Button
             type="submit"
             :disabled="form.processing"
-            class="px-7 py-3 bg-[#1a1a1a] hover:bg-black text-white text-xs font-semibold rounded-full shadow-sm hover:shadow transition-all active:scale-98 cursor-pointer disabled:opacity-50"
+            class="h-11 px-7 bg-[#1a1a1a] hover:bg-black text-white text-xs font-semibold rounded-full shadow-sm hover:shadow transition-all active:scale-98 cursor-pointer disabled:opacity-50"
           >
             {{ form.processing ? 'Publishing Kit...' : 'Publish Recipe Kit' }}
-          </button>
+          </Button>
         </div>
 
       </form>

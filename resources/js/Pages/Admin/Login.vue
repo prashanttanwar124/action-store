@@ -1,6 +1,10 @@
 <script setup>
 import { Head, useForm, Link } from '@inertiajs/vue3';
 import { Shield, Lock, Mail, ArrowRight, ArrowLeft } from 'lucide-vue-next';
+import { Input } from '@/Components/ui/input';
+import { Label } from '@/Components/ui/label';
+import { Checkbox } from '@/Components/ui/checkbox';
+import { Button } from '@/Components/ui/button';
 
 const form = useForm({
   email: '',
@@ -61,14 +65,14 @@ const fillDemo = (email, password = 'password') => {
         <form @submit.prevent="submit" class="space-y-4">
           <!-- Email Input -->
           <div>
-            <label for="email" class="block text-xs font-semibold uppercase tracking-wider text-[#6e6e73] mb-1.5">
+            <Label for="email" class="block mb-1.5">
               Admin Email
-            </label>
+            </Label>
             <div class="relative">
-              <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-[#86868b]">
+              <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-[#86868b] z-10">
                 <Mail class="w-4 h-4" />
               </div>
-              <input
+              <Input
                 id="email"
                 v-model="form.email"
                 type="email"
@@ -76,8 +80,8 @@ const fillDemo = (email, password = 'password') => {
                 autofocus
                 autocomplete="username"
                 placeholder="admin@masalamart.com"
-                class="w-full pl-10 pr-3.5 py-2.5 bg-white border border-[#e0d9cc] rounded-xl text-sm text-[#1d1d1f] placeholder:text-[#86868b] focus:outline-none focus:ring-2 focus:ring-[#1a1a1a] focus:border-transparent transition-all"
-                :class="{ 'border-red-500': form.errors.email }"
+                class="w-full pl-10 pr-3.5 h-11 bg-white rounded-xl text-sm"
+                :class="{ 'border-red-500 focus-visible:ring-red-500': form.errors.email }"
               />
             </div>
             <p v-if="form.errors.email" class="text-xs text-red-600 mt-1 font-medium">
@@ -87,22 +91,22 @@ const fillDemo = (email, password = 'password') => {
 
           <!-- Password Input -->
           <div>
-            <label for="password" class="block text-xs font-semibold uppercase tracking-wider text-[#6e6e73] mb-1.5">
+            <Label for="password" class="block mb-1.5">
               Password
-            </label>
+            </Label>
             <div class="relative">
-              <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-[#86868b]">
+              <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-[#86868b] z-10">
                 <Lock class="w-4 h-4" />
               </div>
-              <input
+              <Input
                 id="password"
                 v-model="form.password"
                 type="password"
                 required
                 autocomplete="current-password"
                 placeholder="••••••••"
-                class="w-full pl-10 pr-3.5 py-2.5 bg-white border border-[#e0d9cc] rounded-xl text-sm text-[#1d1d1f] placeholder:text-[#86868b] focus:outline-none focus:ring-2 focus:ring-[#1a1a1a] focus:border-transparent transition-all"
-                :class="{ 'border-red-500': form.errors.password }"
+                class="w-full pl-10 pr-3.5 h-11 bg-white rounded-xl text-sm"
+                :class="{ 'border-red-500 focus-visible:ring-red-500': form.errors.password }"
               />
             </div>
             <p v-if="form.errors.password" class="text-xs text-red-600 mt-1 font-medium">
@@ -113,27 +117,26 @@ const fillDemo = (email, password = 'password') => {
           <!-- Remember Me -->
           <div class="flex items-center justify-between pt-1">
             <label class="flex items-center gap-2 cursor-pointer select-none">
-              <input 
-                v-model="form.remember" 
-                type="checkbox" 
-                class="rounded border-[#e0d9cc] text-[#1a1a1a] focus:ring-[#1a1a1a] w-4 h-4" 
+              <Checkbox 
+                :checked="form.remember" 
+                @update:checked="form.remember = $event"
               />
               <span class="text-xs text-[#6e6e73]">Stay logged in to admin session</span>
             </label>
           </div>
 
           <!-- Submit Button -->
-          <button
+          <Button
             type="submit"
             :disabled="form.processing"
-            class="w-full py-3 bg-[#1a1a1a] hover:bg-black text-white font-semibold text-xs rounded-full flex items-center justify-center gap-2 transition-transform active:scale-98 shadow-md cursor-pointer disabled:opacity-50 mt-2"
+            class="w-full h-11 bg-[#1a1a1a] hover:bg-black text-white font-semibold text-xs rounded-full flex items-center justify-center gap-2 transition-transform active:scale-98 shadow-md cursor-pointer disabled:opacity-50 mt-2"
           >
             <span v-if="form.processing">Authenticating...</span>
             <template v-else>
               <span>Sign In to Admin Guard</span>
               <ArrowRight class="w-4 h-4" />
             </template>
-          </button>
+          </Button>
         </form>
 
         <!-- Pre-fill demo accounts for quick testing -->
