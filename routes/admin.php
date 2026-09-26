@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Admin\AdminDashboardController;
 use App\Http\Controllers\Admin\AdminLoginController;
+use App\Http\Controllers\Admin\AdminProductController;
 use App\Http\Controllers\Admin\AdminRoleController;
 use Illuminate\Support\Facades\Route;
 
@@ -16,6 +17,17 @@ Route::prefix('admin')->name('admin.')->group(function () {
     Route::middleware('auth:admin')->group(function () {
         Route::post('/logout', [AdminLoginController::class, 'destroy'])->name('logout');
         Route::get('/dashboard', [AdminDashboardController::class, 'index'])->name('dashboard');
+
+        // Product Management (with Multi-Image Uploads)
+        Route::middleware('permission:manage products,admin')->group(function () {
+            Route::get('/products', [AdminProductController::class, 'index'])->name('products.index');
+            Route::get('/products/create', [AdminProductController::class, 'create'])->name('products.create');
+            Route::post('/products', [AdminProductController::class, 'store'])->name('products.store');
+            Route::get('/products/{product}/edit', [AdminProductController::class, 'edit'])->name('products.edit');
+            Route::post('/products/{product}', [AdminProductController::class, 'update'])->name('products.update');
+            Route::put('/products/{product}', [AdminProductController::class, 'update']);
+            Route::delete('/products/{product}', [AdminProductController::class, 'destroy'])->name('products.destroy');
+        });
 
         // Role & Permission Management
         Route::middleware('permission:manage roles,admin')->group(function () {

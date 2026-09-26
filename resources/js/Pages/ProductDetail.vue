@@ -34,6 +34,7 @@ const product = computed(() => {
       stockBadge: props.product.stock_badge,
       photoLabel: props.product.photo_label,
       image: props.product.image,
+      images: props.product.images_list || props.product.images || (props.product.image ? [props.product.image] : []),
       sizeMain: props.product.size_main,
       sizeSub: props.product.size_sub,
       size: props.product.size_main,
@@ -63,6 +64,11 @@ const product = computed(() => {
     goesWithIt,
   };
 });
+
+const activeImage = ref('');
+watch(() => product.value.image, (newImg) => {
+  if (newImg) activeImage.value = newImg;
+}, { immediate: true });
 
 const isSubscribed = ref(false);
 const quantity = ref(1);
@@ -179,9 +185,9 @@ function handleAddAllFbt() {
             
             <!-- Real High-Res Product Image -->
             <img 
-              :src="product.image || ('/images/products/' + product.slug + '.jpg')" 
+              :src="activeImage || product.image || ('/images/products/' + product.slug + '.jpg')" 
               :alt="product.name" 
-              class="w-full h-full object-cover object-center absolute inset-0"
+              class="w-full h-full object-cover object-center absolute inset-0 transition-opacity duration-200"
             />
 
             <!-- Subtle vignette gradient -->
@@ -206,6 +212,25 @@ function handleAddAllFbt() {
                 {{ product.sizeSub }}
               </div>
             </div>
+          </div>
+
+          <!-- Multi-Image Thumbnail Gallery (if product has > 1 image) -->
+          <div v-if="product.images && product.images.length > 1" class="flex items-center gap-2 overflow-x-auto pb-1 no-scrollbar">
+            <button 
+              v-for="(img, idx) in product.images" 
+              :key="idx"
+              type="button"
+              @click="activeImage = img"
+              class="w-16 h-16 rounded-2xl overflow-hidden border-2 transition-all cursor-pointer shrink-0 bg-stone-100"
+              :class="activeImage === img ? 'border-[#a47a3c] ring-2 ring-[#a47a3c]/30 scale-102' : 'border-stone-200 opacity-70 hover:opacity-100'"
+            >
+              <img 
+                :src="img" 
+                :alt="`${product.name} gallery ${idx + 1}`" 
+                class="w-full h-full object-cover"
+                @error="$event.target.src = '/images/products/atta.jpg'"
+              />
+            </button>
           </div>
 
           <!-- Product Assurance Strip -->

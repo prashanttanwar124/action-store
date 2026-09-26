@@ -75,21 +75,21 @@ const navigationItems = [
     items: [
       {
         name: 'Catalog & Products',
-        href: '#catalog-section',
+        href: route('admin.products.index'),
         icon: Package,
-        isCurrent: () => false,
-        badge: 'Active',
+        isCurrent: () => route().current('admin.products.*'),
+        badge: 'CRUD',
       },
       {
         name: 'Orders & Sales',
-        href: '#orders-section',
+        href: route('admin.dashboard') + '#orders-section',
         icon: ShoppingBag,
         isCurrent: () => false,
         badge: 'Live',
       },
       {
         name: 'Customer Users',
-        href: '#customers-section',
+        href: route('admin.dashboard') + '#customers-section',
         icon: Users,
         isCurrent: () => false,
         badge: null,
@@ -101,21 +101,21 @@ const navigationItems = [
     items: [
       {
         name: 'Spatie RBAC Roles',
-        href: '#roles-section',
+        href: route('admin.dashboard') + '#roles-section',
         icon: ShieldCheck,
         isCurrent: () => false,
         badge: 'RBAC',
       },
       {
         name: 'Admin Staff',
-        href: '#admins-section',
+        href: route('admin.dashboard') + '#admins-section',
         icon: UserCheck,
         isCurrent: () => false,
         badge: null,
       },
       {
         name: 'Guard Architecture',
-        href: '#architecture-section',
+        href: route('admin.dashboard') + '#architecture-section',
         icon: Layers,
         isCurrent: () => false,
         badge: 'Isolated',
@@ -175,7 +175,8 @@ const navigationItems = [
             <div class="text-[10px] font-mono uppercase tracking-wider text-stone-500 font-semibold px-3 py-1">
               {{ navGroup.group }}
             </div>
-            <a 
+            <component 
+              :is="item.href.includes('#') ? 'a' : Link"
               v-for="item in navGroup.items" 
               :key="item.name"
               :href="item.href"
@@ -200,7 +201,7 @@ const navigationItems = [
               >
                 {{ item.badge }}
               </span>
-            </a>
+            </component>
           </div>
 
           <!-- Customer Storefront Shortcut -->
@@ -281,7 +282,8 @@ const navigationItems = [
           <div class="text-[10px] font-mono uppercase tracking-wider text-stone-500 font-semibold px-3 py-1">
             {{ navGroup.group }}
           </div>
-          <a 
+          <component
+            :is="item.href.includes('#') ? 'a' : Link"
             v-for="item in navGroup.items" 
             :key="item.name"
             :href="item.href"
@@ -305,7 +307,7 @@ const navigationItems = [
             >
               {{ item.badge }}
             </span>
-          </a>
+          </component>
         </div>
 
         <!-- Storefront Shortcut Group -->
