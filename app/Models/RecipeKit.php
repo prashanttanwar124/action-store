@@ -2,13 +2,12 @@
 
 namespace App\Models;
 
-use Database\Factories\ProductFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
-class Product extends Model
+class RecipeKit extends Model
 {
-    /** @use HasFactory<ProductFactory> */
     use HasFactory;
 
     /**
@@ -17,25 +16,19 @@ class Product extends Model
      * @var list<string>
      */
     protected $fillable = [
-        'slug',
         'name',
+        'slug',
         'subtitle_tag',
-        'category',
-        'category_title',
+        'description',
+        'servings',
+        'cooking_time',
+        'difficulty',
         'price',
         'original_price',
-        'unit_price',
-        'stock_badge',
-        'photo_label',
         'image',
         'images',
-        'size_main',
-        'size_sub',
-        'freshness_line',
-        'description',
-        'buy_again',
-        'has_subscription',
-        'frequently_bought_together',
+        'recipe_steps',
+        'is_active',
     ];
 
     /**
@@ -45,6 +38,7 @@ class Product extends Model
      */
     protected $appends = [
         'images_list',
+        'calculated_individual_total',
     ];
 
     /**
@@ -58,20 +52,20 @@ class Product extends Model
             'price' => 'float',
             'original_price' => 'float',
             'images' => 'array',
-            'buy_again' => 'boolean',
-            'has_subscription' => 'boolean',
-            'frequently_bought_together' => 'array',
+            'recipe_steps' => 'array',
+            'is_active' => 'boolean',
         ];
     }
 
     /**
-     * Recipe kits that include this product as an ingredient.
+     * Linked products/ingredients for Group Buy.
      */
-    public function recipeKits()
+    public function products(): BelongsToMany
     {
-        return $this->belongsToMany(RecipeKit::class, 'recipe_kit_products')
+        return $this->belongsToMany(Product::class, 'recipe_kit_products')
             ->withPivot(['quantity', 'unit_notes', 'is_optional', 'sort_order'])
-            ->withTimestamps();
+            ->withTimestamps()
+            ->orderBy('recipe_kit_products.sort_order');
     }
 
     /**
@@ -89,6 +83,24 @@ class Product extends Model
             return [$this->image];
         }
 
-        return ['/images/products/atta.jpg'];
+        return ['/images/products/paneer_curry.jpg'];
+    }
+
+    /**
+     * Calculate sum of individual linked products if bought separately.
+     */
+    public function getCalculatedIndividualTotalAttribute(): float
+    {
+        if (! $this->relationLoaded('products')) {
+            return 0.0;
+        }
+
+        $total = 0.0;
+        foreach ($this->products as $product) {
+            $qty = $product->pivot->quantity ?? 1;
+            $total += ($product->price * $qty);
+        }
+
+        return round($total, 2);
     }
 }

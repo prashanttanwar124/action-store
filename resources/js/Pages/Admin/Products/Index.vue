@@ -140,7 +140,7 @@ const getCategoryBadgeClass = (category) => {
       </div>
 
       <!-- Quick Metrics Bar -->
-      <div class="grid grid-cols-2 sm:grid-cols-3 gap-3.5">
+      <div class="grid grid-cols-2 gap-3.5">
         <div class="bg-white border border-[#e0d9cc] rounded-2xl p-4 shadow-2xs flex items-center gap-3">
           <div class="w-10 h-10 rounded-xl bg-[#f5eee2] text-[#a47a3c] flex items-center justify-center shrink-0">
             <Package class="w-5 h-5" />
@@ -149,23 +149,11 @@ const getCategoryBadgeClass = (category) => {
             <div class="text-xl sm:text-2xl font-serif font-medium text-[#1d1d1f] leading-none">
               {{ stats.total }}
             </div>
-            <div class="text-[11px] text-[#6e6e73] mt-0.5">Total Products</div>
+            <div class="text-[11px] text-[#6e6e73] mt-0.5">Total Store Products</div>
           </div>
         </div>
 
         <div class="bg-white border border-[#e0d9cc] rounded-2xl p-4 shadow-2xs flex items-center gap-3">
-          <div class="w-10 h-10 rounded-xl bg-purple-50 text-purple-700 flex items-center justify-center shrink-0">
-            <Sparkles class="w-5 h-5" />
-          </div>
-          <div>
-            <div class="text-xl sm:text-2xl font-serif font-medium text-[#1d1d1f] leading-none">
-              {{ stats.recipe_kits }}
-            </div>
-            <div class="text-[11px] text-[#6e6e73] mt-0.5">Artisanal Recipe Kits</div>
-          </div>
-        </div>
-
-        <div class="bg-white border border-[#e0d9cc] rounded-2xl p-4 shadow-2xs col-span-2 sm:col-span-1 flex items-center gap-3">
           <div class="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-700 flex items-center justify-center shrink-0">
             <Filter class="w-5 h-5" />
           </div>

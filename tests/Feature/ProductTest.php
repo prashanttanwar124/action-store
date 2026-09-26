@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use Database\Seeders\ProductSeeder;
+use Database\Seeders\RecipeKitSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Inertia\Testing\AssertableInertia as Assert;
 use Tests\TestCase;
@@ -20,7 +21,7 @@ class ProductTest extends TestCase
         $response->assertStatus(200);
         $response->assertInertia(fn (Assert $page) => $page
             ->component('Home')
-            ->has('products', 15)
+            ->has('products', 10)
             ->where('products.0.slug', 'atta')
         );
     }
@@ -43,15 +44,15 @@ class ProductTest extends TestCase
     public function test_recipe_kit_detail_page_loads_kit_ingredients(): void
     {
         $this->seed(ProductSeeder::class);
+        $this->seed(RecipeKitSeeder::class);
 
-        $response = $this->get('/products/paneer-curry');
+        $response = $this->get('/recipe-kits/paneer-curry');
 
         $response->assertStatus(200);
         $response->assertInertia(fn (Assert $page) => $page
-            ->component('ProductDetail')
-            ->where('slug', 'paneer-curry')
-            ->where('product.is_recipe_kit', true)
-            ->has('product.recipe_ingredients', 4)
+            ->component('RecipeKitDetail')
+            ->where('kit.slug', 'paneer-curry')
+            ->has('kit.products')
         );
     }
 }

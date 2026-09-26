@@ -21,7 +21,8 @@ import {
   ChevronRight,
   Sparkles,
   BarChart3,
-  Sliders
+  Sliders,
+  UtensilsCrossed
 } from 'lucide-vue-next';
 
 defineProps({
@@ -79,6 +80,20 @@ const navigationItems = [
         icon: Package,
         isCurrent: () => route().current('admin.products.*'),
         badge: 'CRUD',
+      },
+      {
+        name: 'Recipe Kits & Group Buy',
+        href: route('admin.recipe-kits.index'),
+        icon: UtensilsCrossed,
+        isCurrent: () => route().current('admin.recipe-kits.*'),
+        badge: 'Group Buy',
+      },
+      {
+        name: 'Hero Sliders',
+        href: route('admin.sliders.index'),
+        icon: Sliders,
+        isCurrent: () => route().current('admin.sliders.*'),
+        badge: 'Hero',
       },
       {
         name: 'Orders & Sales',

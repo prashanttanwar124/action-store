@@ -2,19 +2,42 @@
 
 use App\Http\Controllers\ProfileController;
 use App\Models\Product;
+use App\Models\RecipeKit;
+use App\Models\Slider;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
 // 1a: Home / Storefront
 Route::get('/', function () {
+    $sliders = Slider::where('is_active', true)->orderBy('sort_order')->latest('id')->get();
+    $recipeKits = RecipeKit::with('products')->where('is_active', true)->latest('id')->get();
+
     return Inertia::render('Home', [
         'products' => Product::all(),
+        'sliders' => $sliders,
+        'recipeKits' => $recipeKits,
     ]);
 })->name('home');
+
+// Recipe Kit Detail Page (Group Buy Bundle)
+Route::get('/recipe-kits/{slug}', function (string $slug) {
+    $kit = RecipeKit::with('products')->where('slug', $slug)->firstOrFail();
+
+    return Inertia::render('RecipeKitDetail', [
+        'kit' => $kit,
+    ]);
+})->name('recipe-kits.show');
 
 // 1b & 1c: Product detail pages (e.g. /products/paneer, /products/rice, /products/atta)
 Route::get('/products/{slug}', function (string $slug) {
     $product = Product::where('slug', $slug)->first();
+
+    if (! $product) {
+        $kit = RecipeKit::with('products')->where('slug', $slug)->first();
+        if ($kit) {
+            return redirect()->route('recipe-kits.show', $slug);
+        }
+    }
 
     return Inertia::render('ProductDetail', [
         'slug' => $slug,

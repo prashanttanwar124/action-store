@@ -2,13 +2,11 @@
 
 namespace App\Models;
 
-use Database\Factories\ProductFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
-class Product extends Model
+class Slider extends Model
 {
-    /** @use HasFactory<ProductFactory> */
     use HasFactory;
 
     /**
@@ -17,25 +15,16 @@ class Product extends Model
      * @var list<string>
      */
     protected $fillable = [
-        'slug',
-        'name',
-        'subtitle_tag',
-        'category',
-        'category_title',
-        'price',
-        'original_price',
-        'unit_price',
-        'stock_badge',
-        'photo_label',
+        'title',
+        'tag',
+        'cta_text',
+        'link_url',
         'image',
         'images',
-        'size_main',
-        'size_sub',
-        'freshness_line',
-        'description',
-        'buy_again',
-        'has_subscription',
-        'frequently_bought_together',
+        'photo_label',
+        'bg_color',
+        'sort_order',
+        'is_active',
     ];
 
     /**
@@ -55,23 +44,10 @@ class Product extends Model
     protected function casts(): array
     {
         return [
-            'price' => 'float',
-            'original_price' => 'float',
             'images' => 'array',
-            'buy_again' => 'boolean',
-            'has_subscription' => 'boolean',
-            'frequently_bought_together' => 'array',
+            'sort_order' => 'integer',
+            'is_active' => 'boolean',
         ];
-    }
-
-    /**
-     * Recipe kits that include this product as an ingredient.
-     */
-    public function recipeKits()
-    {
-        return $this->belongsToMany(RecipeKit::class, 'recipe_kit_products')
-            ->withPivot(['quantity', 'unit_notes', 'is_optional', 'sort_order'])
-            ->withTimestamps();
     }
 
     /**
@@ -89,6 +65,6 @@ class Product extends Model
             return [$this->image];
         }
 
-        return ['/images/products/atta.jpg'];
+        return ['/images/products/sweets.jpg'];
     }
 }

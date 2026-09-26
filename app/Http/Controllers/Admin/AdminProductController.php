@@ -66,7 +66,6 @@ class AdminProductController extends Controller
                 'image' => $product->image,
                 'images' => $product->images_list,
                 'images_count' => count($product->images_list),
-                'is_recipe_kit' => $product->is_recipe_kit,
                 'created_at' => $product->created_at?->format('M d, Y'),
             ];
         });
@@ -75,7 +74,6 @@ class AdminProductController extends Controller
 
         $stats = [
             'total' => Product::count(),
-            'recipe_kits' => Product::where('is_recipe_kit', true)->count(),
             'categories_count' => $categories->count(),
         ];
 
@@ -181,9 +179,6 @@ class AdminProductController extends Controller
                 'size_sub' => $product->size_sub,
                 'freshness_line' => $product->freshness_line,
                 'description' => $product->description,
-                'servings' => $product->servings,
-                'cooking_time' => $product->cooking_time,
-                'is_recipe_kit' => (bool) $product->is_recipe_kit,
                 'buy_again' => (bool) $product->buy_again,
                 'has_subscription' => (bool) $product->has_subscription,
             ],

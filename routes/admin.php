@@ -3,7 +3,9 @@
 use App\Http\Controllers\Admin\AdminDashboardController;
 use App\Http\Controllers\Admin\AdminLoginController;
 use App\Http\Controllers\Admin\AdminProductController;
+use App\Http\Controllers\Admin\AdminRecipeKitController;
 use App\Http\Controllers\Admin\AdminRoleController;
+use App\Http\Controllers\Admin\AdminSliderController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('admin')->name('admin.')->group(function () {
@@ -27,6 +29,24 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::post('/products/{product}', [AdminProductController::class, 'update'])->name('products.update');
             Route::put('/products/{product}', [AdminProductController::class, 'update']);
             Route::delete('/products/{product}', [AdminProductController::class, 'destroy'])->name('products.destroy');
+
+            // Recipe Kits & Group Buy Product Bundles
+            Route::get('/recipe-kits', [AdminRecipeKitController::class, 'index'])->name('recipe-kits.index');
+            Route::get('/recipe-kits/create', [AdminRecipeKitController::class, 'create'])->name('recipe-kits.create');
+            Route::post('/recipe-kits', [AdminRecipeKitController::class, 'store'])->name('recipe-kits.store');
+            Route::get('/recipe-kits/{recipe_kit}/edit', [AdminRecipeKitController::class, 'edit'])->name('recipe-kits.edit');
+            Route::post('/recipe-kits/{recipe_kit}', [AdminRecipeKitController::class, 'update'])->name('recipe-kits.update');
+            Route::put('/recipe-kits/{recipe_kit}', [AdminRecipeKitController::class, 'update']);
+            Route::delete('/recipe-kits/{recipe_kit}', [AdminRecipeKitController::class, 'destroy'])->name('recipe-kits.destroy');
+
+            // Homepage Hero Carousel Sliders
+            Route::get('/sliders', [AdminSliderController::class, 'index'])->name('sliders.index');
+            Route::get('/sliders/create', [AdminSliderController::class, 'create'])->name('sliders.create');
+            Route::post('/sliders', [AdminSliderController::class, 'store'])->name('sliders.store');
+            Route::get('/sliders/{slider}/edit', [AdminSliderController::class, 'edit'])->name('sliders.edit');
+            Route::post('/sliders/{slider}', [AdminSliderController::class, 'update'])->name('sliders.update');
+            Route::put('/sliders/{slider}', [AdminSliderController::class, 'update']);
+            Route::delete('/sliders/{slider}', [AdminSliderController::class, 'destroy'])->name('sliders.destroy');
         });
 
         // Role & Permission Management

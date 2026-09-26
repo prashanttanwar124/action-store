@@ -46,9 +46,6 @@ const form = useForm({
   size_sub: props.product.size_sub || '',
   freshness_line: props.product.freshness_line || '',
   description: props.product.description || '',
-  servings: props.product.servings || '',
-  cooking_time: props.product.cooking_time || '',
-  is_recipe_kit: !!props.product.is_recipe_kit,
   buy_again: !!props.product.buy_again,
   has_subscription: !!props.product.has_subscription,
   existing_images: [...(props.product.images || [])],
@@ -521,19 +518,7 @@ const submit = () => {
             </div>
 
             <!-- Toggles for Options -->
-            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2">
-              <label class="flex items-center gap-2.5 p-3 rounded-2xl border border-[#e0d9cc] bg-[#faf8f5] cursor-pointer hover:bg-stone-50">
-                <input 
-                  type="checkbox" 
-                  v-model="form.is_recipe_kit"
-                  class="rounded border-[#e0d9cc] text-[#1a1a1a] focus:ring-[#1a1a1a]"
-                />
-                <div>
-                  <div class="text-xs font-semibold text-[#1d1d1f]">Recipe Meal Kit</div>
-                  <div class="text-[10px] text-[#86868b]">Displays recipe & ingredients tab</div>
-                </div>
-              </label>
-
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
               <label class="flex items-center gap-2.5 p-3 rounded-2xl border border-[#e0d9cc] bg-[#faf8f5] cursor-pointer hover:bg-stone-50">
                 <input 
                   type="checkbox" 
@@ -557,28 +542,6 @@ const submit = () => {
                   <div class="text-[10px] text-[#86868b]">Enables 5% recurring discount</div>
                 </div>
               </label>
-            </div>
-
-            <!-- Recipe kit specs if checked -->
-            <div v-if="form.is_recipe_kit" class="grid grid-cols-2 gap-4 p-4 rounded-2xl bg-purple-50/50 border border-purple-200">
-              <div>
-                <label class="block text-xs font-semibold text-purple-900 mb-1">Servings</label>
-                <input 
-                  v-model="form.servings"
-                  type="text"
-                  placeholder="e.g. 4-6 servings"
-                  class="w-full px-3 py-1.5 text-xs bg-white border border-purple-200 rounded-lg focus:outline-none"
-                />
-              </div>
-              <div>
-                <label class="block text-xs font-semibold text-purple-900 mb-1">Cooking Time</label>
-                <input 
-                  v-model="form.cooking_time"
-                  type="text"
-                  placeholder="e.g. 30 mins"
-                  class="w-full px-3 py-1.5 text-xs bg-white border border-purple-200 rounded-lg focus:outline-none"
-                />
-              </div>
             </div>
           </div>
         </div>

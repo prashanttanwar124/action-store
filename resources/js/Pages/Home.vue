@@ -16,12 +16,20 @@ const props = defineProps({
     type: Array,
     default: () => [],
   },
+  sliders: {
+    type: Array,
+    default: () => [],
+  },
+  recipeKits: {
+    type: Array,
+    default: () => [],
+  },
 });
 
 const store = useStore();
 
-// Hero Banner Interactive Carousel Slides
-const bannerSlides = [
+// Hero Banner Interactive Carousel Slides (Dynamic from DB / Admin)
+const defaultBannerSlides = [
   {
     id: 'sweets',
     tag: 'FESTIVAL PRE-ORDER · CLOSES OCT 30',
@@ -31,18 +39,18 @@ const bannerSlides = [
     image: '/images/products/sweets.jpg',
     alt: 'Assorted luxury Diwali sweets in royal gold gift box',
     photoLabel: 'mithai box',
-    bg: 'bg-[#1a1a1a]',
+    bg: '#1a1a1a',
   },
   {
     id: 'curry-kit',
     tag: 'CHEF-CRAFTED · DINNER IN 20 MINS',
     title: 'Restaurant curry,\ncooked at\nhome.',
     cta: 'Order kit for $14.99',
-    link: '/products/paneer-curry',
+    link: '/recipe-kits/paneer-curry',
     image: '/images/products/paneer_curry.jpg',
     alt: 'Fresh Paneer Butter Masala curry kit with pre-portioned ingredients',
     photoLabel: 'paneer kit',
-    bg: 'bg-[#221c17]',
+    bg: '#221c17',
   },
   {
     id: 'atta',
@@ -53,9 +61,26 @@ const bannerSlides = [
     image: '/images/products/atta.jpg',
     alt: 'Chakki Atta 100% stone ground whole wheat flour',
     photoLabel: 'chakki atta',
-    bg: 'bg-[#26201b]',
+    bg: '#26201b',
   },
 ];
+
+const bannerSlides = computed(() => {
+  if (props.sliders && props.sliders.length > 0) {
+    return props.sliders.map(s => ({
+      id: s.id,
+      tag: s.tag || 'FEATURED',
+      title: s.title,
+      cta: s.cta_text || 'Order now',
+      link: s.link_url || '/',
+      image: s.image,
+      alt: s.title.replace(/\n/g, ' '),
+      photoLabel: s.photo_label || '',
+      bg: s.bg_color || '#1a1a1a',
+    }));
+  }
+  return defaultBannerSlides;
+});
 
 // Masala Dabba (Spice-Box) Essential Staples
 const masalaDabbaSpices = [
@@ -223,52 +248,101 @@ const buyAgainItems = computed(() => {
   return items.length > 0 ? items : store.products.slice(0, 5);
 });
 
-// Recipe Kits
+// Recipe Kits (from live DB / Admin or fallback)
 const recipeKitItems = computed(() => {
-  const items = store.products.filter(p => p.isRecipeKit);
-  return items.length > 0 ? items : [
+  if (props.recipeKits && props.recipeKits.length > 0) {
+    return props.recipeKits.map(k => ({
+      id: k.id,
+      slug: k.slug,
+      name: k.name,
+      price: Number(k.price),
+      originalPrice: Number(k.original_price || (Number(k.price) + 2.50)),
+      image: k.image,
+      servings: k.servings || 'Serves 4',
+      cookingTime: k.cooking_time || '20 mins',
+      photoLabel: k.subtitle_tag || 'recipe kit',
+      freshnessLine: k.description || 'Pre-portioned fresh ingredients & spices · Zero food waste',
+      productsCount: k.products ? k.products.length : 3,
+      products: k.products || [],
+    }));
+  }
+  return [
     {
       id: 6,
       slug: 'paneer-curry',
       name: 'Paneer Butter Masala Kit',
       price: 14.99,
+      originalPrice: 18.99,
       image: '/images/products/paneer_curry.jpg',
       servings: 'Serves 4',
       cookingTime: '25 mins',
       photoLabel: 'paneer kit',
+      productsCount: 3,
+      products: [],
     },
     {
       id: 7,
       slug: 'biryani',
       name: 'Royal Dum Biryani Kit',
       price: 19.99,
+      originalPrice: 24.49,
       image: '/images/products/biryani.jpg',
       servings: 'Serves 4',
       cookingTime: '45 mins',
       photoLabel: 'biryani kit',
+      productsCount: 3,
+      products: [],
     },
     {
       id: 8,
       slug: 'chana-masala',
       name: 'Punjabi Chana Masala Kit',
       price: 11.99,
+      originalPrice: 14.49,
       image: '/images/products/garam_masala.jpg',
       servings: 'Serves 4',
       cookingTime: '30 mins',
       photoLabel: 'chana kit',
+      productsCount: 2,
+      products: [],
     },
     {
       id: 9,
       slug: 'dal-tadka',
       name: 'Dal Tadka & Jeera Rice Kit',
       price: 10.99,
+      originalPrice: 13.99,
       image: '/images/products/toor_dal.jpg',
       servings: 'Serves 4',
       cookingTime: '20 mins',
       photoLabel: 'dal kit',
+      productsCount: 3,
+      products: [],
     },
   ];
 });
+
+const handleAddKitToCart = (kit) => {
+  if (kit.products && kit.products.length > 0) {
+    kit.products.forEach(p => {
+      store.addToCart({
+        id: p.id,
+        name: p.name,
+        price: Number(p.price),
+        weight: p.size_main,
+        quantity: p.pivot?.quantity || 1,
+        image: p.image,
+      });
+    });
+  } else {
+    store.addToCart({
+      id: kit.id || kit.slug,
+      name: kit.name,
+      price: kit.price,
+      image: kit.image,
+    });
+  }
+};
 </script>
 
 <template>
@@ -304,7 +378,7 @@ const recipeKitItems = computed(() => {
                 v-for="slide in bannerSlides"
                 :key="slide.id"
                 class="w-full shrink-0 h-full text-white grid grid-cols-12 overflow-hidden min-h-[180px] sm:min-h-[200px]"
-                :class="slide.bg"
+                :style="{ backgroundColor: slide.bg || '#1a1a1a' }"
               >
                 <Link 
                   :href="slide.link"
@@ -611,7 +685,7 @@ const recipeKitItems = computed(() => {
           >
             <div>
               <!-- Kit Photo Tile -->
-              <Link :href="'/products/' + kit.slug" class="block relative w-full aspect-[4/3] bg-white rounded-2xl overflow-hidden img-zoom-container border border-[#e0d9cc]/60">
+              <Link :href="'/recipe-kits/' + kit.slug" class="block relative w-full aspect-[4/3] bg-white rounded-2xl overflow-hidden img-zoom-container border border-[#e0d9cc]/60">
                 <img 
                   :src="kit.image || (kit.slug === 'veg-manchurian' ? '/images/products/sweets.jpg' : '/images/products/paneer_curry.jpg')" 
                   :alt="kit.name" 
@@ -621,15 +695,15 @@ const recipeKitItems = computed(() => {
                 <span class="font-mono text-xs text-[#1d1d1f] bg-white/85 backdrop-blur-xs px-2 py-0.5 rounded-md absolute top-2.5 left-2.5 shadow-2xs">
                   {{ kit.photoLabel || kit.photo_label || 'recipe kit' }}
                 </span>
-                <!-- 6 items dark pill -->
+                <!-- Dynamic items count dark pill -->
                 <span class="absolute top-2.5 right-2.5 bg-[#1a1a1a] text-white text-[11px] font-semibold px-2 py-0.5 rounded-md shadow-xs">
-                  6 items
+                  {{ kit.productsCount || 3 }} items
                 </span>
               </Link>
 
               <!-- Kit Typography Below Image -->
               <div class="pt-3 text-left">
-                <Link :href="'/products/' + kit.slug" class="block">
+                <Link :href="'/recipe-kits/' + kit.slug" class="block">
                   <h3 class="font-serif font-medium text-base sm:text-lg text-[#1d1d1f] leading-snug group-hover:text-[#a47a3c] transition-colors">
                     {{ kit.name }}
                   </h3>
@@ -654,15 +728,15 @@ const recipeKitItems = computed(() => {
               </div>
             </div>
 
-            <!-- Full-width CTA Button: "+ Add all 6 to cart" -->
+            <!-- Full-width CTA Button: "+ Add all to cart" -->
             <button 
               type="button"
-              @click.stop.prevent="store.addToCart(kit)"
+              @click.stop.prevent="handleAddKitToCart(kit)"
               class="w-full mt-3.5 py-2.5 sm:py-3 bg-[#1a1a1a] hover:bg-black text-white font-semibold text-xs rounded-full flex items-center justify-center gap-1.5 transition-colors cursor-pointer active:scale-98 shadow-xs"
-              :aria-label="'Add all 6 to cart for ' + kit.name"
+              :aria-label="'Add all ' + (kit.productsCount || 3) + ' to cart for ' + kit.name"
             >
               <Plus class="w-3.5 h-3.5 stroke-[2.5]" />
-              <span>Add all 6 to cart</span>
+              <span>Add all {{ kit.productsCount || 3 }} to cart</span>
             </button>
           </div>
 
