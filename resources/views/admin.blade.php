@@ -6,10 +6,9 @@
 
         <title inertia>{{ config('app.name', 'Masala Mart') }} Admin</title>
 
-        <!-- Google Fonts: Newsreader (Serif), Plus Jakarta Sans -->
-        <link rel="preconnect" href="https://fonts.googleapis.com">
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-        <link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;0,6..72,700&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+        <!-- Preload Local Self-Hosted Fonts -->
+        <link rel="preload" href="/fonts/plus-jakarta-sans.woff2" as="font" type="font/woff2" crossorigin>
+        <link rel="preload" href="/fonts/newsreader.woff2" as="font" type="font/woff2" crossorigin>
 
         <!-- Admin Backoffice Assets (Completely Isolated from Storefront) -->
         @routes
