@@ -9,6 +9,7 @@ import {
   Search, 
   ChevronDown, 
   ChevronLeft,
+  ChevronRight,
   X, 
   Sparkles, 
   Clock, 
@@ -382,7 +383,7 @@ const navTabs = computed(() => [
     ></div>
 
     <!-- Main Page Content Body -->
-    <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-5 sm:py-8 pb-56 sm:pb-20 relative">
+    <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-5 sm:py-8 pb-36 sm:pb-20 relative">
       <Transition name="fade-skeleton" mode="out-in">
         <PageSkeleton v-if="isPageLoading" :type="targetPageType" key="skeleton" />
         <div v-else key="content">
@@ -391,43 +392,56 @@ const navTabs = computed(() => [
       </Transition>
     </main>
 
-    <!-- Floating Dark Cart Bar (Screen 1a match) -->
+    <!-- Floating Dark Cart Bar (Ultra-compact, sleek & lightweight) -->
     <div 
       v-if="showCartBar && store.totalItemCount > 0"
-      class="fixed bottom-[72px] sm:bottom-6 left-4 right-4 sm:left-auto sm:right-6 z-40 max-w-md sm:w-80 cursor-pointer pointer-events-auto mx-auto"
+      class="fixed bottom-[68px] sm:bottom-6 left-3 right-3 sm:left-auto sm:right-6 z-40 max-w-md sm:w-84 cursor-pointer pointer-events-auto mx-auto"
     >
       <Link 
         href="/cart"
-        class="block bg-[#1a1a1a] text-white rounded-2xl shadow-2xl p-3.5 hover:bg-black active:scale-[0.99] transition-all border border-[#e0d9cc]/20"
+        class="group block bg-[#1a1a1a]/95 backdrop-blur-md text-white rounded-2xl shadow-xl hover:bg-black active:scale-[0.99] transition-all border border-white/10 overflow-hidden"
       >
-        <div class="flex items-center justify-between">
-          <div>
-            <div class="text-sm font-semibold tracking-tight flex items-center gap-1.5">
-              <span>View cart</span>
-              <span class="text-stone-500">·</span>
-              <span>{{ store.totalItemCount }} items</span>
+        <div class="flex items-center justify-between px-3.5 py-2 gap-2">
+          <!-- Left: Shopping bag icon + item count + subtotal -->
+          <div class="flex items-center gap-2.5 min-w-0">
+            <div class="relative w-8 h-8 rounded-xl bg-white/10 flex items-center justify-center shrink-0 border border-white/10 group-hover:bg-[#a47a3c]/20 transition-colors">
+              <ShoppingBag class="w-4 h-4 text-white group-hover:text-[#e4b97a] transition-colors stroke-[2.2]" />
+              <span class="absolute -top-1 -right-1 bg-[#a47a3c] text-white text-[9px] font-bold w-4 h-4 rounded-full flex items-center justify-center border-2 border-[#1a1a1a]">
+                {{ store.totalItemCount }}
+              </span>
             </div>
-            <div class="text-xs text-stone-400 font-normal mt-0.5">
-              <template v-if="store.amountToFreeDelivery > 0">
-                ${{ store.amountToFreeDelivery.toFixed(2) }} to free delivery
-              </template>
-              <template v-else>
-                <span class="text-[#a47a3c] font-semibold flex items-center gap-1">
-                  <Sparkles class="w-3.5 h-3.5" />
-                  <span>Free Delivery Unlocked!</span>
-                </span>
-              </template>
+
+            <div class="flex flex-col min-w-0">
+              <div class="flex items-center gap-1.5 leading-none">
+                <span class="text-xs font-bold text-white tracking-tight">View Cart</span>
+                <span class="text-stone-500 text-[10px]">·</span>
+                <span class="text-xs font-serif font-bold text-[#e4b97a]">${{ store.subtotal.toFixed(2) }}</span>
+              </div>
+              <span class="text-[10px] text-stone-400 mt-1 truncate leading-none">
+                <template v-if="store.amountToFreeDelivery > 0">
+                  Add <span class="text-stone-200 font-semibold">${{ store.amountToFreeDelivery.toFixed(2) }}</span> for free delivery
+                </template>
+                <template v-else>
+                  <span class="text-[#e4b97a] font-semibold flex items-center gap-1">
+                    <Sparkles class="w-2.5 h-2.5 inline" />
+                    <span>Free Delivery Unlocked!</span>
+                  </span>
+                </template>
+              </span>
             </div>
           </div>
-          <div class="text-right">
-            <div class="text-base sm:text-lg font-serif font-medium tracking-tight text-white">${{ store.subtotal.toFixed(2) }}</div>
+
+          <!-- Right: Arrow Button -->
+          <div class="flex items-center gap-1 text-[11px] font-bold text-stone-200 bg-white/10 group-hover:bg-white/20 group-hover:text-white px-2.5 py-1.5 rounded-xl border border-white/10 shrink-0 transition-colors">
+            <span>Checkout</span>
+            <ChevronRight class="w-3.5 h-3.5 stroke-[2.5]" />
           </div>
         </div>
-        
-        <!-- Brass accent delivery progress line -->
-        <div class="w-full bg-stone-800 h-1.5 rounded-full mt-2.5 relative overflow-hidden">
+
+        <!-- Sleek Hairline 2px Brass Progress Line at the very bottom edge -->
+        <div class="w-full bg-white/10 h-0.5 relative overflow-hidden">
           <div 
-            class="bg-[#a47a3c] h-full rounded-full transition-all duration-300"
+            class="bg-[#a47a3c] h-full transition-all duration-300"
             :style="{ width: store.freeDeliveryProgressPercent + '%' }"
           ></div>
         </div>
