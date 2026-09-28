@@ -194,17 +194,17 @@ const navTabs = computed(() => [
 
         <!-- Storefront Mobile Header OR Desktop Full Header -->
         <div 
-          class="items-center justify-between h-16 sm:h-20 gap-3"
+          class="items-center justify-between h-16 sm:h-[68px] gap-2.5 sm:gap-3"
           :class="(headerMode === 'pdp' || headerMode === 'cart') ? 'hidden sm:flex' : 'flex'"
         >
           <!-- Logo & Store Location Badge -->
-          <div class="flex items-center gap-3 sm:gap-4 shrink-0">
+          <div class="flex items-center gap-2.5 sm:gap-3 shrink-0">
             <div class="flex flex-col">
               <Link href="/" class="flex items-center gap-1.5 group">
-                <span class="text-2xl sm:text-3xl font-serif font-medium tracking-tight leading-none text-[#1d1d1f] group-hover:text-[#a47a3c] transition-colors">
+                <span class="text-2xl sm:text-[27px] font-serif font-medium tracking-tight leading-none text-[#1d1d1f] group-hover:text-[#a47a3c] transition-colors">
                   Masala Mart
                 </span>
-                <span class="font-devanagari text-[11px] text-[#7a5620] font-medium bg-[#f5eee2] px-1.5 py-0.5 rounded-md border border-[#e0d9cc] hidden sm:inline-block">
+                <span class="font-devanagari text-[10.5px] text-[#7a5620] font-medium bg-[#f5eee2] px-1.5 py-0.5 rounded-md border border-[#e0d9cc] hidden sm:inline-block">
                   {{ storeInfo.hindi_tagline || 'किराना' }}
                 </span>
               </Link>
@@ -224,51 +224,49 @@ const navTabs = computed(() => [
               </button>
             </div>
 
-            <!-- Desktop Single Store Pickup & Location Badge (Interactive with Store Info Modal) -->
+            <!-- Desktop Single Store Pickup Pill (Uniform h-[42px] rounded-full) -->
             <div class="relative hidden sm:block">
               <button 
                 type="button"
                 @click="storeInfoModalOpen = true"
-                class="group flex items-center gap-2.5 px-3.5 py-2 border border-[#dfd6c8] bg-[#f4efe6] hover:bg-[#ece5d8] hover:border-[#cfc4b2] text-left text-xs transition-all duration-150 rounded-2xl cursor-pointer shadow-xs active:scale-[0.99]"
+                class="h-[42px] inline-flex items-center gap-2 px-3 bg-[#f4efe6] hover:bg-[#ede6da] border border-[#dfd6c8] hover:border-[#cfc4b2] text-left rounded-full transition-all duration-150 cursor-pointer shadow-xs active:scale-[0.99] shrink-0"
                 title="View store hours, location & curbside directions"
               >
-                <div class="relative w-8 h-8 rounded-xl bg-white/90 border border-[#dfd6c8] flex items-center justify-center shrink-0 group-hover:bg-white transition-colors">
-                  <MapPin class="w-4 h-4 text-[#8a6b32] stroke-[2.2]" />
-                  <span class="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-emerald-500 border border-white"></span>
+                <div class="relative w-6 h-6 rounded-full bg-white border border-[#dfd6c8] flex items-center justify-center shrink-0">
+                  <MapPin class="w-3.5 h-3.5 text-[#8a6b32] stroke-[2.2]" />
+                  <span class="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
                 </div>
-                <div class="min-w-0 pr-1">
-                  <div class="flex items-center gap-1.5 text-[9.5px] text-[#8a6b32] font-bold uppercase tracking-wider leading-none">
-                    <span>Store Pickup</span>
+                <div class="flex flex-col justify-center min-w-0 pr-0.5">
+                  <div class="flex items-center gap-1 text-[9px] text-[#8a6b32] font-bold uppercase tracking-wider leading-none">
+                    <span>PICKUP</span>
                     <span class="text-[#c5baaa]">·</span>
                     <span class="font-medium text-[#6e6e73] normal-case">{{ storeInfo.pickup_time }}</span>
                   </div>
-                  <div class="font-bold text-[#1d1d1f] text-[12px] leading-snug truncate max-w-[170px] mt-0.5 group-hover:text-black">
+                  <div class="font-bold text-[#1d1d1f] text-[11.5px] leading-tight truncate max-w-[150px] mt-0.5">
                     {{ storeInfo.name }}
                   </div>
                 </div>
-                <div class="w-5 h-5 rounded-lg flex items-center justify-center text-[#86868b] group-hover:text-[#1d1d1f] group-hover:bg-white/60 transition-colors">
-                  <Info class="w-3.5 h-3.5" />
-                </div>
+                <ChevronDown class="w-3.5 h-3.5 text-[#86868b] shrink-0 ml-0.5" />
               </button>
             </div>
           </div>
 
-          <!-- Desktop Global Search Bar (Modern, tactile & sleek) -->
-          <div class="flex-1 max-w-xl mx-3 hidden sm:block">
-            <div class="relative flex items-center group">
+          <!-- Desktop Global Search Bar (Uniform h-[42px] rounded-full) -->
+          <div class="flex-1 max-w-xl mx-2 hidden sm:block">
+            <div class="relative flex items-center h-[42px] group">
               <Search class="absolute left-3.5 w-4 h-4 text-[#86868b] group-focus-within:text-[#1a1a1a] transition-colors stroke-[2.2]" />
               <input 
                 v-model="store.searchQuery"
                 ref="searchInputRef"
                 type="text" 
                 placeholder="Search paneer, atta, desi ghee, garam masala, maggi…"
-                class="w-full pl-10 pr-10 py-2.5 bg-[#f4efe6] hover:bg-[#efe9de] border border-[#dfd6c8] focus:border-[#1a1a1a] rounded-2xl text-xs text-[#1d1d1f] placeholder-[#86868b] focus:outline-none focus:bg-white focus:ring-4 focus:ring-[#1a1a1a]/5 transition-all font-normal shadow-xs"
+                class="w-full h-full pl-10 pr-10 bg-[#f4efe6] hover:bg-[#ede6da] border border-[#dfd6c8] focus:border-[#1a1a1a] rounded-full text-xs text-[#1d1d1f] placeholder-[#86868b] focus:outline-none focus:bg-white focus:ring-4 focus:ring-[#1a1a1a]/5 transition-all font-normal shadow-xs"
               />
               <button 
                 v-if="store.searchQuery" 
                 type="button"
                 @click="store.searchQuery = ''"
-                class="absolute right-3 p-1 text-[#86868b] hover:text-[#1d1d1f] rounded-lg hover:bg-stone-200/60 transition-colors"
+                class="absolute right-3 p-1 text-[#86868b] hover:text-[#1d1d1f] rounded-full hover:bg-stone-200/60 transition-colors"
                 title="Clear search"
               >
                 <X class="w-3.5 h-3.5" />
@@ -282,11 +280,11 @@ const navTabs = computed(() => [
             </div>
           </div>
 
-          <!-- Header Right Actions -->
+          <!-- Header Right Actions (Uniform h-[42px] rounded-full) -->
           <div class="flex items-center gap-2 sm:gap-2.5 shrink-0">
             <Link 
               href="/reorder" 
-              class="hidden md:flex items-center gap-1.5 px-3 py-2 border border-[#e0d9cc] bg-white hover:bg-[#f3efe7] rounded-xl text-xs font-semibold text-[#1d1d1f] transition-colors shadow-xs"
+              class="hidden md:inline-flex items-center gap-1.5 h-[42px] px-3.5 border border-[#dfd6c8] bg-[#f4efe6] hover:bg-[#ede6da] rounded-full text-xs font-semibold text-[#1d1d1f] transition-colors shadow-xs shrink-0"
             >
               <RefreshCw class="w-3.5 h-3.5 text-[#6e6e73]" />
               <span>Buy It Again</span>
@@ -294,29 +292,29 @@ const navTabs = computed(() => [
 
             <Link 
               href="/account" 
-              class="hidden sm:flex items-center gap-1.5 px-3 py-2 border border-[#e0d9cc] bg-white hover:bg-[#f3efe7] rounded-xl text-xs font-semibold text-[#1d1d1f] transition-colors shadow-xs"
+              class="hidden sm:inline-flex items-center gap-1.5 h-[42px] px-3.5 border border-[#dfd6c8] bg-[#f4efe6] hover:bg-[#ede6da] rounded-full text-xs font-semibold text-[#1d1d1f] transition-colors shadow-xs shrink-0"
             >
               <User class="w-3.5 h-3.5 text-[#6e6e73]" />
               <span>Account</span>
             </Link>
 
-            <!-- Cart Trigger Button -->
+            <!-- Cart Trigger Button (Uniform h-[42px] rounded-full) -->
             <Link 
               href="/cart"
-              class="relative w-10 h-10 sm:w-auto sm:h-auto sm:px-4 sm:py-2.5 bg-[#f4efe6] sm:bg-[#1a1a1a] text-[#1d1d1f] sm:text-white rounded-2xl sm:rounded-xl transition-all hover:opacity-95 active:scale-[0.98] cursor-pointer flex items-center justify-center gap-2 border border-[#dfd6c8] sm:border-transparent shadow-xs"
+              class="relative h-[42px] px-3.5 sm:px-4 bg-[#1a1a1a] hover:bg-black text-white rounded-full transition-all hover:opacity-95 active:scale-[0.98] cursor-pointer inline-flex items-center justify-center gap-2.5 border border-[#1a1a1a] shadow-xs shrink-0"
               aria-label="Shopping Cart"
             >
               <div class="relative w-5 h-5 flex items-center justify-center">
-                <ShoppingBag class="w-5 h-5 stroke-[2]" />
+                <ShoppingBag class="w-4 h-4 stroke-[2]" />
                 <span 
                   v-if="store.totalItemCount > 0"
-                  class="absolute -top-2.5 -right-2.5 bg-[#1a1a1a] sm:bg-[#a47a3c] text-white text-[10px] font-bold w-4 h-4 rounded-full flex items-center justify-center border-2 border-white shadow-xs"
+                  class="absolute -top-1.5 -right-2 bg-[#a47a3c] text-white text-[9.5px] font-bold w-4 h-4 rounded-full flex items-center justify-center border-2 border-[#1a1a1a] shadow-xs"
                 >
                   {{ store.totalItemCount }}
                 </span>
               </div>
               <div class="hidden sm:flex flex-col text-left leading-none">
-                <span class="text-[9px] text-stone-400 font-semibold uppercase">Cart</span>
+                <span class="text-[8.5px] text-stone-400 font-semibold uppercase tracking-wider">Cart</span>
                 <span class="text-xs font-bold mt-0.5 text-white">${{ store.subtotal.toFixed(2) }}</span>
               </div>
             </Link>
@@ -333,7 +331,7 @@ const navTabs = computed(() => [
               ref="searchInputRef"
               type="text" 
               placeholder="Search paneer, atta, curry leaves, maggi…"
-              class="w-full pl-10 pr-9 py-2.5 bg-[#f4efe6] border border-[#dfd6c8] rounded-xl text-xs text-[#1d1d1f] placeholder-[#86868b] font-normal focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#1a1a1a]/15 focus:border-[#1a1a1a] transition-all shadow-xs"
+              class="w-full pl-10 pr-9 py-2.5 bg-[#f4efe6] border border-[#dfd6c8] rounded-full text-xs text-[#1d1d1f] placeholder-[#86868b] font-normal focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#1a1a1a]/15 focus:border-[#1a1a1a] transition-all shadow-xs"
             />
             <button 
               v-if="store.searchQuery" 
