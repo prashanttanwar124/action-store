@@ -34,11 +34,11 @@ const store = useStore();
 const defaultBannerSlides = [
   {
     id: 'sweets',
-    tag: 'FESTIVAL PRE-ORDER · CLOSES OCT 30',
+    tag: 'FESTIVAL PRE-ORDER',
     title: 'Diwali sweets,\nboxed & ready.',
-    subtitle: 'Artisanal kaju katli, besan ladoo & pista barfi in royal gold packaging.',
+    subtitle: 'Artisanal kaju katli, besan ladoo & pista barfi in royal packaging.',
     highlight: 'Fresh Handcrafted Batch · Serves 6–8',
-    cta: 'Pre-order from $24.99',
+    cta: 'Pre-order for $24.99',
     link: '/products/sweets-box',
     image: '/images/products/sweets.jpg',
     alt: 'Assorted luxury Diwali sweets in royal gold gift box',
@@ -47,9 +47,9 @@ const defaultBannerSlides = [
   },
   {
     id: 'curry-kit',
-    tag: 'CHEF-CRAFTED · DINNER IN 20 MINS',
+    tag: 'CHEF-CRAFTED · 20 MINS',
     title: 'Restaurant curry,\ncooked at home.',
-    subtitle: 'Fresh malai paneer, stone-ground whole spices & velvety simmer sauce.',
+    subtitle: 'Fresh malai paneer, simmer sauce & stone-ground spices.',
     highlight: 'Pre-portioned ingredients · Zero waste',
     cta: 'Order kit for $14.99',
     link: '/recipe-kits/paneer-curry',
@@ -60,11 +60,11 @@ const defaultBannerSlides = [
   },
   {
     id: 'atta',
-    tag: 'PANTRY STAPLE · FRESH MILL BATCH',
-    title: 'Never run out\nof fresh atta again.',
-    subtitle: '100% stone ground whole wheat flour for ultra-soft, golden phulkas & rotis.',
+    tag: 'SUBSCRIBE & SAVE · 10% OFF',
+    title: 'Never run out\nof fresh atta.',
+    subtitle: '100% stone ground whole wheat flour for ultra-soft golden phulkas.',
     highlight: '20 lb bag · Zero maida added',
-    cta: 'Order bag for $18.99',
+    cta: 'Subscribe for $18.04',
     link: '/products/atta',
     image: '/images/products/atta.jpg',
     alt: 'Chakki Atta 100% stone ground whole wheat flour',
@@ -72,6 +72,24 @@ const defaultBannerSlides = [
     bg: '#191410',
   },
 ];
+
+const cleanTag = (tag) => {
+  if (!tag) return 'FEATURED';
+  const parts = tag.split(/[·•]/);
+  if (parts.length > 2) {
+    return parts.slice(0, 2).map(p => p.trim()).join(' · ');
+  }
+  return tag.trim();
+};
+
+const formatTitle = (title) => {
+  if (!title) return '';
+  const lines = title.split('\n').map(l => l.trim()).filter(Boolean);
+  if (lines.length >= 3) {
+    return `${lines[0]}\n${lines.slice(1).join(' ')}`;
+  }
+  return title;
+};
 
 const bannerSlides = computed(() => {
   if (props.sliders && props.sliders.length > 0) {
@@ -84,16 +102,19 @@ const bannerSlides = computed(() => {
         (s.title && d.title && s.title.toLowerCase().includes(d.title.split('\n')[0].toLowerCase()))
       );
 
+      const rawTag = s.tag || defaultMatch?.tag || 'FEATURED';
+      const rawTitle = s.title || defaultMatch?.title || '';
+
       return {
         id: s.id,
-        tag: s.tag || defaultMatch?.tag || 'FEATURED',
-        title: s.title,
-        subtitle: s.subtitle || defaultMatch?.subtitle || 'Fresh click-and-collect batch ready for 1-hour store pickup.',
+        tag: cleanTag(rawTag),
+        title: formatTitle(rawTitle),
+        subtitle: defaultMatch?.subtitle || s.subtitle || 'Fresh click-and-collect batch ready for 1-hour store pickup.',
         highlight: s.photo_label ? `${s.photo_label} · Store Pickup in 1 hr` : (defaultMatch?.highlight || 'Click & Collect Ready'),
         cta: s.cta_text || defaultMatch?.cta || 'Order now',
         link: s.link_url || defaultMatch?.link || '/',
         image: s.image,
-        alt: s.title.replace(/\n/g, ' '),
+        alt: rawTitle.replace(/\n/g, ' '),
         photoLabel: s.photo_label || defaultMatch?.photoLabel || '',
         bg: s.bg_color || defaultMatch?.bg || '#16120e',
       };
@@ -405,7 +426,7 @@ const handleAddKitToCart = (kit) => {
         <!-- Main Festival Pre-Order Banner (Interactive Sliding Carousel with Drag & Swipe) -->
         <div class="lg:col-span-8 flex flex-col justify-between">
           <div 
-            class="relative overflow-hidden rounded-2xl sm:rounded-3xl shadow-sm h-[230px] sm:h-[285px] md:h-[315px] lg:h-[355px] group bg-[#16120e] select-none cursor-grab active:cursor-grabbing touch-pan-y border border-black/10"
+            class="relative overflow-hidden rounded-2xl sm:rounded-3xl shadow-sm h-[205px] xs:h-[215px] sm:h-[265px] md:h-[295px] lg:h-[345px] group bg-[#16120e] select-none cursor-grab active:cursor-grabbing touch-pan-y border border-black/10"
             @mouseenter="pauseAutoplay"
             @mousedown="handleDragStart"
             @mousemove="handleDragMove"
@@ -429,23 +450,23 @@ const handleAddKitToCart = (kit) => {
                 class="w-full shrink-0 h-full text-white relative overflow-hidden select-none flex items-stretch"
                 :style="{ backgroundColor: slide.bg || '#16120e' }"
               >
-                <!-- Background Image Layer: Full bleed with seamless gourmet scrim -->
-                <div class="absolute inset-0 w-full h-full overflow-hidden pointer-events-none">
+                <!-- Background Image Layer: Cleanly placed on right side with organic gradient dissolve -->
+                <div class="absolute inset-y-0 right-0 w-[54%] xs:w-[52%] sm:w-[54%] lg:w-[50%] overflow-hidden pointer-events-none">
                   <img 
                     :src="slide.image" 
                     :alt="slide.alt" 
-                    class="w-full h-full object-cover object-right sm:object-center scale-100 group-hover:scale-105 transition-transform duration-700 ease-out select-none"
+                    class="w-full h-full object-cover object-center scale-100 group-hover:scale-105 transition-transform duration-700 ease-out select-none"
                     draggable="false"
                   />
-                  <!-- Seamless Gradient: Dark on left for 100% text contrast, smoothly opening up to vibrant food on right -->
+                  <!-- Smooth Dissolve Scrim on Left Edge of Image so it merges seamlessly into slide.bg -->
                   <div 
                     class="absolute inset-0 pointer-events-none"
                     :style="{
-                      background: `linear-gradient(to right, ${slide.bg || '#16120e'}FA 0%, ${slide.bg || '#16120e'}F2 42%, ${slide.bg || '#16120e'}66 72%, transparent 100%)`
+                      background: `linear-gradient(to right, ${slide.bg || '#16120e'} 0%, ${slide.bg || '#16120e'}E6 20%, ${slide.bg || '#16120e'}33 55%, transparent 100%)`
                     }"
                   ></div>
                   <!-- Warm Golden Ambient Radial Bloom -->
-                  <div class="absolute inset-0 bg-[radial-gradient(circle_at_80%_50%,rgba(228,185,122,0.16),transparent_65%)] pointer-events-none"></div>
+                  <div class="absolute inset-0 bg-[radial-gradient(circle_at_70%_50%,rgba(228,185,122,0.12),transparent_70%)] pointer-events-none"></div>
 
                   <!-- Photo Category Tag Badge in Bottom Right (Clean desktop/tablet only) -->
                   <div v-if="slide.photoLabel" class="hidden sm:inline-flex absolute bottom-3.5 right-3.5 sm:bottom-4 sm:right-4 z-10 pointer-events-none">
@@ -456,34 +477,34 @@ const handleAddKitToCart = (kit) => {
                   </div>
                 </div>
 
-                <!-- Text Content & Interactive CTA (Vertically centered, perfectly balanced) -->
+                <!-- Text Content & Interactive CTA: Cleanly isolated on left, 100% legible, vertically centered -->
                 <Link 
                   :href="slide.link"
                   @click="handleSlideClick"
-                  class="relative z-20 w-full max-w-[72%] sm:max-w-[62%] lg:max-w-[56%] p-4.5 sm:p-7 lg:p-8 flex flex-col justify-center h-full select-none cursor-pointer"
+                  class="relative z-20 w-full max-w-[58%] xs:max-w-[56%] sm:max-w-[54%] lg:max-w-[50%] p-4 xs:p-4.5 sm:p-7 lg:p-8 flex flex-col justify-center h-full select-none cursor-pointer"
                   draggable="false"
                 >
-                  <div class="space-y-2 sm:space-y-3">
-                    <!-- Category Pill Badge -->
-                    <div class="inline-flex items-center gap-1.5 px-2.5 py-1 sm:px-3 sm:py-1 rounded-full bg-black/45 backdrop-blur-md border border-[#e4b97a]/40 text-[#f5d8a8] text-[9.5px] sm:text-[11px] font-bold tracking-wider uppercase shadow-xs w-fit">
-                      <Sparkles class="w-3 h-3 text-[#e4b97a] shrink-0" />
-                      <span class="max-w-[270px] sm:max-w-none truncate">{{ slide.tag }}</span>
+                  <div class="space-y-1.5 xs:space-y-2 sm:space-y-2.5">
+                    <!-- Crisp Category Pill Badge -->
+                    <div class="inline-flex items-center gap-1.5 px-2.5 py-0.5 sm:px-3 sm:py-1 rounded-full bg-white/10 backdrop-blur-md border border-white/15 text-[#f5d8a8] text-[8.5px] xs:text-[9.5px] sm:text-[10.5px] font-bold tracking-wider uppercase shadow-xs w-fit">
+                      <Sparkles class="w-2.5 h-2.5 sm:w-3 sm:h-3 text-[#e4b97a] shrink-0" />
+                      <span class="truncate max-w-[170px] sm:max-w-none">{{ slide.tag }}</span>
                     </div>
 
                     <!-- Grand Editorial Serif Title -->
-                    <h2 class="text-[20px] sm:text-[26px] lg:text-[32px] font-serif font-medium leading-[1.15] sm:leading-[1.12] tracking-tight text-white drop-shadow-xs whitespace-pre-line line-clamp-3 sm:line-clamp-none">
+                    <h2 class="text-[18px] xs:text-[20px] sm:text-2xl lg:text-[28px] font-serif font-medium leading-[1.16] sm:leading-[1.12] tracking-tight text-white drop-shadow-xs whitespace-pre-line line-clamp-2">
                       {{ slide.title }}
                     </h2>
 
-                    <!-- Descriptive Subtitle (Always visible: gives appetizing context, eliminates empty void) -->
-                    <p v-if="slide.subtitle" class="text-[12.5px] sm:text-[13.5px] text-stone-200/95 font-normal leading-relaxed line-clamp-2 max-w-[280px] sm:max-w-sm drop-shadow-xs">
+                    <!-- Descriptive Subtitle (Always visible, 100% crisp on solid dark backdrop) -->
+                    <p v-if="slide.subtitle" class="text-[11px] xs:text-[11.5px] sm:text-[12.5px] text-stone-300 font-normal leading-snug line-clamp-2 max-w-[210px] sm:max-w-xs drop-shadow-xs">
                       {{ slide.subtitle }}
                     </p>
                   </div>
 
                   <!-- CTA Button & Highlight Pill -->
-                  <div class="pt-2.5 sm:pt-4 flex flex-wrap items-center gap-2 sm:gap-3">
-                    <span class="inline-flex items-center gap-2 px-4 py-2 sm:px-4.5 sm:py-2.5 rounded-full bg-white text-[#1a1a1a] hover:bg-[#f5eee2] text-xs sm:text-[13px] font-bold shadow-sm hover:shadow-md transition-all duration-300 group-hover:scale-[1.02] shrink-0">
+                  <div class="pt-2 xs:pt-2.5 sm:pt-3.5 flex flex-wrap items-center gap-2 sm:gap-3">
+                    <span class="inline-flex items-center gap-1.5 sm:gap-2 px-3.5 py-1.5 xs:px-4 xs:py-2 sm:px-4.5 sm:py-2.5 rounded-full bg-white text-[#1a1a1a] hover:bg-[#f5eee2] text-[11px] xs:text-xs font-bold shadow-sm hover:shadow-md transition-all duration-300 group-hover:scale-[1.02] shrink-0">
                       <span>{{ slide.cta }}</span>
                       <ChevronRight class="w-3.5 h-3.5 stroke-[2.5] text-[#1a1a1a] transition-transform group-hover:translate-x-0.5" />
                     </span>
@@ -545,7 +566,7 @@ const handleAddKitToCart = (kit) => {
         </div>
 
         <!-- Desktop Click & Collect Guarantee Card (Matching Elevation & Height) -->
-        <div class="hidden lg:flex lg:col-span-4 bg-[#f5eee2] rounded-3xl border border-[#e0d9cc] p-6 lg:p-7 flex-col justify-between shadow-xs h-[355px]">
+        <div class="hidden lg:flex lg:col-span-4 bg-[#f5eee2] rounded-3xl border border-[#e0d9cc] p-6 lg:p-7 flex-col justify-between shadow-xs h-[345px]">
           <div class="space-y-3">
             <div class="flex items-center justify-between text-[10px] font-bold uppercase tracking-wider text-[#7a5620]">
               <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-white/70 border border-[#e0d9cc]">
