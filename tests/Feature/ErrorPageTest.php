@@ -2,11 +2,14 @@
 
 namespace Tests\Feature;
 
+use Illuminate\Foundation\Testing\RefreshDatabase;
 use Inertia\Testing\AssertableInertia as Assert;
 use Tests\TestCase;
 
 class ErrorPageTest extends TestCase
 {
+    use RefreshDatabase;
+
     public function test_non_existent_page_renders_blade_404_view_on_standard_request(): void
     {
         $response = $this->get('/non-existent-page-url-xyz');

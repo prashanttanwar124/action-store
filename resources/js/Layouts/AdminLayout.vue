@@ -96,6 +96,13 @@ const navigationItems = [
         badge: 'Hero',
       },
       {
+        name: 'Store Info & Pickup',
+        href: route('admin.store-info.edit'),
+        icon: Store,
+        isCurrent: () => route().current('admin.store-info.*'),
+        badge: 'Settings',
+      },
+      {
         name: 'Orders & Sales',
         href: route('admin.dashboard') + '#orders-section',
         icon: ShoppingBag,

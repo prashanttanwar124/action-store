@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed } from 'vue';
+import { ref, computed, watchEffect } from 'vue';
 import { Link, usePage } from '@inertiajs/vue3';
 import { useStore } from '../stores/cart';
 import { usePageLoading } from '@/composables/usePageLoading';
@@ -19,7 +19,12 @@ import {
   UtensilsCrossed, 
   Store, 
   Home, 
-  Check 
+  Check,
+  Info,
+  ExternalLink,
+  Phone,
+  Mail,
+  Car
 } from 'lucide-vue-next';
 
 const props = defineProps({
@@ -60,22 +65,44 @@ const props = defineProps({
 const store = useStore();
 const page = usePage();
 const { isPageLoading, isNavigating, targetPageType } = usePageLoading();
-const storeSelectorOpen = ref(false);
+
+// Modal state for Store Information & Pickup details
+const storeInfoModalOpen = ref(false);
 const searchInputRef = ref(null);
 
 const currentUrl = computed(() => page.url);
 
-const storesList = [
-  { id: 'main', name: 'Main St. store', address: '482 Main Street', readyTime: 'ready in 1 hr' },
-  { id: 'oak', name: 'Oakridge Plaza', address: '1204 Oakridge Ave', readyTime: 'ready in 2 hrs' },
-  { id: 'downtown', name: 'Downtown Hub', address: '85 Market Square', readyTime: 'ready in 45 mins' },
-];
+// Global Store Information from Laravel DB (editable via Admin portal)
+const storeInfo = computed(() => page.props.storeInfo || {
+  name: 'Masala Mart — Main St.',
+  tagline: 'Authentic Indian Groceries & Fresh Click-and-Collect',
+  hindi_tagline: 'किराना',
+  address: '214 Main St.',
+  city: 'Edison',
+  state: 'NJ',
+  zip: '08817',
+  phone: '+1 (555) 345-6789',
+  email: 'support@masalamart.com',
+  opening_hours: 'Daily 9:00 AM – 9:00 PM',
+  pickup_time: 'Ready in 1 hr',
+  curbside_instructions: 'Park in Curbside Bay 3 or pick up at the front express counter. Bring your order confirmation SMS.',
+  announcement: 'Diwali 2026: Fresh Mithai Pre-Orders Open · Closes Oct 30',
+  maps_url: 'https://maps.google.com/?q=214+Main+St,+Edison,+NJ',
+  is_pickup_active: true,
+});
 
-function selectStore(st) {
-  store.selectedStore = st.name;
-  store.readyTime = st.readyTime;
-  storeSelectorOpen.value = false;
-}
+// Reactively keep Pinia cart store in sync with DB store settings
+watchEffect(() => {
+  if (storeInfo.value?.name) {
+    store.selectedStore = storeInfo.value.name;
+  }
+  if (storeInfo.value?.pickup_time) {
+    store.readyTime = storeInfo.value.pickup_time;
+  }
+  if (storeInfo.value?.address) {
+    store.pickupLocation = `${storeInfo.value.address} · ${storeInfo.value.name || 'Masala Mart'}`;
+  }
+});
 
 function handleSearchClick() {
   if (searchInputRef.value) {
@@ -95,22 +122,34 @@ const navTabs = computed(() => [
   <div class="min-h-screen bg-[#fbf9f5] text-[#1d1d1f] flex flex-col font-sans selection:bg-[#1a1a1a] selection:text-white antialiased">
     
     <!-- Top Announcement Bar (Desktop) -->
-    <div v-if="showHeader" class="bg-[#1a1a1a] text-white text-[11px] py-1.5 px-4 hidden sm:block">
+    <div v-if="showHeader && storeInfo.announcement" class="bg-[#1a1a1a] text-white text-[11px] py-1.5 px-4 hidden sm:block">
       <div class="max-w-7xl mx-auto flex justify-between items-center">
         <div class="flex items-center gap-2">
-          <span class="bg-[#f5eee2] text-[#7a5620] border border-[#e0d9cc]/50 px-2 py-0.5 rounded-full font-semibold text-[10px] tracking-wide">Diwali 2026</span>
-          <span class="text-stone-300 font-normal">Fresh Mithai Pre-Orders Open · Closes Oct 30</span>
+          <span class="bg-[#f5eee2] text-[#7a5620] border border-[#e0d9cc]/50 px-2 py-0.5 rounded-full font-semibold text-[10px] tracking-wide">
+            {{ storeInfo.hindi_tagline || 'किराना' }} Notice
+          </span>
+          <span class="text-stone-300 font-normal">{{ storeInfo.announcement }}</span>
         </div>
         <div class="flex items-center gap-4 text-stone-400 font-normal">
-          <span class="flex items-center gap-1.5">
+          <button 
+            type="button" 
+            @click="storeInfoModalOpen = true"
+            class="flex items-center gap-1.5 hover:text-stone-200 transition-colors cursor-pointer"
+            title="Click to view pickup hours and location"
+          >
             <Clock class="w-3.5 h-3.5 text-[#a47a3c]" />
-            <span>Click & Collect in 1 hr</span>
-          </span>
+            <span>Pickup: {{ storeInfo.pickup_time }}</span>
+          </button>
           <span class="text-stone-700">|</span>
-          <span class="flex items-center gap-1.5">
+          <button 
+            type="button" 
+            @click="storeInfoModalOpen = true"
+            class="flex items-center gap-1.5 hover:text-stone-200 transition-colors cursor-pointer"
+            title="Click to view address and directions"
+          >
             <Store class="w-3.5 h-3.5 text-[#a47a3c]" />
-            <span>Free In-Store & Curbside Pickup</span>
-          </span>
+            <span>Store Info & Directions</span>
+          </button>
           <span class="text-stone-700">|</span>
           <Link href="/account" class="text-stone-200 hover:text-white font-semibold flex items-center gap-1">
             <Sparkles class="w-3 h-3 text-[#a47a3c]" />
@@ -120,11 +159,11 @@ const navTabs = computed(() => [
       </div>
     </div>
 
-    <!-- Main Navigation Header (Clean & Premium) -->
+    <!-- Main Navigation Header (Clean, Tactile & Premium) -->
     <header v-if="showHeader" class="bg-white/95 border-b border-[#e0d9cc] sticky top-0 z-40 backdrop-blur-md">
       <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         
-        <!-- Mobile PDP & Cart Header (Clean Single Header matching Screen 1b, 1c & 1d) -->
+        <!-- Mobile PDP & Cart Header (Clean Single Header) -->
         <div v-if="headerMode === 'pdp' || headerMode === 'cart'" class="sm:hidden flex items-center justify-between h-14">
           <Link 
             :href="backUrl || '/'" 
@@ -158,90 +197,96 @@ const navTabs = computed(() => [
           class="items-center justify-between h-16 sm:h-20 gap-3"
           :class="(headerMode === 'pdp' || headerMode === 'cart') ? 'hidden sm:flex' : 'flex'"
         >
-          <!-- Logo & Mobile Store Subtitle -->
-          <div class="flex items-center gap-4">
+          <!-- Logo & Store Location Badge -->
+          <div class="flex items-center gap-3 sm:gap-4 shrink-0">
             <div class="flex flex-col">
               <Link href="/" class="flex items-center gap-1.5 group">
-                <span class="text-2xl sm:text-3xl font-serif font-medium tracking-tight leading-none text-[#1d1d1f]">
+                <span class="text-2xl sm:text-3xl font-serif font-medium tracking-tight leading-none text-[#1d1d1f] group-hover:text-[#a47a3c] transition-colors">
                   Masala Mart
                 </span>
                 <span class="font-devanagari text-[11px] text-[#7a5620] font-medium bg-[#f5eee2] px-1.5 py-0.5 rounded-md border border-[#e0d9cc] hidden sm:inline-block">
-                  किराना
+                  {{ storeInfo.hindi_tagline || 'किराना' }}
                 </span>
               </Link>
               
-              <!-- Location subtitle on Mobile (Screen 1a match) -->
-              <div 
-                @click="storeSelectorOpen = !storeSelectorOpen"
-                class="flex items-center gap-1 text-xs text-[#6e6e73] mt-1 cursor-pointer select-none sm:hidden"
+              <!-- Single Store Location Tap Target on Mobile (Opens Store Info Modal) -->
+              <button 
+                type="button"
+                @click="storeInfoModalOpen = true"
+                class="flex items-center gap-1.5 text-[11px] text-[#6e6e73] mt-1 cursor-pointer select-none sm:hidden text-left hover:text-[#1d1d1f] transition-colors"
+                title="View store information and hours"
               >
-                <span class="font-normal text-[#6e6e73]">
-                  Pickup · {{ store.selectedStore }} · {{ store.readyTime }}
+                <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0"></span>
+                <span class="font-medium text-[#1d1d1f] truncate max-w-[210px]">
+                  Pickup · {{ storeInfo.address }} · {{ storeInfo.pickup_time }}
                 </span>
-                <ChevronDown class="w-3.5 h-3.5 text-[#86868b]" />
-              </div>
+                <Info class="w-3 h-3 text-[#a47a3c] shrink-0" />
+              </button>
             </div>
 
-            <!-- Desktop Store Selector Dropdown -->
+            <!-- Desktop Single Store Pickup & Location Badge (Interactive with Store Info Modal) -->
             <div class="relative hidden sm:block">
               <button 
-                @click="storeSelectorOpen = !storeSelectorOpen"
-                class="flex items-center gap-2 px-3 py-1.5 border border-[#e0d9cc] bg-[#f3efe7] hover:bg-[#ece7de] text-left text-xs transition-colors rounded-xl cursor-pointer"
+                type="button"
+                @click="storeInfoModalOpen = true"
+                class="group flex items-center gap-2.5 px-3.5 py-2 border border-[#dfd6c8] bg-[#f4efe6] hover:bg-[#ece5d8] hover:border-[#cfc4b2] text-left text-xs transition-all duration-150 rounded-2xl cursor-pointer shadow-xs active:scale-[0.99]"
+                title="View store hours, location & curbside directions"
               >
-                <MapPin class="w-3.5 h-3.5 text-[#a47a3c]" />
-                <div>
-                  <div class="text-[10px] text-[#6e6e73] font-semibold uppercase">Store Pickup</div>
-                  <div class="font-bold text-[#1d1d1f] leading-tight">{{ store.selectedStore }} · {{ store.readyTime }}</div>
+                <div class="relative w-8 h-8 rounded-xl bg-white/90 border border-[#dfd6c8] flex items-center justify-center shrink-0 group-hover:bg-white transition-colors">
+                  <MapPin class="w-4 h-4 text-[#8a6b32] stroke-[2.2]" />
+                  <span class="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-emerald-500 border border-white"></span>
                 </div>
-                <ChevronDown class="w-3.5 h-3.5 text-[#86868b] ml-1" />
+                <div class="min-w-0 pr-1">
+                  <div class="flex items-center gap-1.5 text-[9.5px] text-[#8a6b32] font-bold uppercase tracking-wider leading-none">
+                    <span>Store Pickup</span>
+                    <span class="text-[#c5baaa]">·</span>
+                    <span class="font-medium text-[#6e6e73] normal-case">{{ storeInfo.pickup_time }}</span>
+                  </div>
+                  <div class="font-bold text-[#1d1d1f] text-[12px] leading-snug truncate max-w-[170px] mt-0.5 group-hover:text-black">
+                    {{ storeInfo.name }}
+                  </div>
+                </div>
+                <div class="w-5 h-5 rounded-lg flex items-center justify-center text-[#86868b] group-hover:text-[#1d1d1f] group-hover:bg-white/60 transition-colors">
+                  <Info class="w-3.5 h-3.5" />
+                </div>
               </button>
-
-              <div 
-                v-if="storeSelectorOpen" 
-                class="absolute left-0 mt-1 w-72 bg-white border border-[#e0d9cc] rounded-2xl shadow-xl z-50 p-2 space-y-1"
-              >
-                <div class="px-2 py-1.5 text-[10px] text-[#86868b] uppercase font-semibold border-b border-[#e0d9cc]/60">
-                  Select Pickup Location
-                </div>
-                <button
-                  v-for="st in storesList"
-                  :key="st.id"
-                  @click="selectStore(st)"
-                  class="w-full text-left p-2.5 hover:bg-[#f3efe7] rounded-xl flex flex-col transition-colors cursor-pointer"
-                >
-                  <span class="text-xs font-bold text-[#1d1d1f]">{{ st.name }}</span>
-                  <span class="text-[11px] text-[#6e6e73] font-normal">{{ st.address }} · {{ st.readyTime }}</span>
-                </button>
-              </div>
             </div>
           </div>
 
-          <!-- Desktop Global Search Bar -->
-          <div class="flex-1 max-w-xl mx-4 hidden sm:block">
-            <div class="relative flex items-center">
-              <Search class="absolute left-3.5 w-4 h-4 text-[#86868b] stroke-[2.2]" />
+          <!-- Desktop Global Search Bar (Modern, tactile & sleek) -->
+          <div class="flex-1 max-w-xl mx-3 hidden sm:block">
+            <div class="relative flex items-center group">
+              <Search class="absolute left-3.5 w-4 h-4 text-[#86868b] group-focus-within:text-[#1a1a1a] transition-colors stroke-[2.2]" />
               <input 
                 v-model="store.searchQuery"
                 ref="searchInputRef"
                 type="text" 
                 placeholder="Search paneer, atta, desi ghee, garam masala, maggi…"
-                class="w-full pl-10 pr-9 py-2.5 bg-[#f3efe7] border border-[#e0d9cc] rounded-2xl text-xs text-[#1d1d1f] placeholder-[#86868b] focus:outline-none focus:bg-white focus:border-[#1a1a1a] focus:ring-2 focus:ring-[#1a1a1a]/10 transition-all font-normal"
+                class="w-full pl-10 pr-10 py-2.5 bg-[#f4efe6] hover:bg-[#efe9de] border border-[#dfd6c8] focus:border-[#1a1a1a] rounded-2xl text-xs text-[#1d1d1f] placeholder-[#86868b] focus:outline-none focus:bg-white focus:ring-4 focus:ring-[#1a1a1a]/5 transition-all font-normal shadow-xs"
               />
               <button 
                 v-if="store.searchQuery" 
+                type="button"
                 @click="store.searchQuery = ''"
-                class="absolute right-3 text-[#86868b] hover:text-[#1d1d1f]"
+                class="absolute right-3 p-1 text-[#86868b] hover:text-[#1d1d1f] rounded-lg hover:bg-stone-200/60 transition-colors"
+                title="Clear search"
               >
-                <X class="w-4 h-4" />
+                <X class="w-3.5 h-3.5" />
               </button>
+              <span 
+                v-else 
+                class="hidden xl:inline-flex absolute right-3 text-[10px] font-semibold text-stone-400 bg-white/80 border border-stone-200/80 px-1.5 py-0.5 rounded-md pointer-events-none"
+              >
+                ⌘K
+              </span>
             </div>
           </div>
 
           <!-- Header Right Actions -->
-          <div class="flex items-center gap-2.5">
+          <div class="flex items-center gap-2 sm:gap-2.5 shrink-0">
             <Link 
               href="/reorder" 
-              class="hidden md:flex items-center gap-1.5 px-3 py-2 border border-[#e0d9cc] bg-white hover:bg-[#f3efe7] rounded-xl text-xs font-semibold text-[#1d1d1f] transition-colors"
+              class="hidden md:flex items-center gap-1.5 px-3 py-2 border border-[#e0d9cc] bg-white hover:bg-[#f3efe7] rounded-xl text-xs font-semibold text-[#1d1d1f] transition-colors shadow-xs"
             >
               <RefreshCw class="w-3.5 h-3.5 text-[#6e6e73]" />
               <span>Buy It Again</span>
@@ -249,7 +294,7 @@ const navTabs = computed(() => [
 
             <Link 
               href="/account" 
-              class="hidden sm:flex items-center gap-1.5 px-3 py-2 border border-[#e0d9cc] bg-white hover:bg-[#f3efe7] rounded-xl text-xs font-semibold text-[#1d1d1f] transition-colors"
+              class="hidden sm:flex items-center gap-1.5 px-3 py-2 border border-[#e0d9cc] bg-white hover:bg-[#f3efe7] rounded-xl text-xs font-semibold text-[#1d1d1f] transition-colors shadow-xs"
             >
               <User class="w-3.5 h-3.5 text-[#6e6e73]" />
               <span>Account</span>
@@ -258,7 +303,7 @@ const navTabs = computed(() => [
             <!-- Cart Trigger Button -->
             <Link 
               href="/cart"
-              class="relative w-10 h-10 sm:w-auto sm:h-auto sm:px-4 sm:py-2.5 bg-[#f3efe7] sm:bg-[#1a1a1a] text-[#1d1d1f] sm:text-white rounded-2xl sm:rounded-xl transition-all hover:opacity-95 cursor-pointer flex items-center justify-center gap-2 border border-[#e0d9cc] sm:border-transparent"
+              class="relative w-10 h-10 sm:w-auto sm:h-auto sm:px-4 sm:py-2.5 bg-[#f4efe6] sm:bg-[#1a1a1a] text-[#1d1d1f] sm:text-white rounded-2xl sm:rounded-xl transition-all hover:opacity-95 active:scale-[0.98] cursor-pointer flex items-center justify-center gap-2 border border-[#dfd6c8] sm:border-transparent shadow-xs"
               aria-label="Shopping Cart"
             >
               <div class="relative w-5 h-5 flex items-center justify-center">
@@ -279,41 +324,22 @@ const navTabs = computed(() => [
 
         </div>
 
-        <!-- Mobile Store Selector Dropdown (Storefront mode only) -->
-        <div 
-          v-if="headerMode === 'storefront' && storeSelectorOpen" 
-          class="sm:hidden border-t border-stone-200 py-2.5 bg-stone-50 px-2 rounded-2xl space-y-1 mb-2 shadow-inner"
-        >
-          <div class="text-[10px] text-stone-400 uppercase font-semibold px-2 py-0.5">Select Store Location:</div>
-          <button
-            v-for="st in storesList"
-            :key="st.id"
-            @click="selectStore(st)"
-            class="w-full text-left p-2.5 bg-white rounded-xl border border-stone-200 flex justify-between items-center text-xs"
-          >
-            <div>
-              <span class="font-bold text-stone-900">{{ st.name }}</span>
-              <span class="text-stone-500 font-normal text-[11px] block">{{ st.readyTime }}</span>
-            </div>
-            <Check v-if="store.selectedStore === st.name" class="w-4 h-4 text-[#1a1a1a] stroke-[3]" />
-          </button>
-        </div>
-
         <!-- Mobile Pinned Search Row (Storefront mode only, Screen 1a) -->
-        <div v-if="headerMode === 'storefront'" class="sm:hidden pb-3 pt-0.5">
+        <div v-if="headerMode === 'storefront'" class="sm:hidden pb-3 pt-1">
           <div class="relative flex items-center">
             <Search class="absolute left-3.5 w-4 h-4 text-[#86868b] stroke-[2.2]" />
             <input 
               v-model="store.searchQuery"
               ref="searchInputRef"
               type="text" 
-              placeholder="Search paneer, atta, curry leaves…"
-              class="w-full pl-10 pr-8 py-2.5 bg-[#f3efe7] border border-[#e0d9cc] rounded-xl text-xs text-[#1d1d1f] placeholder-[#86868b] font-normal focus:bg-white focus:ring-2 focus:ring-[#1a1a1a]/10"
+              placeholder="Search paneer, atta, curry leaves, maggi…"
+              class="w-full pl-10 pr-9 py-2.5 bg-[#f4efe6] border border-[#dfd6c8] rounded-xl text-xs text-[#1d1d1f] placeholder-[#86868b] font-normal focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#1a1a1a]/15 focus:border-[#1a1a1a] transition-all shadow-xs"
             />
             <button 
               v-if="store.searchQuery" 
+              type="button"
               @click="store.searchQuery = ''"
-              class="absolute right-3 text-[#86868b]"
+              class="absolute right-3 text-[#86868b] hover:text-[#1d1d1f]"
             >
               <X class="w-4 h-4" />
             </button>
@@ -369,7 +395,7 @@ const navTabs = computed(() => [
           <div class="hidden md:flex items-center gap-2 text-xs font-normal text-[#6e6e73] shrink-0">
             <span>Free Store Pickup</span>
             <span>·</span>
-            <span class="text-[#a47a3c] font-semibold">Ready in 1 Hr</span>
+            <span class="text-[#a47a3c] font-semibold">{{ storeInfo.pickup_time }}</span>
           </div>
         </nav>
 
@@ -391,6 +417,163 @@ const navTabs = computed(() => [
         </div>
       </Transition>
     </main>
+
+    <!-- Store Information & Pickup Guide Modal (Accessible, Clean & Informative) -->
+    <Teleport to="body">
+      <Transition
+        enter-active-class="transition duration-200 ease-out"
+        enter-from-class="opacity-0"
+        enter-to-class="opacity-100"
+        leave-active-class="transition duration-150 ease-in"
+        leave-from-class="opacity-100"
+        leave-to-class="opacity-0"
+      >
+        <div 
+          v-if="storeInfoModalOpen" 
+          class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs"
+          @click.self="storeInfoModalOpen = false"
+        >
+          <div 
+            class="bg-white rounded-3xl max-w-lg w-full shadow-2xl border border-stone-200 overflow-hidden transform transition-all duration-200 max-h-[92vh] flex flex-col"
+          >
+            <!-- Modal Header -->
+            <div class="px-6 py-5 bg-[#f7f4ee] border-b border-[#e5decb] flex items-start justify-between">
+              <div>
+                <div class="flex items-center gap-2">
+                  <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                  <span class="text-[10px] font-bold text-[#8a6b32] uppercase tracking-wider">
+                    {{ storeInfo.is_pickup_active ? 'Open for Store Pickup Today' : 'Pickup Currently Paused' }}
+                  </span>
+                </div>
+                <h3 class="text-xl font-serif font-bold text-[#1d1d1f] mt-1">
+                  {{ storeInfo.name }}
+                </h3>
+                <p class="text-xs text-[#6e6e73] mt-0.5">
+                  {{ storeInfo.tagline || 'Authentic Indian Groceries & Fresh Click-and-Collect' }}
+                </p>
+              </div>
+              <button 
+                type="button"
+                @click="storeInfoModalOpen = false"
+                class="w-8 h-8 rounded-full bg-white/90 hover:bg-white text-stone-500 hover:text-stone-900 border border-stone-200 flex items-center justify-center transition-colors cursor-pointer shadow-xs"
+                aria-label="Close"
+              >
+                <X class="w-4 h-4" />
+              </button>
+            </div>
+
+            <!-- Modal Content (Scrollable) -->
+            <div class="p-6 space-y-4 overflow-y-auto text-xs">
+              
+              <!-- Address & Google Maps Directions -->
+              <div class="p-4 rounded-2xl bg-[#faf7f2] border border-[#e8e1d3] space-y-3">
+                <div class="flex items-start gap-3">
+                  <div class="w-9 h-9 rounded-xl bg-white border border-[#dfd6c8] flex items-center justify-center text-[#8a6b32] shrink-0 shadow-xs">
+                    <MapPin class="w-4 h-4 stroke-[2.2]" />
+                  </div>
+                  <div class="min-w-0 flex-1">
+                    <div class="font-bold text-stone-900 text-sm">Store Address</div>
+                    <div class="text-stone-700 text-xs mt-0.5 font-medium leading-relaxed">
+                      {{ storeInfo.address }}<br />
+                      {{ storeInfo.city }}, {{ storeInfo.state }} {{ storeInfo.zip }}
+                    </div>
+                  </div>
+                </div>
+
+                <a 
+                  v-if="storeInfo.maps_url"
+                  :href="storeInfo.maps_url"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  class="w-full inline-flex items-center justify-center gap-2 px-3.5 py-2.5 bg-white hover:bg-stone-50 text-stone-900 font-semibold rounded-xl border border-[#dfd6c8] shadow-xs transition-colors cursor-pointer"
+                >
+                  <ExternalLink class="w-3.5 h-3.5 text-[#8a6b32]" />
+                  <span>Get Directions in Google Maps</span>
+                </a>
+              </div>
+
+              <!-- Pickup Prep Time & Store Hours -->
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div class="p-3.5 rounded-2xl bg-white border border-stone-200 space-y-1">
+                  <div class="flex items-center gap-1.5 text-stone-500 text-[11px] font-semibold uppercase tracking-wider">
+                    <Clock class="w-3.5 h-3.5 text-[#8a6b32]" />
+                    <span>Order Prep Time</span>
+                  </div>
+                  <div class="text-sm font-bold text-stone-900">
+                    {{ storeInfo.pickup_time }}
+                  </div>
+                  <p class="text-[11px] text-stone-500 font-normal leading-tight">
+                    Order online and pick up at the express counter.
+                  </p>
+                </div>
+
+                <div class="p-3.5 rounded-2xl bg-white border border-stone-200 space-y-1">
+                  <div class="flex items-center gap-1.5 text-stone-500 text-[11px] font-semibold uppercase tracking-wider">
+                    <Store class="w-3.5 h-3.5 text-[#8a6b32]" />
+                    <span>Store Hours</span>
+                  </div>
+                  <div class="text-sm font-bold text-stone-900">
+                    {{ storeInfo.opening_hours }}
+                  </div>
+                  <p class="text-[11px] text-stone-500 font-normal leading-tight">
+                    Open 7 days a week for in-store shopping & pickup.
+                  </p>
+                </div>
+              </div>
+
+              <!-- Curbside & Bay Instructions -->
+              <div v-if="storeInfo.curbside_instructions" class="p-4 rounded-2xl bg-[#fdfbf7] border border-[#e8e1d3] space-y-2">
+                <div class="flex items-center gap-2 text-stone-900 font-bold text-xs">
+                  <Car class="w-4 h-4 text-[#8a6b32]" />
+                  <span>Curbside & Parking Bay Instructions</span>
+                </div>
+                <p class="text-stone-600 text-xs leading-relaxed font-normal">
+                  {{ storeInfo.curbside_instructions }}
+                </p>
+              </div>
+
+              <!-- Contact & Phone -->
+              <div class="p-4 rounded-2xl bg-white border border-stone-200 space-y-2.5">
+                <div class="text-[11px] font-bold text-stone-400 uppercase tracking-wider">
+                  Store Contact & Inquiries
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                  <a 
+                    :href="'tel:' + storeInfo.phone" 
+                    class="flex items-center gap-2 p-2.5 rounded-xl bg-stone-50 hover:bg-stone-100 text-stone-800 transition-colors"
+                  >
+                    <Phone class="w-3.5 h-3.5 text-[#8a6b32] shrink-0" />
+                    <span class="font-semibold">{{ storeInfo.phone }}</span>
+                  </a>
+                  <a 
+                    :href="'mailto:' + storeInfo.email" 
+                    class="flex items-center gap-2 p-2.5 rounded-xl bg-stone-50 hover:bg-stone-100 text-stone-800 transition-colors truncate"
+                  >
+                    <Mail class="w-3.5 h-3.5 text-[#8a6b32] shrink-0" />
+                    <span class="font-semibold truncate">{{ storeInfo.email }}</span>
+                  </a>
+                </div>
+              </div>
+
+            </div>
+
+            <!-- Modal Footer -->
+            <div class="px-6 py-4 bg-stone-50 border-t border-stone-200 flex items-center justify-between">
+              <span class="text-[11px] text-stone-500">
+                Single store location · 100% Free Store Pickup
+              </span>
+              <button 
+                type="button"
+                @click="storeInfoModalOpen = false"
+                class="px-5 py-2 bg-[#1a1a1a] hover:bg-black text-white text-xs font-semibold rounded-xl transition-all shadow-xs cursor-pointer"
+              >
+                Done
+              </button>
+            </div>
+          </div>
+        </div>
+      </Transition>
+    </Teleport>
 
     <!-- Floating Dark Cart Bar (Ultra-compact, sleek & lightweight) -->
     <div 
@@ -419,7 +602,7 @@ const navTabs = computed(() => [
               </div>
               <span class="text-[10px] text-stone-300 mt-1 truncate leading-none flex items-center gap-1">
                 <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0"></span>
-                <span>Free Store Pickup · Ready in 1 hr</span>
+                <span>Free Store Pickup · {{ storeInfo.pickup_time }}</span>
               </span>
             </div>
           </div>
@@ -474,7 +657,9 @@ const navTabs = computed(() => [
           <div class="space-y-3">
             <div class="text-2xl font-serif font-medium tracking-tight text-[#1d1d1f] flex items-center gap-1.5">
               <span>Masala Mart</span>
-              <span class="font-devanagari text-xs text-[#7a5620] font-medium bg-[#f5eee2] px-2 py-0.5 rounded-full border border-[#e0d9cc]">किराना</span>
+              <span class="font-devanagari text-xs text-[#7a5620] font-medium bg-[#f5eee2] px-2 py-0.5 rounded-full border border-[#e0d9cc]">
+                {{ storeInfo.hindi_tagline || 'किराना' }}
+              </span>
             </div>
             <p class="text-xs text-[#6e6e73] font-normal leading-relaxed">
               Clean, premium click-and-collect Indian groceries. Fresh stone-ground atta, farm-batched paneer, pure desi ghee, and festival sweets ready in 60 minutes.
@@ -487,14 +672,19 @@ const navTabs = computed(() => [
           <!-- Column 2: Hours & Pickup -->
           <div class="space-y-2 text-xs">
             <div class="font-semibold uppercase text-[11px] text-[#7a5620] tracking-wider">
-              Store Pickup
+              Store Pickup Location
             </div>
-            <div class="text-[#1d1d1f] font-bold">Main St. Store (Flagship)</div>
-            <div class="text-[#6e6e73] font-normal">482 Main Street, Suite 100</div>
-            <div class="text-[#6e6e73] font-normal">Mon–Sun: 8:00 AM – 10:00 PM</div>
-            <div class="text-[#1d1d1f] font-semibold pt-1">
-              Curbside bay parking available
-            </div>
+            <div class="text-[#1d1d1f] font-bold">{{ storeInfo.name }}</div>
+            <div class="text-[#6e6e73] font-normal">{{ storeInfo.address }}, {{ storeInfo.city }} {{ storeInfo.state }}</div>
+            <div class="text-[#6e6e73] font-normal">{{ storeInfo.opening_hours }}</div>
+            <button 
+              type="button"
+              @click="storeInfoModalOpen = true"
+              class="text-[#7a5620] font-semibold pt-1 hover:underline text-left cursor-pointer flex items-center gap-1"
+            >
+              <span>View full pickup guide & directions</span>
+              <ChevronRight class="w-3 h-3" />
+            </button>
           </div>
 
           <!-- Column 3: Quick Links -->
@@ -517,7 +707,7 @@ const navTabs = computed(() => [
               <span>Masala Rewards</span>
             </div>
             <p class="text-[11px] text-[#6e6e73] font-normal leading-snug">
-              Earn 1 point for every $1 spent. Curbside pickup ready in 60 mins at Main St.
+              Earn 1 point for every $1 spent. Curbside pickup ready in {{ storeInfo.pickup_time }} at {{ storeInfo.name }}.
             </p>
             <div class="flex items-center justify-between text-xs text-[#1d1d1f] border-t border-[#e0d9cc] pt-2 font-bold">
               <span>Your Balance:</span>
@@ -528,7 +718,7 @@ const navTabs = computed(() => [
         </div>
 
         <div class="pt-6 flex flex-col sm:flex-row justify-between items-center text-xs text-[#86868b] gap-3 font-normal">
-          <div>© 2026 Masala Mart Inc. All rights reserved. Modern Classic V3.</div>
+          <div>© 2026 {{ storeInfo.name }}. All rights reserved. Modern Classic V3.</div>
           <div class="flex gap-4">
             <a href="#" class="hover:text-stone-600">Privacy Policy</a>
             <span>·</span>

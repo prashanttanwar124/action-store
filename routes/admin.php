@@ -6,6 +6,7 @@ use App\Http\Controllers\Admin\AdminProductController;
 use App\Http\Controllers\Admin\AdminRecipeKitController;
 use App\Http\Controllers\Admin\AdminRoleController;
 use App\Http\Controllers\Admin\AdminSliderController;
+use App\Http\Controllers\Admin\AdminStoreSettingController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('admin')->name('admin.')->group(function () {
@@ -47,6 +48,10 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::post('/sliders/{slider}', [AdminSliderController::class, 'update'])->name('sliders.update');
             Route::put('/sliders/{slider}', [AdminSliderController::class, 'update']);
             Route::delete('/sliders/{slider}', [AdminSliderController::class, 'destroy'])->name('sliders.destroy');
+
+            // Store Info & Pickup Settings
+            Route::get('/store-info', [AdminStoreSettingController::class, 'edit'])->name('store-info.edit');
+            Route::put('/store-info', [AdminStoreSettingController::class, 'update'])->name('store-info.update');
         });
 
         // Role & Permission Management
