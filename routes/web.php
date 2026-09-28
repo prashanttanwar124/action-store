@@ -7,7 +7,6 @@ use App\Http\Controllers\ProductController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\RecipeKitController;
 use Illuminate\Support\Facades\Route;
-use Inertia\Inertia;
 
 // 1a: Home / Storefront
 Route::get('/', [HomeController::class, 'index'])->name('home');
@@ -29,7 +28,7 @@ Route::get('/reorder', [AccountController::class, 'reorder'])->name('reorder');
 
 // Breeze default dashboard & profile routes
 Route::get('/dashboard', function () {
-    return Inertia::render('Dashboard');
+    return redirect()->route('account');
 })->middleware(['auth', 'verified'])->name('dashboard');
 
 Route::middleware('auth')->group(function () {

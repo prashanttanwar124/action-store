@@ -291,11 +291,23 @@ const navTabs = computed(() => [
             </Link>
 
             <Link 
+              v-if="page.props.auth?.user"
               href="/account" 
               class="hidden sm:inline-flex items-center gap-1.5 h-[42px] px-3.5 border border-[#dfd6c8] bg-[#f4efe6] hover:bg-[#ede6da] rounded-full text-xs font-semibold text-[#1d1d1f] transition-colors shadow-xs shrink-0"
+              :title="'Logged in as ' + page.props.auth.user.name"
+            >
+              <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+              <User class="w-3.5 h-3.5 text-[#a47a3c]" />
+              <span class="max-w-[100px] truncate">{{ page.props.auth.user.name.split(' ')[0] }}</span>
+            </Link>
+            <Link 
+              v-else
+              href="/login" 
+              class="hidden sm:inline-flex items-center gap-1.5 h-[42px] px-3.5 border border-[#dfd6c8] bg-[#f4efe6] hover:bg-[#ede6da] rounded-full text-xs font-semibold text-[#1d1d1f] transition-colors shadow-xs shrink-0"
+              title="Sign in to your account"
             >
               <User class="w-3.5 h-3.5 text-[#6e6e73]" />
-              <span>Account</span>
+              <span>Sign In</span>
             </Link>
 
             <!-- Cart Trigger Button (Uniform h-[42px] rounded-full) -->
@@ -693,6 +705,12 @@ const navTabs = computed(() => [
               <li><Link href="/checkout" class="hover:text-[#1d1d1f]">Express Store Pickup</Link></li>
               <li><Link href="/account" class="hover:text-[#1d1d1f]">Subscriptions & Auto-Reorder</Link></li>
               <li><Link href="/reorder" class="hover:text-[#1d1d1f]">Past Orders & Instant Reorder</Link></li>
+              <li v-if="page.props.auth?.user">
+                <Link href="/logout" method="post" as="button" class="hover:text-rose-600 cursor-pointer">Sign Out ({{ page.props.auth.user.name.split(' ')[0] }})</Link>
+              </li>
+              <li v-else>
+                <Link href="/login" class="hover:text-[#1d1d1f]">Customer Sign In / Register</Link>
+              </li>
             </ul>
           </div>
 
