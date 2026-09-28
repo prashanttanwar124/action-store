@@ -12,6 +12,7 @@ import {
   ShieldCheck, 
   CheckCircle2, 
   Clock,
+  Store,
   ShoppingBag
 } from 'lucide-vue-next';
 
@@ -40,38 +41,35 @@ const store = useStore();
         <span class="text-stone-900 font-bold">Cart ({{ store.totalItemCount }} items)</span>
       </nav>
 
-      <!-- Cart Header & Free Delivery Meter -->
+      <!-- Store Pickup Header & Fulfillment Guarantee -->
       <div class="bg-[#1a1a1a] text-white p-5 sm:p-6 rounded-3xl shadow-sm border border-[#e0d9cc]/20">
-        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <div>
-            <div class="text-[10px] sm:text-xs font-semibold uppercase tracking-wider text-[#a47a3c]">
-              ORDER PROGRESS
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div class="flex items-start sm:items-center gap-3.5">
+            <div class="w-11 h-11 rounded-2xl bg-white/10 flex items-center justify-center shrink-0 border border-white/10 text-[#e4b97a]">
+              <Store class="w-5 h-5 stroke-[2]" />
             </div>
-            <div class="text-base sm:text-lg font-serif font-medium tracking-tight mt-0.5">
-              <template v-if="store.amountToFreeDelivery > 0">
-                Add ${{ store.amountToFreeDelivery.toFixed(2) }} more to unlock free delivery
-              </template>
-              <template v-else>
-                <span class="text-[#a47a3c] flex items-center gap-1.5">
-                  <Sparkles class="w-4 h-4 text-[#a47a3c]" />
-                  <span>You've unlocked FREE Home Delivery!</span>
+            <div>
+              <div class="flex items-center gap-2">
+                <span class="text-[10px] sm:text-xs font-semibold uppercase tracking-wider text-[#a47a3c]">
+                  FULFILLMENT METHOD
                 </span>
-              </template>
+                <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-[#a47a3c]/20 text-[#e4b97a] text-[10px] font-bold border border-[#a47a3c]/30">
+                  <Clock class="w-3 h-3" />
+                  Ready in 1 hr
+                </span>
+              </div>
+              <h1 class="text-base sm:text-lg font-serif font-medium tracking-tight mt-1 text-white">
+                100% Free In-Store & Curbside Pickup
+              </h1>
+              <p class="text-xs text-stone-400 font-normal mt-0.5">
+                Packaged fresh in thermal insulated bags at <strong class="text-stone-200">Masala Mart — Main St.</strong> (Bay 3 or Front Counter).
+              </p>
             </div>
           </div>
-          <div class="text-left sm:text-right text-xs text-stone-400 font-normal">
-            <span>Threshold: $40.00</span>
-            <span class="mx-1.5">·</span>
-            <span class="text-white font-semibold">{{ Math.round(store.freeDeliveryProgressPercent) }}% complete</span>
+          <div class="shrink-0 flex sm:flex-col items-center sm:items-end justify-between border-t sm:border-t-0 border-white/10 pt-2.5 sm:pt-0 text-xs">
+            <span class="text-stone-400 font-normal">Fulfillment Fee</span>
+            <span class="text-[#e4b97a] font-serif font-bold text-sm tracking-wide sm:mt-0.5">ALWAYS FREE</span>
           </div>
-        </div>
-
-        <!-- Brass Accent Progress Bar -->
-        <div class="w-full bg-stone-800 h-1.5 rounded-full mt-3.5 overflow-hidden">
-          <div 
-            class="bg-[#a47a3c] h-full rounded-full transition-all duration-300"
-            :style="{ width: store.freeDeliveryProgressPercent + '%' }"
-          ></div>
         </div>
       </div>
 
@@ -178,7 +176,7 @@ const store = useStore();
             <div class="flex items-center justify-between">
               <div>
                 <h3 class="font-serif font-medium text-base text-[#1d1d1f]">Quick pantry add-ons</h3>
-                <p class="text-xs text-[#6e6e73] font-normal">Popular items under $2 to reach free delivery.</p>
+                <p class="text-xs text-[#6e6e73] font-normal">Popular staples under $2 to add to your pickup basket.</p>
               </div>
               <span class="text-[10px] font-semibold text-[#7a5620] bg-[#f5eee2] border border-[#e0d9cc] px-2 py-0.5 rounded-full">&lt;$2 ITEMS</span>
             </div>

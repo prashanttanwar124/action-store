@@ -17,7 +17,7 @@ import {
   User, 
   RefreshCw, 
   UtensilsCrossed, 
-  Truck, 
+  Store, 
   Home, 
   Check 
 } from 'lucide-vue-next';
@@ -108,8 +108,8 @@ const navTabs = computed(() => [
           </span>
           <span class="text-stone-700">|</span>
           <span class="flex items-center gap-1.5">
-            <Truck class="w-3.5 h-3.5 text-stone-400" />
-            <span>Free delivery on orders $40+</span>
+            <Store class="w-3.5 h-3.5 text-[#a47a3c]" />
+            <span>Free In-Store & Curbside Pickup</span>
           </span>
           <span class="text-stone-700">|</span>
           <Link href="/account" class="text-stone-200 hover:text-white font-semibold flex items-center gap-1">
@@ -417,33 +417,23 @@ const navTabs = computed(() => [
                 <span class="text-stone-500 text-[10px]">·</span>
                 <span class="text-xs font-serif font-bold text-[#e4b97a]">${{ store.subtotal.toFixed(2) }}</span>
               </div>
-              <span class="text-[10px] text-stone-400 mt-1 truncate leading-none">
-                <template v-if="store.amountToFreeDelivery > 0">
-                  Add <span class="text-stone-200 font-semibold">${{ store.amountToFreeDelivery.toFixed(2) }}</span> for free delivery
-                </template>
-                <template v-else>
-                  <span class="text-[#e4b97a] font-semibold flex items-center gap-1">
-                    <Sparkles class="w-2.5 h-2.5 inline" />
-                    <span>Free Delivery Unlocked!</span>
-                  </span>
-                </template>
+              <span class="text-[10px] text-stone-300 mt-1 truncate leading-none flex items-center gap-1">
+                <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0"></span>
+                <span>Free Store Pickup · Ready in 1 hr</span>
               </span>
             </div>
           </div>
 
           <!-- Right: Arrow Button -->
           <div class="flex items-center gap-1 text-[11px] font-bold text-stone-200 bg-white/10 group-hover:bg-white/20 group-hover:text-white px-2.5 py-1.5 rounded-xl border border-white/10 shrink-0 transition-colors">
-            <span>Checkout</span>
+            <span>Pickup Checkout</span>
             <ChevronRight class="w-3.5 h-3.5 stroke-[2.5]" />
           </div>
         </div>
 
-        <!-- Sleek Hairline 2px Brass Progress Line at the very bottom edge -->
-        <div class="w-full bg-white/10 h-0.5 relative overflow-hidden">
-          <div 
-            class="bg-[#a47a3c] h-full transition-all duration-300"
-            :style="{ width: store.freeDeliveryProgressPercent + '%' }"
-          ></div>
+        <!-- Sleek Hairline 2px Brass Accent Line at the very bottom edge -->
+        <div class="w-full bg-[#a47a3c]/30 h-0.5 relative overflow-hidden">
+          <div class="bg-[#a47a3c] h-full w-full"></div>
         </div>
       </Link>
     </div>
@@ -513,21 +503,21 @@ const navTabs = computed(() => [
               Customer Services
             </div>
             <ul class="space-y-1.5 text-[#6e6e73] font-normal">
-              <li><Link href="/cart" class="hover:text-[#1d1d1f]">Shopping Cart & Delivery Meter</Link></li>
-              <li><Link href="/checkout" class="hover:text-[#1d1d1f]">Express Checkout</Link></li>
+              <li><Link href="/cart" class="hover:text-[#1d1d1f]">Shopping Cart & Pickup Status</Link></li>
+              <li><Link href="/checkout" class="hover:text-[#1d1d1f]">Express Store Pickup</Link></li>
               <li><Link href="/account" class="hover:text-[#1d1d1f]">Subscriptions & Auto-Reorder</Link></li>
               <li><Link href="/reorder" class="hover:text-[#1d1d1f]">Past Orders & Instant Reorder</Link></li>
             </ul>
           </div>
 
-          <!-- Column 4: Rewards & Delivery -->
+          <!-- Column 4: Rewards & Pickup -->
           <div class="space-y-3 text-xs bg-[#f5eee2] p-4 rounded-2xl border border-[#e0d9cc]">
             <div class="font-semibold uppercase text-[11px] text-[#7a5620] flex items-center gap-1.5">
               <Sparkles class="w-3.5 h-3.5 text-[#a47a3c]" />
               <span>Masala Rewards</span>
             </div>
             <p class="text-[11px] text-[#6e6e73] font-normal leading-snug">
-              Earn 1 point for every $1 spent. Unlock $10 grocery credit at 1,500 points.
+              Earn 1 point for every $1 spent. Curbside pickup ready in 60 mins at Main St.
             </p>
             <div class="flex items-center justify-between text-xs text-[#1d1d1f] border-t border-[#e0d9cc] pt-2 font-bold">
               <span>Your Balance:</span>

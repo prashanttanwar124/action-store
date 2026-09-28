@@ -127,7 +127,7 @@ function handleAction() {
     quantity: quantity.value,
     isSubscribed: isSubscribed.value,
     subscriptionInterval: isSubscribed.value ? 'Monthly' : undefined,
-    nextDelivery: isSubscribed.value ? 'Oct 3' : undefined,
+    nextPickup: isSubscribed.value ? 'Oct 3' : undefined,
     image: product.value.image,
   });
 

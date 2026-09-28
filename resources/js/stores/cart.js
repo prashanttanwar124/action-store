@@ -2,9 +2,10 @@ import { defineStore } from 'pinia';
 import { ref, computed } from 'vue';
 
 export const useStore = defineStore('masalaStore', () => {
-  // Navigation & Location
-  const deliveryMode = ref('Pickup');
+  // Navigation & Location (Store Pickup Only)
+  const deliveryMode = ref('Store Pickup');
   const selectedStore = ref('Main St. store');
+  const pickupLocation = ref('214 Main St. · Masala Mart Express');
   const readyTime = ref('ready in 1 hr');
   const searchQuery = ref('');
 
@@ -380,7 +381,7 @@ export const useStore = defineStore('masalaStore', () => {
       price: 1.99,
       originalPrice: 1.99,
       unitPrice: '$1.99 / bunch',
-      stockBadge: 'Daily delivery',
+      stockBadge: 'Fresh daily batch',
       photoLabel: 'curry leaves',
       image: '/images/products/curry_leaves.jpg',
       sizeMain: '1 fresh bunch',
@@ -582,16 +583,12 @@ export const useStore = defineStore('masalaStore', () => {
     return subtotal.value;
   });
 
-  const freeDeliveryThreshold = 40.0;
-  const amountToFreeDelivery = computed(() => {
-    const rem = Number((freeDeliveryThreshold - subtotal.value).toFixed(2));
-    return rem > 0 ? rem : 0;
-  });
-
-  const freeDeliveryProgressPercent = computed(() => {
-    if (subtotal.value <= 0) return 0;
-    return Math.min(100, Math.round((subtotal.value / freeDeliveryThreshold) * 100));
-  });
+  // Store Pickup (Always 100% Free & Ready in 1 hr)
+  const pickupFee = 0.0;
+  const isPickupReady = computed(() => true);
+  const freeDeliveryThreshold = 0.0;
+  const amountToFreeDelivery = computed(() => 0.0);
+  const freeDeliveryProgressPercent = computed(() => 100);
 
   function getQuantity(productId) {
     const id = resolveProductId(productId);
@@ -693,6 +690,9 @@ export const useStore = defineStore('masalaStore', () => {
 
   return {
     deliveryMode,
+    pickupLocation,
+    pickupFee,
+    isPickupReady,
     selectedStore,
     readyTime,
     searchQuery,

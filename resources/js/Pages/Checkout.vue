@@ -10,7 +10,7 @@ import {
   CreditCard, 
   ShieldCheck, 
   CheckCircle2, 
-  Truck, 
+  Store, 
   Lock, 
   Loader2, 
   Sparkles 
@@ -20,7 +20,6 @@ import IconGooglePay from '../Components/Icons/IconGooglePay.vue';
 
 const store = useStore();
 
-const deliveryMethod = ref('pickup'); // 'pickup' | 'delivery'
 const selectedSlot = ref('today-4-5');
 const paymentMethod = ref('apple-pay'); // 'apple-pay' | 'google-pay' | 'card'
 const isProcessing = ref(false);
@@ -126,75 +125,44 @@ function completeOrder() {
         <!-- LEFT COLUMN: Form Steps (Screen 1e exact layout) -->
         <div class="lg:col-span-7 space-y-6">
           
-          <!-- STEP 01: HOW DO YOU WANT IT? -->
+          <!-- STEP 01: STORE PICKUP LOCATION & FULFILLMENT -->
           <div class="space-y-3.5">
             <div class="text-[11px] font-semibold text-stone-400 uppercase tracking-wider">
-              01 · HOW DO YOU WANT IT?
+              01 · STORE PICKUP LOCATION
             </div>
 
-            <!-- Two-Cell Switch (Screen 1e) -->
-            <div class="grid grid-cols-2 gap-3">
-              <!-- In-store pickup Card (Selected dark state) -->
-              <button 
-                type="button"
-                @click="deliveryMethod = 'pickup'"
-                :class="[
-                  'p-4 rounded-2xl text-left transition-all flex flex-col justify-between cursor-pointer min-h-[92px]',
-                  deliveryMethod === 'pickup' 
-                    ? 'bg-[#1a1a1a] text-white shadow-md' 
-                    : 'bg-white text-[#1d1d1f] border border-[#e0d9cc] hover:border-[#a47a3c]'
-                ]"
-              >
-                <div class="flex items-center justify-between">
-                  <Store :class="['w-5 h-5 stroke-[2]', deliveryMethod === 'pickup' ? 'text-white' : 'text-[#1d1d1f]']" />
-                </div>
-                <div class="mt-2">
-                  <div class="font-bold text-sm">In-store pickup</div>
-                  <div :class="['text-xs font-normal mt-0.5', deliveryMethod === 'pickup' ? 'text-stone-300' : 'text-[#6e6e73]']">
-                    Free · ready in 1 hr
+            <!-- In-store pickup Card (Selected dark state) -->
+            <div class="p-5 rounded-2xl bg-[#1a1a1a] text-white shadow-md border border-stone-800 space-y-3">
+              <div class="flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                  <div class="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center text-[#e4b97a]">
+                    <Store class="w-5 h-5 stroke-[2]" />
+                  </div>
+                  <div>
+                    <div class="font-bold text-sm text-white">Masala Mart — Main St.</div>
+                    <div class="text-xs text-stone-300 font-normal mt-0.5">214 Main St. · Curbside Bay 3 or Front Counter</div>
                   </div>
                 </div>
-              </button>
-
-              <!-- Local delivery Card -->
-              <button 
-                type="button"
-                @click="deliveryMethod = 'delivery'"
-                :class="[
-                  'p-4 rounded-2xl text-left transition-all flex flex-col justify-between cursor-pointer min-h-[92px]',
-                  deliveryMethod === 'delivery' 
-                    ? 'bg-[#1a1a1a] text-white shadow-md' 
-                    : 'bg-white text-[#1d1d1f] border border-[#e0d9cc] hover:border-[#a47a3c]'
-                ]"
-              >
-                <div class="flex items-center justify-between">
-                  <Truck :class="['w-5 h-5 stroke-[2]', deliveryMethod === 'delivery' ? 'text-white' : 'text-[#1d1d1f]']" />
-                </div>
-                <div class="mt-2">
-                  <div class="font-bold text-sm">Local delivery</div>
-                  <div :class="['text-xs font-normal mt-0.5', deliveryMethod === 'delivery' ? 'text-stone-300' : 'text-[#6e6e73]']">
-                    Free on this order
-                  </div>
-                </div>
-              </button>
-            </div>
-
-            <!-- Store Location details (Screen 1e) -->
-            <div class="pt-1">
-              <template v-if="deliveryMethod === 'pickup'">
-                <div class="font-bold text-sm text-[#1d1d1f]">Masala Mart — Main St.</div>
-                <div class="text-xs text-[#6e6e73] font-normal">214 Main St. · curbside bay or counter</div>
-              </template>
-              <template v-else>
-                <div class="font-bold text-sm text-[#1d1d1f]">Local Delivery Address</div>
-                <div class="text-xs text-[#6e6e73] font-normal">742 Evergreen Terrace, Apt 4B · Contactless delivery</div>
-              </template>
+                <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-[#a47a3c]/20 text-[#e4b97a] text-[10px] font-bold border border-[#a47a3c]/40">
+                  <CheckCircle2 class="w-3 h-3" />
+                  Free Pickup
+                </span>
+              </div>
+              
+              <div class="pt-2 border-t border-white/10 flex items-center justify-between text-xs text-stone-400 font-normal">
+                <span class="flex items-center gap-1.5 text-stone-300">
+                  <Clock class="w-3.5 h-3.5 text-[#e4b97a]" />
+                  <span>Ready in 1 hour after order placement</span>
+                </span>
+                <span class="text-[11px] text-[#e4b97a] font-medium">Curbside & Counter</span>
+              </div>
             </div>
 
             <!-- Pick a time slot (Screen 1e: 3x2 Grid) -->
             <div class="space-y-2.5 pt-2">
-              <div class="text-xs font-semibold text-[#1d1d1f]">
-                Pick a time slot
+              <div class="text-xs font-semibold text-[#1d1d1f] flex items-center justify-between">
+                <span>Pick a pickup time slot</span>
+                <span class="text-[11px] text-[#6e6e73] font-normal">Bagged fresh before arrival</span>
               </div>
 
               <div class="grid grid-cols-3 gap-2.5">
