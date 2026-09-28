@@ -13,7 +13,8 @@ import {
   Store, 
   Lock, 
   Loader2, 
-  Sparkles 
+  Sparkles,
+  ShoppingBag
 } from 'lucide-vue-next';
 import IconApplePay from '../Components/Icons/IconApplePay.vue';
 import IconGooglePay from '../Components/Icons/IconGooglePay.vue';
@@ -39,15 +40,17 @@ const currentSlot = computed(() => {
 });
 
 const checkoutTotal = computed(() => {
-  return store.total > 0 ? store.total.toFixed(2) : '81.57';
+  return store.total.toFixed(2);
 });
 
 function completeOrder() {
   isProcessing.value = true;
+  const pointsEarned = Math.floor(store.subtotal);
   setTimeout(() => {
     isProcessing.value = false;
     orderPlaced.value = true;
-    store.masalaPoints += Math.floor(store.subtotal);
+    store.masalaPoints += pointsEarned;
+    store.clearCart();
   }, 1200);
 }
 </script>
@@ -117,6 +120,24 @@ function completeOrder() {
             Continue Shopping
           </Link>
         </div>
+      </div>
+
+      <!-- Empty Cart State -->
+      <div v-else-if="store.cartItems.length === 0" class="bg-white rounded-3xl border border-[#e0d9cc] p-10 text-center space-y-4 shadow-xs max-w-lg mx-auto my-8">
+        <div class="w-16 h-16 rounded-full bg-[#f3efe7] flex items-center justify-center mx-auto text-[#6e6e73]">
+          <ShoppingBag class="w-8 h-8 stroke-[1.8]" />
+        </div>
+        <h2 class="text-xl font-serif font-medium text-[#1d1d1f]">Your cart is empty</h2>
+        <p class="text-xs text-[#6e6e73] font-normal leading-relaxed">
+          You don't have any items in your cart to checkout. Add groceries to your cart first.
+        </p>
+        <Link 
+          href="/"
+          class="inline-flex items-center gap-2 px-6 py-3 bg-[#1a1a1a] hover:bg-black text-white text-xs font-semibold rounded-full shadow-sm transition-colors"
+        >
+          <span>Explore Groceries</span>
+          <ChevronLeft class="w-3.5 h-3.5 rotate-180" />
+        </Link>
       </div>
 
       <!-- Main Checkout Flow (Exact Match to Screen 1e) -->

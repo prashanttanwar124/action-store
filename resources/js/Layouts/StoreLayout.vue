@@ -91,7 +91,7 @@ const storeInfo = computed(() => page.props.storeInfo || {
   is_pickup_active: true,
 });
 
-// Reactively keep Pinia cart store in sync with DB store settings
+// Reactively keep Pinia cart store in sync with DB store settings & active user account
 watchEffect(() => {
   if (storeInfo.value?.name) {
     store.selectedStore = storeInfo.value.name;
@@ -102,6 +102,7 @@ watchEffect(() => {
   if (storeInfo.value?.address) {
     store.pickupLocation = `${storeInfo.value.address} · ${storeInfo.value.name || 'Masala Mart'}`;
   }
+  store.syncUser(page.props.auth?.user);
 });
 
 function handleSearchClick() {

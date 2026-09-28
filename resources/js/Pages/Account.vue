@@ -95,9 +95,10 @@ function reorderPastOrder() {
           >
             <ShoppingBag class="w-5 h-5 stroke-[2] text-[#1d1d1f]" />
             <span 
+              v-if="store.totalItemCount > 0"
               class="absolute -top-1.5 -right-1.5 bg-[#1a1a1a] text-white text-[11px] font-bold w-5 h-5 rounded-full flex items-center justify-center border-2 border-white shadow-xs"
             >
-              {{ store.totalItemCount > 0 ? store.totalItemCount : 8 }}
+              {{ store.totalItemCount }}
             </span>
           </Link>
         </div>

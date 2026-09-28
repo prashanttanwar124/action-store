@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia';
-import { ref, computed } from 'vue';
+import { ref, computed, watch } from 'vue';
 
 export const useStore = defineStore('masalaStore', () => {
   // Navigation & Location (Store Pickup Only)
@@ -452,12 +452,90 @@ export const useStore = defineStore('masalaStore', () => {
   // Masala Points Rewards (Matching Screen 1f: 1,240 pts)
   const masalaPoints = ref(1240);
 
-  // Cart State (Exact match to PDF: 3 items initially = Paneer $5.99 [id:4], Atta $18.04 [id:1], Garam Masala $3.49 [id:11] => Total $27.52)
-  const cart = ref([
-    { id: 4, quantity: 1, isSubscribed: false }, // Malai Paneer ($5.99)
-    { id: 1, quantity: 1, isSubscribed: true },  // Chakki Atta ($18.04 after 5% sub discount)
-    { id: 11, quantity: 1, isSubscribed: false }  // Garam Masala ($3.49)
-  ]);
+  // User Cart State & Storage Sync (No fake items; connected to user)
+  const currentUserId = ref(null);
+  const isInitialized = ref(false);
+  const cart = ref([]);
+
+  function getStorageKey(uid) {
+    return uid ? `masala_cart_user_${uid}` : 'masala_cart_guest';
+  }
+
+  function loadCartFromStorage(uid) {
+    if (typeof window === 'undefined') return [];
+    try {
+      const raw = localStorage.getItem(getStorageKey(uid));
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed)) {
+          return parsed;
+        }
+      }
+    } catch (e) {
+      console.error('Failed to parse cart from storage:', e);
+    }
+    return [];
+  }
+
+  function saveCartToStorage(uid, items) {
+    if (typeof window === 'undefined') return;
+    try {
+      localStorage.setItem(getStorageKey(uid), JSON.stringify(items));
+    } catch (e) {
+      console.error('Failed to save cart to storage:', e);
+    }
+  }
+
+  // Synchronize cart with current authenticated user or guest
+  function syncUser(user) {
+    const newUserId = user ? user.id : null;
+
+    if (currentUserId.value === newUserId && isInitialized.value) {
+      return;
+    }
+
+    const prevUserId = currentUserId.value;
+    currentUserId.value = newUserId;
+
+    if (prevUserId === null && newUserId !== null) {
+      // Transition from guest to logged in user:
+      // Merge guest cart items into user's cart so unauthenticated items are preserved
+      const guestCart = loadCartFromStorage(null);
+      const userCart = loadCartFromStorage(newUserId);
+
+      if (guestCart.length > 0) {
+        guestCart.forEach(gItem => {
+          const existing = userCart.find(u => u.id === gItem.id);
+          if (existing) {
+            existing.quantity += gItem.quantity;
+            if (gItem.isSubscribed) existing.isSubscribed = true;
+          } else {
+            userCart.push(gItem);
+          }
+        });
+        saveCartToStorage(null, []); // clear guest cart once merged
+      }
+      cart.value = userCart;
+      saveCartToStorage(newUserId, cart.value);
+    } else {
+      cart.value = loadCartFromStorage(newUserId);
+    }
+
+    isInitialized.value = true;
+  }
+
+  // Initial load for client environment
+  if (typeof window !== 'undefined') {
+    cart.value = loadCartFromStorage(null);
+    isInitialized.value = true;
+  }
+
+  // Auto-persist cart changes to active user/guest storage key
+  watch(cart, (newVal) => {
+    if (isInitialized.value) {
+      saveCartToStorage(currentUserId.value, newVal);
+    }
+  }, { deep: true });
 
   // Set / merge products from Laravel database
   function setProducts(dbProducts) {
@@ -724,5 +802,8 @@ export const useStore = defineStore('masalaStore', () => {
     skipSubscription,
     getProductBySlug,
     setProducts,
+    syncUser,
+    currentUserId,
+    isInitialized,
   };
 });
