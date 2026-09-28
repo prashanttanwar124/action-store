@@ -501,17 +501,17 @@ function handleAddAllFbt() {
           <Link 
             v-for="item in product.goesWithIt" 
             :key="item.id"
-            :href="'/products/' + (item.slug || (item.name.toLowerCase().includes('ghee') ? 'ghee' : 'toor-dal'))"
+            :href="'/products/' + (item.slug || String(item.id))"
             class="relative block flex flex-col group text-left cursor-pointer transition-transform duration-200"
           >
             <!-- Rounded Photo Tile -->
             <div class="relative w-full aspect-[4/3] bg-[#f3efe7] rounded-[22px] sm:rounded-3xl overflow-hidden img-zoom-container shadow-2xs border border-[#e0d9cc]/60">
               <img 
-                :src="item.image || (item.name.toLowerCase().includes('ghee') ? '/images/products/ghee.jpg' : '/images/products/toor_dal.jpg')" 
+                :src="item.image || '/images/products/atta.jpg'" 
                 :alt="item.name" 
                 class="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-300"
               />
-              <span class="photo-label absolute top-2.5 left-2.5 text-[11px] text-[#1d1d1f] font-mono bg-white/80 backdrop-blur-xs px-2 py-0.5 rounded-lg z-10 shadow-2xs">{{ item.label || item.tag || 'item' }}</span>
+              <span class="photo-label absolute top-2.5 left-2.5 text-[11px] text-[#1d1d1f] font-mono bg-white/80 backdrop-blur-xs px-2 py-0.5 rounded-lg z-10 shadow-2xs">{{ item.label || item.photoLabel || 'item' }}</span>
 
               <!-- When item is in cart: show Primary [- qty +] stepper pill -->
               <div 
