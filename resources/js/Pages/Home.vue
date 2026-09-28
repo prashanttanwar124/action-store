@@ -405,7 +405,7 @@ const handleAddKitToCart = (kit) => {
         <!-- Main Festival Pre-Order Banner (Interactive Sliding Carousel with Drag & Swipe) -->
         <div class="lg:col-span-8 flex flex-col justify-between">
           <div 
-            class="relative overflow-hidden rounded-2xl sm:rounded-3xl shadow-sm h-[215px] sm:h-[275px] md:h-[305px] lg:h-[345px] group bg-[#16120e] select-none cursor-grab active:cursor-grabbing touch-pan-y border border-black/10"
+            class="relative overflow-hidden rounded-2xl sm:rounded-3xl shadow-sm h-[230px] sm:h-[285px] md:h-[315px] lg:h-[355px] group bg-[#16120e] select-none cursor-grab active:cursor-grabbing touch-pan-y border border-black/10"
             @mouseenter="pauseAutoplay"
             @mousedown="handleDragStart"
             @mousemove="handleDragMove"
@@ -441,7 +441,7 @@ const handleAddKitToCart = (kit) => {
                   <div 
                     class="absolute inset-0 pointer-events-none"
                     :style="{
-                      background: `linear-gradient(to right, ${slide.bg || '#16120e'}FA 0%, ${slide.bg || '#16120e'}EE 36%, ${slide.bg || '#16120e'}66 68%, transparent 100%)`
+                      background: `linear-gradient(to right, ${slide.bg || '#16120e'}FA 0%, ${slide.bg || '#16120e'}F2 42%, ${slide.bg || '#16120e'}66 72%, transparent 100%)`
                     }"
                   ></div>
                   <!-- Warm Golden Ambient Radial Bloom -->
@@ -460,30 +460,30 @@ const handleAddKitToCart = (kit) => {
                 <Link 
                   :href="slide.link"
                   @click="handleSlideClick"
-                  class="relative z-20 w-full max-w-[70%] sm:max-w-[62%] lg:max-w-[56%] p-4 sm:p-7 lg:p-8 flex flex-col justify-center h-full select-none cursor-pointer"
+                  class="relative z-20 w-full max-w-[72%] sm:max-w-[62%] lg:max-w-[56%] p-4.5 sm:p-7 lg:p-8 flex flex-col justify-center h-full select-none cursor-pointer"
                   draggable="false"
                 >
-                  <div class="space-y-1.5 sm:space-y-2.5">
+                  <div class="space-y-2 sm:space-y-3">
                     <!-- Category Pill Badge -->
-                    <div class="inline-flex items-center gap-1.5 px-2.5 py-0.5 sm:px-3 sm:py-1 rounded-full bg-[#e4b97a]/20 backdrop-blur-md border border-[#e4b97a]/35 text-[#f5d8a8] text-[9px] sm:text-[10.5px] font-bold tracking-wider uppercase shadow-xs w-fit">
-                      <Sparkles class="w-2.5 h-2.5 sm:w-3 sm:h-3 text-[#e4b97a]" />
-                      <span class="truncate max-w-[190px] sm:max-w-none">{{ slide.tag }}</span>
+                    <div class="inline-flex items-center gap-1.5 px-2.5 py-1 sm:px-3 sm:py-1 rounded-full bg-black/45 backdrop-blur-md border border-[#e4b97a]/40 text-[#f5d8a8] text-[9.5px] sm:text-[11px] font-bold tracking-wider uppercase shadow-xs w-fit">
+                      <Sparkles class="w-3 h-3 text-[#e4b97a] shrink-0" />
+                      <span class="max-w-[270px] sm:max-w-none truncate">{{ slide.tag }}</span>
                     </div>
 
                     <!-- Grand Editorial Serif Title -->
-                    <h2 class="text-[17px] sm:text-2xl lg:text-[30px] font-serif font-medium leading-[1.18] sm:leading-[1.14] tracking-tight text-white drop-shadow-xs whitespace-pre-line line-clamp-3 sm:line-clamp-none">
+                    <h2 class="text-[20px] sm:text-[26px] lg:text-[32px] font-serif font-medium leading-[1.15] sm:leading-[1.12] tracking-tight text-white drop-shadow-xs whitespace-pre-line line-clamp-3 sm:line-clamp-none">
                       {{ slide.title }}
                     </h2>
 
                     <!-- Descriptive Subtitle (Always visible: gives appetizing context, eliminates empty void) -->
-                    <p v-if="slide.subtitle" class="text-[11px] sm:text-[12.5px] text-stone-200/90 font-normal leading-snug line-clamp-2 max-w-[260px] sm:max-w-sm drop-shadow-xs">
+                    <p v-if="slide.subtitle" class="text-[12.5px] sm:text-[13.5px] text-stone-200/95 font-normal leading-relaxed line-clamp-2 max-w-[280px] sm:max-w-sm drop-shadow-xs">
                       {{ slide.subtitle }}
                     </p>
                   </div>
 
                   <!-- CTA Button & Highlight Pill -->
-                  <div class="pt-2 sm:pt-3.5 flex flex-wrap items-center gap-2 sm:gap-3">
-                    <span class="inline-flex items-center gap-2 px-3.5 py-1.5 sm:px-4.5 sm:py-2.5 rounded-full bg-white text-[#1a1a1a] hover:bg-[#f5eee2] text-[11px] sm:text-xs font-bold shadow-sm hover:shadow-md transition-all duration-300 group-hover:scale-[1.02] shrink-0">
+                  <div class="pt-2.5 sm:pt-4 flex flex-wrap items-center gap-2 sm:gap-3">
+                    <span class="inline-flex items-center gap-2 px-4 py-2 sm:px-4.5 sm:py-2.5 rounded-full bg-white text-[#1a1a1a] hover:bg-[#f5eee2] text-xs sm:text-[13px] font-bold shadow-sm hover:shadow-md transition-all duration-300 group-hover:scale-[1.02] shrink-0">
                       <span>{{ slide.cta }}</span>
                       <ChevronRight class="w-3.5 h-3.5 stroke-[2.5] text-[#1a1a1a] transition-transform group-hover:translate-x-0.5" />
                     </span>
@@ -545,7 +545,7 @@ const handleAddKitToCart = (kit) => {
         </div>
 
         <!-- Desktop Click & Collect Guarantee Card (Matching Elevation & Height) -->
-        <div class="hidden lg:flex lg:col-span-4 bg-[#f5eee2] rounded-3xl border border-[#e0d9cc] p-6 lg:p-7 flex-col justify-between shadow-xs h-[345px]">
+        <div class="hidden lg:flex lg:col-span-4 bg-[#f5eee2] rounded-3xl border border-[#e0d9cc] p-6 lg:p-7 flex-col justify-between shadow-xs h-[355px]">
           <div class="space-y-3">
             <div class="flex items-center justify-between text-[10px] font-bold uppercase tracking-wider text-[#7a5620]">
               <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-white/70 border border-[#e0d9cc]">
