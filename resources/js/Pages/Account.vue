@@ -20,12 +20,21 @@ import {
 const store = useStore();
 const page = usePage();
 const reorderedNotification = ref(false);
+const reorderedItemCount = ref(0);
 
 const authUser = computed(() => page.props.auth?.user);
-const userName = computed(() => authUser.value ? authUser.value.name.split(' ')[0] : 'Priya');
+const userName = computed(() => authUser.value ? authUser.value.name.split(' ')[0] : 'there');
 
-function reorderPastOrder() {
-  store.reorderAll();
+function handleReorderOrder(order) {
+  if (order && Array.isArray(order.items) && order.items.length > 0) {
+    order.items.forEach(item => {
+      store.addToCart(item, item.quantity || 1);
+    });
+    reorderedItemCount.value = order.items.length;
+  } else {
+    store.reorderAll(order?.id);
+    reorderedItemCount.value = order?.itemCount || 1;
+  }
   reorderedNotification.value = true;
   setTimeout(() => {
     reorderedNotification.value = false;
@@ -46,7 +55,7 @@ function reorderPastOrder() {
       >
         <div class="flex items-center gap-2">
           <CheckCircle2 class="w-4 h-4 text-[#F59E0B]" />
-          <span>Reordered all 6 past items into your cart!</span>
+          <span>Reordered {{ reorderedItemCount }} item{{ reorderedItemCount > 1 ? 's' : '' }} into your cart!</span>
         </div>
         <Link href="/cart" class="underline text-[#F59E0B] font-semibold inline-flex items-center gap-1">
           <span>View Cart</span>
@@ -59,7 +68,7 @@ function reorderPastOrder() {
         <div>
           <div class="flex items-center gap-2">
             <h1 class="text-2xl sm:text-3xl font-serif font-medium text-[#1d1d1f] tracking-tight">
-              Hi, {{ userName }}
+              {{ authUser ? 'Hi, ' + userName : 'Welcome to Masala Mart' }}
             </h1>
             <span v-if="authUser" class="w-2 h-2 rounded-full bg-emerald-500" title="Signed in"></span>
           </div>
@@ -184,128 +193,134 @@ function reorderPastOrder() {
           </span>
         </div>
 
-        <div class="space-y-4">
-          <!-- Item 1: Chakki Atta · 20 lb (Active) -->
-          <div class="p-4 sm:p-5 rounded-3xl border border-[#e0d9cc] bg-white shadow-xs space-y-3">
+        <!-- Dynamic Subscriptions List or Empty State -->
+        <div v-if="store.subscriptions.length > 0" class="space-y-3">
+          <div 
+            v-for="sub in store.subscriptions" 
+            :key="sub.id"
+            class="p-4 sm:p-5 rounded-3xl border border-[#e0d9cc] bg-white shadow-xs space-y-3"
+          >
             <div class="flex items-start justify-between gap-3">
               <div class="flex items-center gap-3">
                 <div class="w-12 h-12 rounded-xl bg-[#f3efe7] overflow-hidden shrink-0 border border-[#e0d9cc]">
-                  <img src="/images/products/atta.jpg" alt="Chakki Atta" class="w-full h-full object-cover" />
+                  <img :src="sub.image || '/images/products/atta.jpg'" :alt="sub.name" class="w-full h-full object-cover" />
                 </div>
                 <div>
-                  <h3 class="font-bold text-sm text-[#1d1d1f]">Chakki Atta · 20 lb</h3>
-                  <div class="text-xs text-[#6e6e73] font-normal mt-0.5">Monthly · $18.04</div>
+                  <h3 class="font-bold text-sm text-[#1d1d1f]">{{ sub.name }}</h3>
+                  <div class="text-xs text-[#6e6e73] font-normal mt-0.5">{{ sub.frequency }} · ${{ Number(sub.price).toFixed(2) }}</div>
                 </div>
               </div>
-              <span class="text-[11px] font-semibold text-[#7a5620] bg-[#f5eee2] border border-[#e0d9cc] px-2.5 py-0.5 rounded-full shrink-0">
-                Next Oct 3
+              <span 
+                :class="[
+                  'text-[11px] px-2.5 py-0.5 rounded-full shrink-0 font-medium',
+                  sub.status === 'active' 
+                    ? 'text-[#7a5620] bg-[#f5eee2] border border-[#e0d9cc] font-semibold' 
+                    : 'text-[#86868b] bg-[#ece7de]'
+                ]"
+              >
+                {{ sub.nextDate }}
               </span>
             </div>
 
-            <!-- Action Pill Buttons (Screen 1f) -->
+            <!-- Action Pill Buttons -->
             <div class="flex items-center gap-2 pt-1 pl-[60px]">
               <button 
-                @click="store.skipSubscription('sub-1')"
+                v-if="sub.status === 'active'"
+                @click="store.skipSubscription(sub.id)"
                 class="px-4 py-1.5 border border-[#e0d9cc] bg-white hover:bg-[#f3efe7] rounded-full text-xs font-semibold text-[#1d1d1f] transition-colors cursor-pointer flex items-center gap-1.5"
               >
                 <SkipForward class="w-3.5 h-3.5 text-[#6e6e73]" />
                 <span>Skip next</span>
               </button>
               <button 
-                @click="store.toggleSubscription('sub-1')"
+                @click="store.toggleSubscription(sub.id)"
                 class="px-4 py-1.5 border border-[#e0d9cc] bg-white hover:bg-[#f3efe7] rounded-full text-xs font-semibold text-[#1d1d1f] transition-colors cursor-pointer"
               >
-                Pause
-              </button>
-            </div>
-          </div>
-
-          <!-- Item 2: Toor Dal · 4 lb (Paused) -->
-          <div class="p-4 sm:p-5 rounded-3xl border border-[#e0d9cc] bg-white shadow-xs space-y-3">
-            <div class="flex items-start justify-between gap-3">
-              <div class="flex items-center gap-3">
-                <div class="w-12 h-12 rounded-xl bg-[#f3efe7] overflow-hidden shrink-0 border border-[#e0d9cc]">
-                  <img src="/images/products/toor_dal.jpg" alt="Toor Dal" class="w-full h-full object-cover" />
-                </div>
-                <div>
-                  <h3 class="font-bold text-sm text-[#1d1d1f]">Toor Dal · 4 lb</h3>
-                  <div class="text-xs text-[#6e6e73] font-normal mt-0.5">Every 2 weeks · $7.59</div>
-                </div>
-              </div>
-              <span class="text-[11px] font-normal text-[#86868b] bg-[#ece7de] px-2.5 py-0.5 rounded-full shrink-0">
-                Paused
-              </span>
-            </div>
-
-            <!-- Action Pill Buttons (Screen 1f) -->
-            <div class="flex items-center gap-2 pt-1 pl-[60px]">
-              <button 
-                class="px-4 py-1.5 border border-[#e0d9cc] bg-white hover:bg-stone-50 rounded-full text-xs font-semibold text-[#86868b] transition-colors cursor-not-allowed flex items-center gap-1.5 opacity-60"
-              >
-                <SkipForward class="w-3.5 h-3.5 text-[#86868b]" />
-                <span>Skip next</span>
-              </button>
-              <button 
-                @click="store.toggleSubscription('sub-2')"
-                class="px-4 py-1.5 border border-[#e0d9cc] bg-white hover:bg-[#f3efe7] rounded-full text-xs font-semibold text-[#1d1d1f] transition-colors cursor-pointer"
-              >
-                Resume
+                {{ sub.status === 'active' ? 'Pause' : 'Resume' }}
               </button>
             </div>
           </div>
         </div>
+
+        <!-- Empty Subscriptions State -->
+        <div v-else class="p-6 rounded-3xl border border-[#e0d9cc] bg-white text-center space-y-2.5 shadow-2xs">
+          <div class="text-sm font-semibold text-[#1d1d1f]">No active subscriptions</div>
+          <p class="text-xs text-[#6e6e73] max-w-sm mx-auto">
+            Subscribe & Save 5% on everyday essentials like Chakki Atta and Aged Basmati Rice.
+          </p>
+          <div class="pt-1">
+            <Link href="/" class="inline-flex items-center gap-1.5 text-xs font-semibold text-[#a47a3c] hover:underline">
+              <span>Explore Subscribe & Save Items</span>
+              <ChevronRight class="w-3.5 h-3.5" />
+            </Link>
+          </div>
+        </div>
       </div>
 
-      <!-- SECTION 3: Past Orders (Screen 1f Exact Match) -->
+      <!-- SECTION 3: Past Orders -->
       <div class="space-y-4">
         <div class="flex items-center justify-between border-b border-[#e0d9cc]/60 pb-2">
           <div class="flex items-center gap-2">
             <h2 class="text-lg sm:text-xl font-serif font-medium text-[#1d1d1f] tracking-tight">Past orders</h2>
             <span class="font-devanagari text-xs text-[#7a5620] bg-[#f5eee2] px-2 py-0.5 rounded-full border border-[#e0d9cc]">पिछला ऑर्डर</span>
           </div>
+          <span v-if="store.pastOrders.length > 0" class="text-xs font-normal text-[#6e6e73]">
+            {{ store.pastOrders.length }} order{{ store.pastOrders.length > 1 ? 's' : '' }}
+          </span>
         </div>
 
-        <div class="rounded-3xl border border-[#e0d9cc] bg-white p-5 space-y-4 shadow-xs">
-          <div class="flex items-center justify-between">
-            <span class="font-bold text-sm text-[#1d1d1f]">Sep 18 · Picked up</span>
-            <span class="font-serif font-medium text-base text-[#1d1d1f]">$62.40</span>
-          </div>
+        <!-- Dynamic Past Orders List or Empty State -->
+        <div v-if="store.pastOrders.length > 0" class="space-y-4">
+          <div 
+            v-for="order in store.pastOrders" 
+            :key="order.id"
+            class="rounded-3xl border border-[#e0d9cc] bg-white p-5 space-y-4 shadow-xs"
+          >
+            <div class="flex items-center justify-between">
+              <span class="font-bold text-sm text-[#1d1d1f]">{{ order.date }} · {{ order.type }}</span>
+              <span class="font-serif font-medium text-base text-[#1d1d1f]">${{ Number(order.total).toFixed(2) }}</span>
+            </div>
 
-          <div class="text-xs text-[#6e6e73] font-normal leading-relaxed">
-            #10482 · Chakki Atta, Desi Ghee, Okra (Bhindi), Curry Leaves, Glucose Biscuits, Masala Noodles
-          </div>
+            <div class="text-xs text-[#6e6e73] font-normal leading-relaxed">
+              {{ order.id }} · {{ order.summary }}
+            </div>
 
-          <!-- Product Thumbnails Row (Screen 1f) -->
-          <div class="flex items-center gap-2 overflow-x-auto no-scrollbar py-1">
-            <div class="w-10 h-10 rounded-2xl bg-[#f3efe7] overflow-hidden shrink-0 border border-[#e0d9cc]">
-              <img src="/images/products/atta.jpg" alt="Atta" class="w-full h-full object-cover" />
+            <!-- Product Thumbnails Row if items are attached -->
+            <div v-if="order.items && order.items.length > 0" class="flex items-center gap-2 overflow-x-auto no-scrollbar py-1">
+              <div 
+                v-for="item in order.items.slice(0, 6)" 
+                :key="item.id"
+                class="w-10 h-10 rounded-2xl bg-[#f3efe7] overflow-hidden shrink-0 border border-[#e0d9cc]"
+                :title="item.name"
+              >
+                <img :src="item.image || '/images/products/atta.jpg'" :alt="item.name" class="w-full h-full object-cover" />
+              </div>
             </div>
-            <div class="w-10 h-10 rounded-2xl bg-[#f3efe7] overflow-hidden shrink-0 border border-[#e0d9cc]">
-              <img src="/images/products/ghee.jpg" alt="Ghee" class="w-full h-full object-cover" />
-            </div>
-            <div class="w-10 h-10 rounded-2xl bg-[#f3efe7] overflow-hidden shrink-0 border border-[#e0d9cc]">
-              <img src="/images/products/okra.jpg" alt="Okra (Bhindi)" class="w-full h-full object-cover" />
-            </div>
-            <div class="w-10 h-10 rounded-2xl bg-[#f3efe7] overflow-hidden shrink-0 border border-[#e0d9cc]">
-              <img src="/images/products/curry_leaves.jpg" alt="Curry Leaves" class="w-full h-full object-cover" />
-            </div>
-            <div class="w-10 h-10 rounded-2xl bg-[#f3efe7] overflow-hidden shrink-0 border border-[#e0d9cc]">
-              <img src="/images/products/biscuits.jpg" alt="Biscuits" class="w-full h-full object-cover" />
-            </div>
-            <div class="w-10 h-10 rounded-2xl bg-[#f3efe7] overflow-hidden shrink-0 border border-[#e0d9cc]">
-              <img src="/images/products/garam_masala.jpg" alt="Spices" class="w-full h-full object-cover" />
+
+            <!-- Reorder Button -->
+            <div class="pt-1">
+              <button 
+                @click="handleReorderOrder(order)"
+                class="w-full h-11 bg-[#1a1a1a] hover:bg-black text-white font-semibold text-xs rounded-full transition-colors flex items-center justify-center gap-2 cursor-pointer shadow-sm active:scale-[0.99]"
+              >
+                <RotateCcw class="w-3.5 h-3.5 stroke-[2.2]" />
+                <span>Reorder {{ order.itemCount }} item{{ order.itemCount > 1 ? 's' : '' }}</span>
+              </button>
             </div>
           </div>
+        </div>
 
-          <!-- Reorder All 6 Items Button (Primary #1a1a1a) -->
+        <!-- Empty Past Orders State -->
+        <div v-else class="p-6 rounded-3xl border border-[#e0d9cc] bg-white text-center space-y-2.5 shadow-2xs">
+          <div class="text-sm font-semibold text-[#1d1d1f]">No past orders yet</div>
+          <p class="text-xs text-[#6e6e73] max-w-sm mx-auto">
+            When you complete pickup orders, your order details and quick reorder buttons will appear here.
+          </p>
           <div class="pt-1">
-            <button 
-              @click="reorderPastOrder"
-              class="w-full h-12 bg-[#1a1a1a] hover:bg-black text-white font-semibold text-sm rounded-full transition-colors flex items-center justify-center gap-2 cursor-pointer shadow-sm active:scale-[0.99]"
-            >
-              <RotateCcw class="w-4 h-4 stroke-[2.2]" />
-              <span>Reorder all 6 items</span>
-            </button>
+            <Link href="/" class="inline-flex items-center gap-1.5 text-xs font-semibold text-[#a47a3c] hover:underline">
+              <span>Start Shopping</span>
+              <ChevronRight class="w-3.5 h-3.5" />
+            </Link>
           </div>
         </div>
       </div>
@@ -323,14 +338,14 @@ function reorderPastOrder() {
           <div class="flex items-center justify-between">
             <div class="flex items-center gap-3">
               <div class="w-10 h-10 rounded-full bg-[#f3efe7] border border-[#e0d9cc] flex items-center justify-center text-[#1a1a1a] font-bold text-sm">
-                {{ authUser ? authUser.name.charAt(0).toUpperCase() : 'P' }}
+                {{ authUser ? authUser.name.charAt(0).toUpperCase() : 'G' }}
               </div>
               <div>
                 <div class="font-bold text-sm text-[#1d1d1f]">
-                  {{ authUser ? authUser.name : 'Priya Sharma (Guest)' }}
+                  {{ authUser ? authUser.name : 'Guest Customer' }}
                 </div>
                 <div class="text-xs text-[#6e6e73]">
-                  {{ authUser ? authUser.email : 'priya@example.com' }}
+                  {{ authUser ? authUser.email : 'Not signed in · Guest Mode' }}
                 </div>
               </div>
             </div>

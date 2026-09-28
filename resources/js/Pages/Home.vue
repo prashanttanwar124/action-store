@@ -125,14 +125,22 @@ const bannerSlides = computed(() => {
 
 // Masala Dabba (Spice-Box) Essential Staples
 const masalaDabbaSpices = [
-  { id: 101, slug: 'garam-masala', name: 'Haldi', english: 'Turmeric Powder', size: '200g', price: 3.49, image: '/images/products/garam_masala.jpg', photoLabel: 'haldi' },
-  { id: 102, slug: 'garam-masala', name: 'Jeera', english: 'Whole Cumin', size: '200g', price: 4.29, image: '/images/products/garam_masala.jpg', photoLabel: 'jeera' },
-  { id: 103, slug: 'garam-masala', name: 'Rai', english: 'Mustard Seeds', size: '200g', price: 2.99, image: '/images/products/garam_masala.jpg', photoLabel: 'rai' },
-  { id: 104, slug: 'garam-masala', name: 'Dhaniya', english: 'Coriander Powder', size: '200g', price: 3.49, image: '/images/products/garam_masala.jpg', photoLabel: 'dhaniya' },
-  { id: 105, slug: 'garam-masala', name: 'Lal Mirch', english: 'Kashmiri Chilli', size: '200g', price: 4.49, image: '/images/products/garam_masala.jpg', photoLabel: 'mirch' },
-  { id: 106, slug: 'garam-masala', name: 'Garam Masala', english: 'Royal 12-Spice', size: '100g', price: 5.49, image: '/images/products/garam_masala.jpg', photoLabel: 'garam masala' },
-  { id: 107, slug: 'garam-masala', name: 'Hing', english: 'Asafoetida', size: '50g', price: 3.99, image: '/images/products/garam_masala.jpg', photoLabel: 'hing' },
+  { id: 101, slug: 'haldi', name: 'Haldi', english: 'Turmeric Powder', size: '200g', price: 3.49, image: '/images/products/garam_masala.jpg', photoLabel: 'haldi' },
+  { id: 102, slug: 'jeera', name: 'Jeera', english: 'Whole Cumin', size: '200g', price: 4.29, image: '/images/products/garam_masala.jpg', photoLabel: 'jeera' },
+  { id: 103, slug: 'rai', name: 'Rai', english: 'Mustard Seeds', size: '200g', price: 2.99, image: '/images/products/garam_masala.jpg', photoLabel: 'rai' },
+  { id: 104, slug: 'dhaniya', name: 'Dhaniya', english: 'Coriander Powder', size: '200g', price: 3.49, image: '/images/products/garam_masala.jpg', photoLabel: 'dhaniya' },
+  { id: 105, slug: 'mirch', name: 'Lal Mirch', english: 'Kashmiri Chilli', size: '200g', price: 4.49, image: '/images/products/garam_masala.jpg', photoLabel: 'mirch' },
+  { id: 'garam-masala', slug: 'garam-masala', name: 'Garam Masala', english: 'Royal 12-Spice', size: '100g', price: 3.49, image: '/images/products/garam_masala.jpg', photoLabel: 'garam masala' },
+  { id: 107, slug: 'hing', name: 'Hing', english: 'Asafoetida', size: '50g', price: 3.99, image: '/images/products/garam_masala.jpg', photoLabel: 'hing' },
 ];
+
+const getSpiceLink = (spice) => {
+  const matched = (props.products || []).find(p => p.slug === spice.slug || p.name.toLowerCase().includes(spice.name.toLowerCase()));
+  if (matched) {
+    return `/products/${matched.slug}`;
+  }
+  return `/search?q=${encodeURIComponent(spice.name)}`;
+};
 
 const currentSlideIndex = ref(0);
 const currentSlide = computed(() => {
@@ -713,7 +721,7 @@ const handleAddKitToCart = (kit) => {
           <Link 
             v-for="spice in masalaDabbaSpices" 
             :key="spice.id"
-            :href="'/products/' + (spice.slug || 'garam-masala')"
+            :href="getSpiceLink(spice)"
             class="relative block w-[140px] sm:w-auto shrink-0 snap-start flex flex-col group text-left cursor-pointer transition-transform duration-200"
           >
             <!-- Card Image Tile with Modern Classic v3 styling -->

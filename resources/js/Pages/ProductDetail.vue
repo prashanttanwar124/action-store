@@ -50,14 +50,27 @@ const product = computed(() => {
       recipeIngredients: props.product.recipe_ingredients || [],
     };
   } else {
-    base = store.getProductBySlug(props.slug);
+    base = store.getProductBySlug(props.slug) || {};
   }
 
-  // Provide pairings for "Goes with it" section (Screen 3)
-  const goesWithIt = [
-    { id: 12, slug: 'toor-dal', name: 'Toor Dal', size: '4 lb', price: 7.99, label: 'toor dal', image: '/images/products/toor_dal.jpg' },
-    { id: 2, slug: 'ghee', name: 'Desi Ghee', size: '500 ml', price: 9.99, label: 'ghee jar', image: '/images/products/ghee.jpg' },
-  ];
+  // Provide dynamic pairings for "Goes with it" section
+  let goesWithIt = [];
+  if (base.frequentlyBoughtTogether && base.frequentlyBoughtTogether.length > 0) {
+    goesWithIt = base.frequentlyBoughtTogether.slice(0, 2);
+  } else {
+    goesWithIt = store.products
+      .filter(p => p.id !== base.id && p.slug !== base.slug)
+      .slice(0, 2)
+      .map(p => ({
+        id: p.id,
+        slug: p.slug,
+        name: p.name,
+        size: p.sizeMain || p.size,
+        price: Number(p.price),
+        label: p.photoLabel || p.name,
+        image: p.image,
+      }));
+  }
 
   return {
     ...base,
@@ -74,11 +87,7 @@ const isSubscribed = ref(false);
 const quantity = ref(1);
 const addedNotification = ref(false);
 
-const fbtSelected = ref({
-  'garam-masala': true,
-  'garlic-naan': false,
-  'kasuri-methi': false,
-});
+const fbtSelected = ref({});
 
 const fbtItems = computed(() => {
   if (product.value.frequentlyBoughtTogether?.length > 0) {
@@ -90,12 +99,24 @@ const fbtItems = computed(() => {
       image: item.image || '/images/products/garam_masala.jpg',
     }));
   }
-  return [
-    { id: 'garam-masala', name: 'Garam Masala', size: '100 g', price: 3.49, image: '/images/products/garam_masala.jpg' },
-    { id: 'garlic-naan', name: 'Garlic Naan', size: '4 pack', price: 3.99, image: '/images/products/sweets.jpg' },
-    { id: 'kasuri-methi', name: 'Kasuri Methi', size: '50 g', price: 2.49, image: '/images/products/okra.jpg' },
-  ];
+  return store.products
+    .filter(p => p.id !== product.value.id && p.slug !== product.value.slug)
+    .slice(0, 3)
+    .map(p => ({
+      id: p.id,
+      name: p.name,
+      size: p.sizeMain || p.size,
+      price: Number(p.price),
+      image: p.image,
+    }));
 });
+
+// Default first companion item selected
+watch(fbtItems, (items) => {
+  if (items.length > 0 && Object.keys(fbtSelected.value).length === 0) {
+    fbtSelected.value = { [items[0].id]: true };
+  }
+}, { immediate: true });
 
 function toggleFbtItem(id) {
   fbtSelected.value[id] = !fbtSelected.value[id];

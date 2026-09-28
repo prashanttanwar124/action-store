@@ -43,13 +43,39 @@ const checkoutTotal = computed(() => {
   return store.total.toFixed(2);
 });
 
+const confirmedOrderNumber = ref('');
+const confirmedTotalPaid = ref('0.00');
+const confirmedPointsEarned = ref(0);
+const confirmedSlotLabel = ref('');
+
 function completeOrder() {
   isProcessing.value = true;
   const pointsEarned = Math.floor(store.subtotal);
+  const totalPaid = Number(store.total.toFixed(2));
+  const orderItems = store.cartItems.map(i => ({ ...i }));
+  const orderId = `#MM-${Math.floor(10000 + Math.random() * 90000)}`;
+  const slotLabel = currentSlot.value.label;
+
   setTimeout(() => {
     isProcessing.value = false;
     orderPlaced.value = true;
+    confirmedOrderNumber.value = orderId;
+    confirmedTotalPaid.value = totalPaid.toFixed(2);
+    confirmedPointsEarned.value = pointsEarned;
+    confirmedSlotLabel.value = slotLabel;
+
     store.masalaPoints += pointsEarned;
+
+    store.pastOrders.unshift({
+      id: orderId,
+      date: 'Today',
+      type: 'Store Pickup',
+      total: totalPaid,
+      itemCount: orderItems.reduce((acc, i) => acc + i.quantity, 0),
+      summary: orderItems.map(i => i.name).join(', '),
+      items: orderItems,
+    });
+
     store.clearCart();
   }, 1200);
 }
@@ -77,32 +103,32 @@ function completeOrder() {
         
         <div>
           <span class="text-[11px] font-semibold uppercase tracking-widest text-[#7a5620] bg-[#f5eee2] px-3 py-1 rounded-full border border-[#e0d9cc]">
-            ORDER CONFIRMED #MM-88492
+            ORDER CONFIRMED {{ confirmedOrderNumber }}
           </span>
           <h2 class="text-2xl sm:text-4xl text-[#1d1d1f] tracking-tight mt-3 leading-tight font-serif font-medium">
             Thank you for your order!
           </h2>
           <p class="text-sm text-[#6e6e73] mt-2.5 max-w-md mx-auto font-normal leading-relaxed">
-            Your items are being hand-picked at <strong>{{ store.selectedStore }}</strong> and will be ready for pickup <strong>{{ currentSlot.label }}</strong>.
+            Your items are being hand-picked at <strong>{{ store.selectedStore }}</strong> and will be ready for pickup <strong>{{ confirmedSlotLabel || currentSlot.label }}</strong>.
           </p>
         </div>
 
         <div class="max-w-md mx-auto bg-[#f3efe7] rounded-2xl p-5 border border-[#e0d9cc] text-left space-y-3 text-xs">
           <div class="flex justify-between items-center">
             <span class="text-[#6e6e73] font-normal">Fulfillment Window:</span>
-            <span class="font-bold text-[#1d1d1f]">{{ currentSlot.label }}</span>
+            <span class="font-bold text-[#1d1d1f]">{{ confirmedSlotLabel || currentSlot.label }}</span>
           </div>
           <div class="flex justify-between items-center">
             <span class="text-[#6e6e73] font-normal">Pickup Location:</span>
-            <span class="font-bold text-[#1d1d1f]">214 Main St. · Curbside Bay 3</span>
+            <span class="font-bold text-[#1d1d1f]">{{ store.pickupLocation }}</span>
           </div>
           <div class="flex justify-between items-center">
             <span class="text-[#6e6e73] font-normal">Total Paid:</span>
-            <span class="font-serif font-medium text-lg text-[#1d1d1f]">${{ store.total.toFixed(2) }}</span>
+            <span class="font-serif font-medium text-lg text-[#1d1d1f]">${{ confirmedTotalPaid }}</span>
           </div>
           <div class="flex justify-between items-center">
             <span class="text-[#6e6e73] font-normal">Masala Points Earned:</span>
-            <span class="font-bold text-[#7a5620]">+{{ Math.floor(store.subtotal) }} pts</span>
+            <span class="font-bold text-[#7a5620]">+{{ confirmedPointsEarned }} pts</span>
           </div>
         </div>
 
