@@ -204,24 +204,24 @@ function completeOrder() {
                 type="button"
                 @click="paymentMethod = 'apple-pay'"
                 :class="[
-                  'h-12 bg-[#1a1a1a] hover:bg-black text-white font-semibold text-sm rounded-full flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-xs active:scale-[0.99]',
-                  paymentMethod === 'apple-pay' ? 'ring-2 ring-[#a47a3c]' : ''
+                  'h-12 bg-black hover:bg-neutral-900 text-white font-semibold rounded-full flex items-center justify-center transition-all cursor-pointer shadow-xs active:scale-[0.99] border border-black',
+                  paymentMethod === 'apple-pay' ? 'ring-2 ring-[#a47a3c] ring-offset-2' : ''
                 ]"
-                aria-label="Apple Pay"
+                aria-label="Pay with Apple Pay"
               >
-                <IconApplePay :width="50" :height="22" class="text-white" />
+                <IconApplePay :width="62" :height="25" class="text-white" />
               </button>
 
               <button 
                 type="button"
                 @click="paymentMethod = 'google-pay'"
                 :class="[
-                  'h-12 bg-[#1a1a1a] hover:bg-black text-white font-semibold text-sm rounded-full flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-xs active:scale-[0.99]',
-                  paymentMethod === 'google-pay' ? 'ring-2 ring-[#a47a3c]' : ''
+                  'h-12 bg-black hover:bg-neutral-900 text-white font-semibold rounded-full flex items-center justify-center transition-all cursor-pointer shadow-xs active:scale-[0.99] border border-black',
+                  paymentMethod === 'google-pay' ? 'ring-2 ring-[#a47a3c] ring-offset-2' : ''
                 ]"
-                aria-label="Google Pay"
+                aria-label="Pay with Google Pay"
               >
-                <IconGooglePay :width="54" :height="22" class="text-white" />
+                <IconGooglePay :width="62" :height="25" class="text-white" />
               </button>
             </div>
 
