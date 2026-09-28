@@ -8,7 +8,9 @@ import {
   ChevronLeft,
   Plus, 
   Minus, 
-  Sparkles 
+  Sparkles,
+  Store,
+  Clock 
 } from 'lucide-vue-next';
 
 const props = defineProps({
@@ -33,35 +35,41 @@ const defaultBannerSlides = [
   {
     id: 'sweets',
     tag: 'FESTIVAL PRE-ORDER · CLOSES OCT 30',
-    title: 'Diwali sweets,\nboxed &\nready.',
+    title: 'Diwali sweets,\nboxed & ready.',
+    subtitle: 'Artisanal kaju katli, besan ladoo & pista barfi in royal gold packaging.',
+    highlight: 'Fresh Handcrafted Batch · Serves 6–8',
     cta: 'Pre-order from $24.99',
     link: '/products/sweets-box',
     image: '/images/products/sweets.jpg',
     alt: 'Assorted luxury Diwali sweets in royal gold gift box',
     photoLabel: 'mithai box',
-    bg: '#1a1a1a',
+    bg: '#181310',
   },
   {
     id: 'curry-kit',
     tag: 'CHEF-CRAFTED · DINNER IN 20 MINS',
-    title: 'Restaurant curry,\ncooked at\nhome.',
+    title: 'Restaurant curry,\ncooked at home.',
+    subtitle: 'Fresh malai paneer, stone-ground whole spices & velvety simmer sauce.',
+    highlight: 'Pre-portioned ingredients · Zero waste',
     cta: 'Order kit for $14.99',
     link: '/recipe-kits/paneer-curry',
     image: '/images/products/paneer_curry.jpg',
     alt: 'Fresh Paneer Butter Masala curry kit with pre-portioned ingredients',
     photoLabel: 'paneer kit',
-    bg: '#221c17',
+    bg: '#16120e',
   },
   {
     id: 'atta',
-    tag: 'SUBSCRIBE & SAVE · 10% OFF AUTO-DELIVER',
-    title: 'Never run out\nof fresh atta\nagain.',
-    cta: 'Subscribe from $18.04',
+    tag: 'PANTRY STAPLE · FRESH MILL BATCH',
+    title: 'Never run out\nof fresh atta again.',
+    subtitle: '100% stone ground whole wheat flour for ultra-soft, golden phulkas & rotis.',
+    highlight: '20 lb bag · Zero maida added',
+    cta: 'Order bag for $18.99',
     link: '/products/atta',
     image: '/images/products/atta.jpg',
     alt: 'Chakki Atta 100% stone ground whole wheat flour',
     photoLabel: 'chakki atta',
-    bg: '#26201b',
+    bg: '#191410',
   },
 ];
 
@@ -71,12 +79,14 @@ const bannerSlides = computed(() => {
       id: s.id,
       tag: s.tag || 'FEATURED',
       title: s.title,
+      subtitle: s.subtitle || 'Fresh click-and-collect batch ready for 1-hour store pickup.',
+      highlight: s.photo_label ? `${s.photo_label} · Store Pickup in 1 hr` : 'Click & Collect Ready',
       cta: s.cta_text || 'Order now',
       link: s.link_url || '/',
       image: s.image,
       alt: s.title.replace(/\n/g, ' '),
       photoLabel: s.photo_label || '',
-      bg: s.bg_color || '#1a1a1a',
+      bg: s.bg_color || '#16120e',
     }));
   }
   return defaultBannerSlides;
@@ -380,12 +390,12 @@ const handleAddKitToCart = (kit) => {
   <StoreLayout>
     <div class="space-y-7 sm:space-y-10">
 
-      <!-- HERO SECTION: Split Festival Banner (Screen 1a Specification) -->
-      <section class="grid grid-cols-1 lg:grid-cols-12 gap-4">
+      <!-- HERO SECTION: Premium Editorial Banner & Click & Collect Hub -->
+      <section class="grid grid-cols-1 lg:grid-cols-12 gap-4 lg:gap-5 items-stretch">
         <!-- Main Festival Pre-Order Banner (Interactive Sliding Carousel with Drag & Swipe) -->
-        <div class="lg:col-span-8 flex flex-col">
+        <div class="lg:col-span-8 flex flex-col justify-between">
           <div 
-            class="relative overflow-hidden rounded-3xl shadow-sm min-h-[180px] sm:min-h-[200px] group bg-[#1a1a1a] select-none cursor-grab active:cursor-grabbing touch-pan-y"
+            class="relative overflow-hidden rounded-3xl shadow-sm min-h-[280px] sm:min-h-[320px] lg:min-h-[340px] group bg-[#16120e] select-none cursor-grab active:cursor-grabbing touch-pan-y border border-black/10"
             @mouseenter="pauseAutoplay"
             @mousedown="handleDragStart"
             @mousemove="handleDragMove"
@@ -406,113 +416,172 @@ const handleAddKitToCart = (kit) => {
               <div 
                 v-for="slide in bannerSlides"
                 :key="slide.id"
-                class="w-full shrink-0 h-full text-white grid grid-cols-12 overflow-hidden min-h-[180px] sm:min-h-[200px]"
-                :style="{ backgroundColor: slide.bg || '#1a1a1a' }"
+                class="w-full shrink-0 h-full text-white relative overflow-hidden select-none min-h-[280px] sm:min-h-[320px] lg:min-h-[340px] flex items-stretch"
+                :style="{ backgroundColor: slide.bg || '#16120e' }"
               >
+                <!-- Background Image Layer with seamless gradient dissolve (No harsh vertical split!) -->
+                <div class="absolute inset-y-0 right-0 w-full sm:w-[62%] lg:w-[60%] overflow-hidden pointer-events-none">
+                  <img 
+                    :src="slide.image" 
+                    :alt="slide.alt" 
+                    class="w-full h-full object-cover object-center scale-100 group-hover:scale-105 transition-transform duration-700 ease-out select-none"
+                    draggable="false"
+                  />
+                  <!-- Seamless Multi-Stop Horizontal Vignette (Dissolves into background naturally) -->
+                  <div 
+                    class="absolute inset-0 hidden sm:block pointer-events-none"
+                    :style="{
+                      background: `linear-gradient(to right, ${slide.bg || '#16120e'} 0%, ${slide.bg || '#16120e'}F2 26%, ${slide.bg || '#16120e'}99 52%, transparent 100%)`
+                    }"
+                  ></div>
+                  <!-- Mobile Vertical Gradient Overlay (ensures readability on mobile) -->
+                  <div 
+                    class="absolute inset-0 sm:hidden pointer-events-none"
+                    :style="{
+                      background: `linear-gradient(to top, ${slide.bg || '#16120e'} 30%, ${slide.bg || '#16120e'}D9 70%, transparent 100%)`
+                    }"
+                  ></div>
+                  <!-- Warm Golden Ambient Radial Bloom -->
+                  <div class="absolute inset-0 bg-[radial-gradient(circle_at_75%_50%,rgba(228,185,122,0.18),transparent_65%)] pointer-events-none"></div>
+
+                  <!-- Photo Category Tag Badge in Bottom Right -->
+                  <div v-if="slide.photoLabel" class="absolute bottom-3 right-3 sm:bottom-4 sm:right-4 z-10 pointer-events-none">
+                    <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-black/60 backdrop-blur-md text-[10px] text-white/90 font-medium border border-white/15 shadow-sm">
+                      <span class="w-1.5 h-1.5 rounded-full bg-[#e4b97a]"></span>
+                      <span class="capitalize">{{ slide.photoLabel }}</span>
+                    </span>
+                  </div>
+                </div>
+
+                <!-- Text Content & Interactive CTA (Overlaid on left) -->
                 <Link 
                   :href="slide.link"
                   @click="handleSlideClick"
-                  class="contents cursor-pointer"
+                  class="relative z-20 w-full sm:max-w-[62%] lg:max-w-[58%] p-6 sm:p-8 lg:p-9 flex flex-col justify-between h-full select-none cursor-pointer"
                   draggable="false"
                 >
-                  <!-- Banner Copy -->
-                  <div class="col-span-7 p-4 sm:p-7 flex flex-col justify-between select-none">
-                    <div>
-                      <div class="text-[9px] sm:text-[10px] font-semibold tracking-wider uppercase text-[#a47a3c] leading-tight mb-1">
-                        {{ slide.tag }}
-                      </div>
-                      <h1 class="text-2xl sm:text-3xl lg:text-4xl font-serif font-medium leading-tight tracking-tight text-white whitespace-pre-line">
-                        {{ slide.title }}
-                      </h1>
+                  <div class="space-y-2.5 sm:space-y-3">
+                    <!-- Category Pill Badge -->
+                    <div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/10 backdrop-blur-md border border-white/15 text-[#f5d8a8] text-[10px] sm:text-[11px] font-bold tracking-wider uppercase shadow-xs w-fit">
+                      <Sparkles class="w-3 h-3 text-[#e4b97a]" />
+                      <span>{{ slide.tag }}</span>
                     </div>
 
-                    <div>
-                      <span class="inline-flex items-center gap-1 text-xs font-semibold text-white group-hover:text-white/90 mt-2 sm:mt-4">
-                        <span>{{ slide.cta }}</span>
-                        <ChevronRight class="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-                      </span>
-                    </div>
+                    <!-- Grand Editorial Serif Title -->
+                    <h2 class="text-2xl sm:text-3xl lg:text-[36px] font-serif font-medium leading-[1.12] tracking-tight text-white drop-shadow-xs whitespace-pre-line">
+                      {{ slide.title }}
+                    </h2>
+
+                    <!-- Descriptive Subtitle -->
+                    <p v-if="slide.subtitle" class="text-xs sm:text-[13px] text-stone-300 font-normal leading-relaxed line-clamp-2 max-w-sm drop-shadow-xs">
+                      {{ slide.subtitle }}
+                    </p>
                   </div>
 
-                  <!-- Banner Visual Texture (Photo Area with Real Product & Label) -->
-                  <div class="col-span-5 relative bg-stone-900 overflow-hidden img-zoom-container select-none">
-                    <img 
-                      :src="slide.image" 
-                      :alt="slide.alt" 
-                      class="w-full h-full object-cover object-center absolute inset-0 pointer-events-none select-none"
-                      draggable="false"
-                    />
-                    <div class="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent pointer-events-none"></div>
-                    <div class="relative z-10 p-2.5 sm:p-3 h-full flex flex-col justify-end items-end pointer-events-none">
-                      <span class="photo-label text-[10px] text-white/80 font-normal">
-                        {{ slide.photoLabel }}
+                  <!-- CTA Button & Highlight Pill -->
+                  <div class="pt-4 sm:pt-5 flex flex-wrap items-center gap-3">
+                    <span class="inline-flex items-center gap-2.5 px-5 py-2.5 sm:py-3 rounded-full bg-white text-[#1a1a1a] hover:bg-[#f5eee2] text-xs sm:text-sm font-bold shadow-md hover:shadow-xl transition-all duration-300 group-hover:scale-[1.02]">
+                      <span>{{ slide.cta }}</span>
+                      <span class="w-5 h-5 rounded-full bg-[#1a1a1a] text-white flex items-center justify-center transition-transform group-hover:translate-x-0.5">
+                        <ChevronRight class="w-3 h-3 stroke-[2.5]" />
                       </span>
-                    </div>
+                    </span>
+
+                    <span v-if="slide.highlight" class="hidden sm:inline-flex items-center gap-1.5 text-xs text-stone-300 font-normal px-3 py-1 rounded-full bg-black/40 backdrop-blur-xs border border-white/10">
+                      <span class="w-1.5 h-1.5 rounded-full bg-[#e4b97a]"></span>
+                      <span>{{ slide.highlight }}</span>
+                    </span>
                   </div>
                 </Link>
               </div>
             </div>
 
-            <!-- Prev/Next desktop hover arrows -->
+            <!-- Floating Glassmorphic Hover Arrows -->
             <button 
               type="button"
               @click.stop.prevent="prevSlide"
-              class="hidden sm:flex absolute left-2.5 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-black/40 hover:bg-black/75 text-white items-center justify-center backdrop-blur-xs opacity-0 group-hover:opacity-100 transition-opacity duration-200 cursor-pointer z-20 shadow-md"
+              class="hidden sm:flex absolute left-3 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-black/40 hover:bg-black/85 text-white items-center justify-center backdrop-blur-md border border-white/15 opacity-0 group-hover:opacity-100 transition-all duration-200 cursor-pointer z-30 shadow-lg active:scale-95"
               aria-label="Previous slide"
             >
-              <ChevronLeft class="w-4 h-4" />
+              <ChevronLeft class="w-4 h-4 stroke-[2.5]" />
             </button>
             <button 
               type="button"
               @click.stop.prevent="nextSlide"
-              class="hidden sm:flex absolute right-2.5 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-black/40 hover:bg-black/75 text-white items-center justify-center backdrop-blur-xs opacity-0 group-hover:opacity-100 transition-opacity duration-200 cursor-pointer z-20 shadow-md"
+              class="hidden sm:flex absolute right-3 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-black/40 hover:bg-black/85 text-white items-center justify-center backdrop-blur-md border border-white/15 opacity-0 group-hover:opacity-100 transition-all duration-200 cursor-pointer z-30 shadow-lg active:scale-95"
               aria-label="Next slide"
             >
-              <ChevronRight class="w-4 h-4" />
+              <ChevronRight class="w-4 h-4 stroke-[2.5]" />
             </button>
           </div>
 
-          <!-- Banner Pagination Indicator Dots Tightly Docked Directly Below Banner -->
-          <div class="flex items-center gap-1.5 mt-2.5 pl-1" role="tablist" aria-label="Hero banner pagination">
-            <button
-              v-for="(slide, idx) in bannerSlides"
-              :key="slide.id"
-              type="button"
-              @click="setSlide(idx)"
-              :aria-label="`Slide ${idx + 1}: ${slide.tag}`"
-              :aria-selected="currentSlideIndex === idx"
-              role="tab"
-              class="h-1.5 rounded-full transition-all duration-300 cursor-pointer focus:outline-none focus-visible:ring-1 focus-visible:ring-[#1a1a1a]"
-              :class="currentSlideIndex === idx ? 'w-5 bg-[#a47a3c]' : 'w-1.5 bg-[#e0d9cc] hover:bg-[#86868b]'"
-            ></button>
+          <!-- Modern Segmented Pill Indicator & Counter -->
+          <div class="flex items-center justify-between mt-3 px-1">
+            <div class="flex items-center gap-2" role="tablist" aria-label="Hero banner pagination">
+              <button
+                v-for="(slide, idx) in bannerSlides"
+                :key="slide.id"
+                type="button"
+                @click="setSlide(idx)"
+                :aria-label="`Slide ${idx + 1}: ${slide.tag}`"
+                :aria-selected="currentSlideIndex === idx"
+                role="tab"
+                class="group/indicator flex items-center py-1 cursor-pointer focus:outline-none"
+              >
+                <span 
+                  class="h-1.5 rounded-full transition-all duration-300 block"
+                  :class="currentSlideIndex === idx ? 'w-8 bg-[#a47a3c] shadow-xs' : 'w-2 bg-[#e0d9cc] group-hover/indicator:bg-[#86868b]'"
+                ></span>
+              </button>
+            </div>
+
+            <div class="text-[11px] font-semibold text-stone-500 tracking-wider flex items-center gap-1.5">
+              <span class="text-stone-900 font-bold">0{{ currentSlideIndex + 1 }}</span>
+              <span class="text-stone-300">/</span>
+              <span>0{{ bannerSlides.length }}</span>
+            </div>
           </div>
         </div>
 
-        <!-- Desktop Click & Collect Guarantee Card -->
-        <div class="hidden lg:flex lg:col-span-4 bg-[#f3efe7] rounded-3xl border border-[#e0d9cc] p-6 flex-col justify-between shadow-xs">
-          <div>
-            <div class="flex items-center justify-between text-[10px] font-semibold uppercase tracking-wider text-[#6e6e73] mb-2">
-              <span>EXPRESS STORE PICKUP</span>
-              <span class="text-[#7a5620] font-semibold">1 HR READY</span>
+        <!-- Desktop Click & Collect Guarantee Card (Matching Elevation & Height) -->
+        <div class="hidden lg:flex lg:col-span-4 bg-[#f5eee2] rounded-3xl border border-[#e0d9cc] p-7 flex-col justify-between shadow-xs min-h-[280px] sm:min-h-[320px] lg:min-h-[340px]">
+          <div class="space-y-3">
+            <div class="flex items-center justify-between text-[10px] font-bold uppercase tracking-wider text-[#7a5620]">
+              <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-white/70 border border-[#e0d9cc]">
+                <Store class="w-3 h-3 text-[#a47a3c]" />
+                EXPRESS STORE PICKUP
+              </span>
+              <span class="text-[#7a5620] font-bold bg-[#a47a3c]/15 px-2 py-0.5 rounded-full">1 HR READY</span>
             </div>
-            <h3 class="text-xl font-serif font-medium text-[#1d1d1f] tracking-tight leading-snug">
+            <h3 class="text-2xl font-serif font-medium text-[#1d1d1f] tracking-tight leading-snug">
               Order online, pull up, pop the trunk.
             </h3>
-            <p class="text-xs text-[#6e6e73] mt-2 font-normal leading-relaxed">
-              We pick temperature-controlled produce, fresh dairy, and heavy pantry bags so you don't have to wait in line.
+            <p class="text-xs text-[#6e6e73] font-normal leading-relaxed">
+              We hand-pick chilled produce, fresh dairy, and heavy pantry bags so your trunk is loaded in under 2 minutes.
             </p>
+
+            <div class="space-y-2 pt-2 text-xs text-[#1d1d1f] font-medium">
+              <div class="flex items-center gap-2 text-[11px] text-stone-700">
+                <span class="w-4 h-4 rounded-full bg-[#1a1a1a] text-white flex items-center justify-center text-[9px]">✓</span>
+                <span>Thermal insulated bags for fresh dairy & paneer</span>
+              </div>
+              <div class="flex items-center gap-2 text-[11px] text-stone-700">
+                <span class="w-4 h-4 rounded-full bg-[#1a1a1a] text-white flex items-center justify-center text-[9px]">✓</span>
+                <span>Zero convenience fees · Always 100% free</span>
+              </div>
+            </div>
           </div>
 
-          <div class="mt-6 pt-4 border-t border-[#e0d9cc]/60 flex items-center justify-between">
+          <div class="pt-4 border-t border-[#e0d9cc] flex items-center justify-between">
             <div>
               <div class="text-xs font-bold text-[#1d1d1f]">{{ store.selectedStore }}</div>
-              <div class="text-[11px] font-normal text-[#6e6e73]">Pickups ready in {{ store.readyTime }}</div>
+              <div class="text-[11px] font-normal text-[#6e6e73]">Bay 3 curbside · Ready in {{ store.readyTime }}</div>
             </div>
             <Link 
               href="/cart" 
-              class="px-4 py-2 bg-[#1a1a1a] hover:bg-black text-xs font-semibold text-white rounded-full inline-flex items-center gap-1 transition-colors"
+              class="px-4 py-2.5 bg-[#1a1a1a] hover:bg-black text-xs font-semibold text-white rounded-full inline-flex items-center gap-1.5 transition-colors shadow-xs"
             >
-              <span>Start Order</span>
+              <span>Pickup Order</span>
               <ChevronRight class="w-3.5 h-3.5" />
             </Link>
           </div>
