@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, onMounted, onUnmounted } from 'vue';
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue';
 import { Head, Link } from '@inertiajs/vue3';
 import StoreLayout from '../Layouts/StoreLayout.vue';
 import { useStore } from '../stores/cart';
@@ -94,12 +94,16 @@ const masalaDabbaSpices = [
 ];
 
 const currentSlideIndex = ref(0);
-const currentSlide = computed(() => bannerSlides[currentSlideIndex.value]);
+const currentSlide = computed(() => {
+  const slides = bannerSlides.value;
+  return slides[currentSlideIndex.value] || slides[0] || null;
+});
 
 let autoplayTimer = null;
 
 const startAutoplay = () => {
   stopAutoplay();
+  if (!bannerSlides.value || bannerSlides.value.length <= 1) return;
   autoplayTimer = setInterval(() => {
     nextSlide();
   }, 5000);
@@ -121,17 +125,30 @@ const resumeAutoplay = () => {
 };
 
 const setSlide = (index) => {
-  currentSlideIndex.value = index;
+  const total = bannerSlides.value.length;
+  if (!total) return;
+  currentSlideIndex.value = Math.max(0, Math.min(index, total - 1));
   startAutoplay();
 };
 
 const nextSlide = () => {
-  currentSlideIndex.value = (currentSlideIndex.value + 1) % bannerSlides.length;
+  const total = bannerSlides.value.length;
+  if (total <= 1) return;
+  currentSlideIndex.value = (currentSlideIndex.value + 1) % total;
 };
 
 const prevSlide = () => {
-  currentSlideIndex.value = (currentSlideIndex.value - 1 + bannerSlides.length) % bannerSlides.length;
+  const total = bannerSlides.value.length;
+  if (total <= 1) return;
+  currentSlideIndex.value = (currentSlideIndex.value - 1 + total) % total;
 };
+
+// Reset index safely if sliders change
+watch(bannerSlides, (newSlides) => {
+  if (newSlides && newSlides.length > 0 && currentSlideIndex.value >= newSlides.length) {
+    currentSlideIndex.value = 0;
+  }
+});
 
 // Drag & Swipe State for Hero Slider (Both Touch & Mouse)
 const dragOffset = ref(0);
@@ -142,6 +159,7 @@ let dragThresholdPassed = false;
 
 const handleDragStart = (e) => {
   if (e.type === 'mousedown' && e.button !== 0) return;
+  if (!bannerSlides.value || bannerSlides.value.length <= 1) return;
   isPointerDown.value = true;
   dragThresholdPassed = false;
   startX = e.clientX;
@@ -160,8 +178,9 @@ const handleDragMove = (e) => {
   }
 
   if (isDragging.value) {
-    if ((currentSlideIndex.value === 0 && diff > 0) || (currentSlideIndex.value === bannerSlides.length - 1 && diff < 0)) {
-      dragOffset.value = diff * 0.3;
+    const total = bannerSlides.value.length;
+    if ((currentSlideIndex.value === 0 && diff > 0) || (currentSlideIndex.value >= total - 1 && diff < 0)) {
+      dragOffset.value = diff * 0.25;
     } else {
       dragOffset.value = diff;
     }
@@ -190,8 +209,15 @@ const handleDragEnd = () => {
   resumeAutoplay();
 };
 
+const handleWindowMouseUp = () => {
+  if (isPointerDown.value) {
+    handleDragEnd();
+  }
+};
+
 // Touch Handlers
 const handleTouchStart = (e) => {
+  if (!bannerSlides.value || bannerSlides.value.length <= 1) return;
   if (e.touches && e.touches[0]) {
     isPointerDown.value = true;
     dragThresholdPassed = false;
@@ -212,8 +238,9 @@ const handleTouchMove = (e) => {
   }
 
   if (isDragging.value) {
-    if ((currentSlideIndex.value === 0 && diff > 0) || (currentSlideIndex.value === bannerSlides.length - 1 && diff < 0)) {
-      dragOffset.value = diff * 0.3;
+    const total = bannerSlides.value.length;
+    if ((currentSlideIndex.value === 0 && diff > 0) || (currentSlideIndex.value >= total - 1 && diff < 0)) {
+      dragOffset.value = diff * 0.25;
     } else {
       dragOffset.value = diff;
     }
@@ -232,6 +259,7 @@ const handleSlideClick = (e) => {
 };
 
 onMounted(() => {
+  window.addEventListener('mouseup', handleWindowMouseUp);
   if (props.products && props.products.length > 0) {
     store.setProducts(props.products);
   }
@@ -239,6 +267,7 @@ onMounted(() => {
 });
 
 onUnmounted(() => {
+  window.removeEventListener('mouseup', handleWindowMouseUp);
   stopAutoplay();
 });
 
@@ -356,7 +385,7 @@ const handleAddKitToCart = (kit) => {
         <!-- Main Festival Pre-Order Banner (Interactive Sliding Carousel with Drag & Swipe) -->
         <div class="lg:col-span-8 flex flex-col">
           <div 
-            class="relative overflow-hidden rounded-3xl shadow-sm min-h-[180px] sm:min-h-[200px] group bg-[#1a1a1a] select-none cursor-grab active:cursor-grabbing"
+            class="relative overflow-hidden rounded-3xl shadow-sm min-h-[180px] sm:min-h-[200px] group bg-[#1a1a1a] select-none cursor-grab active:cursor-grabbing touch-pan-y"
             @mouseenter="pauseAutoplay"
             @mousedown="handleDragStart"
             @mousemove="handleDragMove"
