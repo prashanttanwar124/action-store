@@ -24,7 +24,7 @@ class ProductTest extends TestCase
         $response->assertStatus(200);
         $response->assertInertia(fn (Assert $page) => $page
             ->component('Home')
-            ->has('products', 10)
+            ->has('products', 14)
             ->has('sliders')
             ->has('recipeKits')
             ->where('products.0.slug', 'atta')

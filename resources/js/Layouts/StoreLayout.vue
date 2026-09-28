@@ -102,6 +102,9 @@ watchEffect(() => {
   if (storeInfo.value?.address) {
     store.pickupLocation = `${storeInfo.value.address} · ${storeInfo.value.name || 'Masala Mart'}`;
   }
+  if (page.props.products && Array.isArray(page.props.products) && page.props.products.length > 0) {
+    store.setProducts(page.props.products);
+  }
   store.syncUser(page.props.auth?.user);
 });
 

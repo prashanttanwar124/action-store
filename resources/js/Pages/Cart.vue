@@ -16,6 +16,13 @@ import {
   ShoppingBag
 } from 'lucide-vue-next';
 
+const props = defineProps({
+  impulseItems: {
+    type: Array,
+    default: () => [],
+  },
+});
+
 const store = useStore();
 </script>
 
@@ -183,16 +190,16 @@ const store = useStore();
 
             <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
               <div 
-                v-for="impulse in store.impulseItems" 
+                v-for="impulse in (props.impulseItems.length ? props.impulseItems : store.impulseItems)" 
                 :key="impulse.id"
                 class="border border-[#e0d9cc] rounded-2xl p-3 bg-[#f3efe7] flex items-center justify-between gap-2"
               >
                 <div>
                   <div class="font-semibold text-xs text-[#1d1d1f] line-clamp-1">{{ impulse.name }}</div>
-                  <div class="text-[11px] text-[#6e6e73] font-normal">{{ impulse.size }} · ${{ impulse.price.toFixed(2) }}</div>
+                  <div class="text-[11px] text-[#6e6e73] font-normal">{{ impulse.size_main || impulse.size }} · ${{ Number(impulse.price).toFixed(2) }}</div>
                 </div>
                 <button 
-                  @click="store.addImpulseItem(impulse.id)"
+                  @click="store.addToCart({ id: impulse.id, name: impulse.name, price: Number(impulse.price), size: impulse.size_main || impulse.size, image: impulse.image }, 1)"
                   class="w-7 h-7 bg-[#1a1a1a] hover:bg-black text-white rounded-full flex items-center justify-center transition-colors shrink-0 active:scale-95 cursor-pointer shadow-xs"
                   aria-label="Add impulse item"
                 >
