@@ -1,60 +1,50 @@
 import { ref } from 'vue';
-import { router, usePage } from '@inertiajs/vue3';
+import { router } from '@inertiajs/vue3';
 
 function detectPageType(path) {
   if (!path) return 'home';
   if (path.startsWith('/admin')) return 'admin';
-  if (path.startsWith('/products')) return 'product';
+  if (path.startsWith('/products') || path.startsWith('/recipe-kits')) return 'product';
   if (path.startsWith('/cart') || path.startsWith('/checkout')) return 'cart';
   if (path.startsWith('/account') || path.startsWith('/reorder')) return 'account';
   return 'home';
 }
 
-// Global navigation indicator for active network requests
+// Shared across layouts so remounting does not start another loading state.
 const isNavigating = ref(false);
+const targetPageType = ref('home');
+const activeVisits = new Set();
 
 if (typeof window !== 'undefined') {
-  router.on('start', () => {
+  router.on('start', (event) => {
+    const visit = event.detail.visit;
+
+    if (visit.async || visit.prefetch) return;
+
+    activeVisits.add(visit);
+    const path = typeof visit.url === 'string' ? visit.url : (visit.url?.pathname || '');
+    targetPageType.value = detectPageType(path);
     isNavigating.value = true;
   });
 
-  router.on('finish', () => {
-    isNavigating.value = false;
+  router.on('finish', (event) => {
+    const visit = event.detail.visit;
+
+    activeVisits.delete(visit);
+    isNavigating.value = activeVisits.size > 0;
   });
 
-  router.on('cancel', () => {
-    isNavigating.value = false;
-  });
+  router.on('cancel', (event) => {
+    const visit = event.detail.visit;
 
-  router.on('error', () => {
-    isNavigating.value = false;
+    activeVisits.delete(visit);
+    isNavigating.value = activeVisits.size > 0;
   });
 }
 
 export function usePageLoading() {
-  // Each layout instance starts in loading state on initial render (frame 0)
-  // This guarantees the skeleton renders FIRST, preventing any flash of product content.
-  const isPageLoading = ref(true);
-
-  let pageUrl = '';
-  try {
-    const page = usePage();
-    pageUrl = page?.url || '';
-  } catch (e) {
-    pageUrl = typeof window !== 'undefined' ? window.location.pathname : '';
-  }
-
-  const targetPageType = ref(detectPageType(pageUrl));
-
-  if (typeof window !== 'undefined') {
-    // Smooth transition from skeleton to actual content
-    setTimeout(() => {
-      isPageLoading.value = false;
-    }, 220);
-  }
-
   return {
-    isPageLoading,
+    isPageLoading: isNavigating,
     isNavigating,
     targetPageType,
   };

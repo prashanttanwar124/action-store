@@ -408,12 +408,10 @@ const navTabs = computed(() => [
 
     <!-- Main Page Content Body -->
     <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-5 sm:py-8 pb-36 sm:pb-20 relative">
-      <Transition name="fade-skeleton" mode="out-in">
-        <PageSkeleton v-if="isPageLoading" :type="targetPageType" key="skeleton" />
-        <div v-else key="content">
-          <slot />
-        </div>
-      </Transition>
+      <PageSkeleton v-if="isPageLoading" :type="targetPageType" />
+      <div v-show="!isPageLoading">
+        <slot />
+      </div>
     </main>
 
     <!-- Store Information & Pickup Guide Modal (Accessible, Clean & Informative) -->

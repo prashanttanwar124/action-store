@@ -482,12 +482,10 @@ const navigationItems = [
 
       <!-- Main Slot Content -->
       <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
-        <Transition name="fade-skeleton" mode="out-in">
-          <PageSkeleton v-if="isPageLoading" type="admin" key="skeleton" />
-          <div v-else key="content">
-            <slot />
-          </div>
-        </Transition>
+        <PageSkeleton v-if="isPageLoading" type="admin" />
+        <div v-show="!isPageLoading">
+          <slot />
+        </div>
       </main>
 
       <!-- Admin Backoffice Footer -->
@@ -511,4 +509,3 @@ const navigationItems = [
     </div>
   </div>
 </template>
-

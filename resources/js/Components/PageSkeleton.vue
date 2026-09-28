@@ -16,7 +16,7 @@ const detectedType = computed(() => {
   if (props.type !== 'auto') return props.type;
   const url = page.url || '';
   if (url.startsWith('/admin')) return 'admin';
-  if (url.startsWith('/products')) return 'product';
+  if (url.startsWith('/products') || url.startsWith('/recipe-kits')) return 'product';
   if (url.startsWith('/cart') || url.startsWith('/checkout')) return 'cart';
   if (url.startsWith('/account') || url.startsWith('/reorder')) return 'account';
   return 'home';
