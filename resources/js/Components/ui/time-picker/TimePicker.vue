@@ -122,8 +122,8 @@ const minutes = [0, 15, 30, 45];
         :disabled="disabled"
         :class="
           cn(
-            'w-full flex items-center justify-between px-3.5 py-2.5 bg-stone-50 hover:bg-stone-100/80 border border-stone-200 rounded-xl text-xs font-bold text-stone-900 transition-all cursor-pointer shadow-2xs focus:bg-white focus:border-[#1a1a1a] focus:ring-3 focus:ring-[#1a1a1a]/10 focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed text-left',
-            isOpen && 'border-[#1a1a1a] ring-3 ring-[#1a1a1a]/10 bg-white',
+            'w-full flex items-center justify-between px-3.5 py-2.5 bg-stone-50 hover:bg-stone-100/80 border border-stone-200 rounded-xl text-xs font-bold text-stone-900 transition-all cursor-pointer focus:bg-white focus:border-[#1a1a1a] focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed text-left',
+            isOpen && 'border-[#1a1a1a] bg-white',
             props.class
           )
         "

@@ -38,6 +38,10 @@ class AdminPickupSettingController extends Controller
             'pickup_slot_start_time' => ['nullable', 'string', 'max:10'],
             'pickup_slot_end_time' => ['nullable', 'string', 'max:10'],
             'pickup_slot_duration_minutes' => ['nullable', 'integer', 'min:15', 'max:240'],
+            'max_orders_per_slot' => ['nullable', 'integer', 'min:1', 'max:500'],
+            'min_order_amount' => ['nullable', 'numeric', 'min:0'],
+            'pickup_days' => ['nullable', 'array'],
+            'pickup_days.*' => ['string', 'in:monday,tuesday,wednesday,thursday,friday,saturday,sunday'],
             'pickup_slots' => ['nullable', 'array'],
             'curbside_instructions' => ['nullable', 'string', 'max:1000'],
         ]);

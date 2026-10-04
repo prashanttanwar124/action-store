@@ -144,7 +144,8 @@ class AdminOrderTest extends TestCase
             'total' => 24.50,
         ]);
 
-        $response = $this->get('/orders/'.urlencode('#MM-77777'));
+        $response = $this->withSession(['placed_order_numbers' => ['#MM-77777']])
+            ->get('/orders/'.urlencode('#MM-77777'));
 
         $response->assertStatus(200);
         $response->assertInertia(fn (Assert $page) => $page
@@ -152,5 +153,19 @@ class AdminOrderTest extends TestCase
             ->where('order.order_number', '#MM-77777')
             ->where('order.status', 'ready_for_pickup')
         );
+    }
+
+    public function test_stranger_cannot_view_order_tracking_without_ownership(): void
+    {
+        Order::factory()->create([
+            'order_number' => '#MM-99999',
+            'customer_name' => 'Private Customer',
+            'status' => 'ready_for_pickup',
+            'total' => 50.00,
+        ]);
+
+        $response = $this->get('/orders/'.urlencode('#MM-99999'));
+
+        $response->assertStatus(403);
     }
 }

@@ -37,6 +37,11 @@ const form = useForm({
   pickup_slot_start_time: props.storeInfo.pickup_slot_start_time || '09:00',
   pickup_slot_end_time: props.storeInfo.pickup_slot_end_time || '21:00',
   pickup_slot_duration_minutes: props.storeInfo.pickup_slot_duration_minutes ?? 60,
+  max_orders_per_slot: props.storeInfo.max_orders_per_slot ?? 15,
+  min_order_amount: props.storeInfo.min_order_amount ?? 0,
+  pickup_days: Array.isArray(props.storeInfo.pickup_days) && props.storeInfo.pickup_days.length > 0 
+    ? [...props.storeInfo.pickup_days] 
+    : ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'],
   pickup_slots: Array.isArray(props.storeInfo.pickup_slots) && props.storeInfo.pickup_slots.length > 0 
     ? JSON.parse(JSON.stringify(props.storeInfo.pickup_slots)) 
     : (Array.isArray(props.storeInfo.available_pickup_slots) && props.storeInfo.available_pickup_slots.length > 0 
@@ -44,6 +49,31 @@ const form = useForm({
         : []),
   curbside_instructions: props.storeInfo.curbside_instructions || 'Park in Curbside Bay 3 or pick up at the front express counter. Bring your order confirmation SMS.',
 });
+
+const weekDays = [
+  { id: 'monday', label: 'Mon' },
+  { id: 'tuesday', label: 'Tue' },
+  { id: 'wednesday', label: 'Wed' },
+  { id: 'thursday', label: 'Thu' },
+  { id: 'friday', label: 'Fri' },
+  { id: 'saturday', label: 'Sat' },
+  { id: 'sunday', label: 'Sun' },
+];
+
+const togglePickupDay = (day) => {
+  const idx = form.pickup_days.indexOf(day);
+  if (idx > -1) {
+    if (form.pickup_days.length > 1) {
+      form.pickup_days.splice(idx, 1);
+    }
+  } else {
+    form.pickup_days.push(day);
+  }
+};
+
+const selectAllDays = () => {
+  form.pickup_days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
+};
 
 const setRushPreset = (extraMins, reason = '') => {
   form.busy_mode_extra_minutes = extraMins;
@@ -310,6 +340,61 @@ const submit = () => {
               This is the normal speed displayed to customers on banners and headers when store is running normally.
             </p>
           </div>
+
+          <!-- Operating Pickup Days & Minimum Order -->
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4 pt-3 border-t border-stone-100">
+            <!-- Pickup Days of Week -->
+            <div>
+              <div class="flex items-center justify-between mb-1.5">
+                <label class="block text-xs font-semibold text-stone-700">
+                  Store Pickup Days
+                </label>
+                <button
+                  type="button"
+                  @click="selectAllDays"
+                  class="text-[11px] text-[#a47a3c] hover:underline font-medium cursor-pointer"
+                >
+                  Select All
+                </button>
+              </div>
+              <div class="flex items-center gap-1.5 flex-wrap">
+                <button
+                  v-for="d in weekDays"
+                  :key="d.id"
+                  type="button"
+                  @click="togglePickupDay(d.id)"
+                  class="px-2.5 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer border"
+                  :class="form.pickup_days.includes(d.id) ? 'bg-[#1a1a1a] text-white border-black shadow-xs' : 'bg-stone-50 text-stone-400 border-stone-200 hover:bg-stone-100'"
+                >
+                  {{ d.label }}
+                </button>
+              </div>
+              <p class="text-[11px] text-stone-400 mt-1">
+                Days when customer pickup is active. Unchecked days will show as closed on checkout.
+              </p>
+            </div>
+
+            <!-- Minimum Order Value -->
+            <div>
+              <label class="block text-xs font-semibold text-stone-700 mb-1">
+                Minimum Order Amount for Pickup / Checkout ($)
+              </label>
+              <div class="relative w-full">
+                <span class="absolute left-3.5 top-2.5 text-xs text-stone-500 font-mono">$</span>
+                <input
+                  v-model.number="form.min_order_amount"
+                  type="number"
+                  min="0"
+                  step="0.50"
+                  placeholder="0.00"
+                  class="w-full pl-8 pr-3.5 py-2.5 bg-stone-50 border border-stone-200 rounded-xl text-xs font-bold text-stone-900 focus:bg-white focus:border-[#1a1a1a] focus:outline-none"
+                />
+              </div>
+              <p class="text-[11px] text-stone-400 mt-1">
+                Leave $0.00 for no minimum order requirement.
+              </p>
+            </div>
+          </div>
         </div>
 
         <!-- SECTION 2: LIVE STORE RUSH BUFFER (+MINUTES) -->
@@ -501,6 +586,53 @@ const submit = () => {
                 v-model="form.pickup_slot_end_time"
                 @change="generateSlotsFromSettings"
               />
+            </div>
+
+            <!-- Slot Booking Capacity Limit -->
+            <div class="md:col-span-2 pt-2 border-t border-stone-100">
+              <div class="flex items-center justify-between mb-1">
+                <label class="block text-xs font-semibold text-stone-700">
+                  Max Orders Per Pickup Slot (Capacity Limit)
+                </label>
+                <span class="text-[11px] text-stone-500 font-mono">
+                  {{ form.max_orders_per_slot > 0 ? `${form.max_orders_per_slot} orders max / slot` : 'Unlimited' }}
+                </span>
+              </div>
+              <div class="flex items-center gap-3">
+                <div class="relative w-40">
+                  <input
+                    v-model.number="form.max_orders_per_slot"
+                    type="number"
+                    min="0"
+                    max="500"
+                    step="1"
+                    placeholder="15"
+                    class="w-full px-3.5 py-2.5 bg-stone-50 border border-stone-200 rounded-xl text-xs font-bold text-stone-900 focus:bg-white focus:border-[#1a1a1a] focus:outline-none pr-14"
+                  />
+                  <span class="absolute right-3.5 top-2.5 text-xs text-stone-400 font-mono">orders</span>
+                </div>
+                <div class="flex items-center gap-1.5 flex-wrap">
+                  <button
+                    v-for="cap in [
+                      { val: 10, label: '10' },
+                      { val: 15, label: '15 (Default)' },
+                      { val: 20, label: '20' },
+                      { val: 30, label: '30' },
+                      { val: 0, label: 'Unlimited' },
+                    ]"
+                    :key="cap.val"
+                    type="button"
+                    @click="form.max_orders_per_slot = cap.val"
+                    class="px-2.5 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer border"
+                    :class="form.max_orders_per_slot === cap.val ? 'bg-[#1a1a1a] text-white border-black' : 'bg-stone-50 text-stone-700 border-stone-200 hover:bg-stone-100'"
+                  >
+                    {{ cap.label }}
+                  </button>
+                </div>
+              </div>
+              <p class="text-[11px] text-stone-400 mt-1">
+                When a time window reaches this count, customer checkout displays a <strong>"FULL"</strong> badge and prevents overbooking.
+              </p>
             </div>
           </div>
 

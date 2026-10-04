@@ -2,7 +2,9 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Order;
 use App\Models\Product;
+use App\Models\StoreSetting;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -27,8 +29,38 @@ class CartController extends Controller
      */
     public function checkout(): Response
     {
+        $tz = config('app.timezone');
+        $today = now($tz)->toDateString();
+        $tomorrow = now($tz)->addDay()->toDateString();
+        $storeInfo = StoreSetting::current();
+        $maxCapacity = (int) ($storeInfo->max_orders_per_slot ?? 0);
+
+        $bookedSlots = [];
+        if ($maxCapacity > 0) {
+            $orders = Order::query()
+                ->where(function ($q) use ($today, $tomorrow) {
+                    $q->where('pickup_slot', 'LIKE', "{$today}%")
+                        ->orWhere('pickup_slot', 'LIKE', "{$tomorrow}%");
+                })
+                ->whereNotIn('status', ['cancelled'])
+                ->pluck('pickup_slot');
+
+            foreach ($orders as $slotString) {
+                $parts = explode(' · ', $slotString, 2);
+                if (count($parts) === 2) {
+                    $d = trim($parts[0]);
+                    $l = trim($parts[1]);
+                    $bookedSlots[$d][$l] = ($bookedSlots[$d][$l] ?? 0) + 1;
+                }
+            }
+        }
+
         return Inertia::render('Checkout', [
-            'storeTimezone' => config('app.timezone'),
+            'storeTimezone' => $tz,
+            'bookedSlots' => $bookedSlots,
+            'maxOrdersPerSlot' => $maxCapacity,
+            'minOrderAmount' => (float) ($storeInfo->min_order_amount ?? 0),
+            'pickupDays' => $storeInfo->pickup_days ?? ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'],
         ]);
     }
 }

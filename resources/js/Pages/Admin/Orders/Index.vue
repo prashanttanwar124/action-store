@@ -112,8 +112,8 @@ onMounted(() => {
         isReverbConnected.value = true;
       }
 
-      // Listen on public channel 'orders' for new orders & status changes
-      window.Echo.channel('orders')
+      // Listen on private channel 'admin.orders' for new orders & status changes
+      window.Echo.private('admin.orders')
         .listen('.order.placed', (payload) => {
           handleIncomingOrder(payload.order);
         })
@@ -129,7 +129,7 @@ onMounted(() => {
 onUnmounted(() => {
   stopDoorDashAlarm();
   if (typeof window !== 'undefined' && window.Echo) {
-    window.Echo.leaveChannel('orders');
+    window.Echo.leave('admin.orders');
   }
 });
 

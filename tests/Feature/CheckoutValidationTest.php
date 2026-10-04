@@ -164,6 +164,11 @@ class CheckoutValidationTest extends TestCase
 
     public function test_delivery_fee_and_address_use_validated_order_data(): void
     {
+        StoreSetting::current()->update([
+            'is_delivery_active' => true,
+            'delivery_days' => [strtolower(now()->format('l'))],
+        ]);
+
         $product = Product::factory()->create(['price' => 20]);
 
         $this->postJson('/checkout', [
@@ -178,6 +183,59 @@ class CheckoutValidationTest extends TestCase
         ]);
     }
 
+    public function test_asap_pickup_is_rejected_outside_store_hours(): void
+    {
+        // 11:30 PM (after store close)
+        $this->travelTo(now()->setTime(23, 30));
+        $product = Product::factory()->create(['price' => 10]);
+
+        $response = $this->postJson('/checkout', [
+            'items' => [['id' => $product->id, 'name' => $product->name, 'price' => 10, 'quantity' => 1]],
+            'fulfillment_type' => 'Store Pickup',
+            'pickup_timing_mode' => 'asap',
+        ]);
+
+        $response->assertStatus(422)
+            ->assertJsonValidationErrors(['pickup_timing_mode']);
+    }
+
+    public function test_expected_total_mismatch_is_rejected(): void
+    {
+        $product = Product::factory()->create(['price' => 25]);
+
+        $response = $this->postJson('/checkout', [
+            'items' => [['id' => $product->id, 'name' => $product->name, 'price' => 25, 'quantity' => 1]],
+            'expected_total' => 20.00, // Client expected 20 but server calculates 25
+            'fulfillment_type' => 'Store Pickup',
+        ]);
+
+        $response->assertStatus(422)
+            ->assertJsonValidationErrors(['total']);
+    }
+
+    public function test_duplicate_order_with_same_idempotency_key_is_not_duplicated(): void
+    {
+        $product = Product::factory()->create(['price' => 15, 'stock' => 10]);
+        $key = 'test_key_12345';
+
+        $payload = [
+            'items' => [['id' => $product->id, 'name' => $product->name, 'price' => 15, 'quantity' => 1]],
+            'idempotency_key' => $key,
+            'fulfillment_type' => 'Store Pickup',
+        ];
+
+        $response1 = $this->postJson('/checkout', $payload)->assertCreated();
+        $orderNumber1 = $response1->json('order.order_number');
+
+        // Retry same request with identical idempotency key
+        $response2 = $this->postJson('/checkout', $payload)->assertOk();
+        $orderNumber2 = $response2->json('order.order_number');
+
+        $this->assertEquals($orderNumber1, $orderNumber2);
+        $this->assertDatabaseCount('orders', 1);
+        $this->assertEquals(9, $product->fresh()->stock); // Stock decremented only once!
+    }
+
     public function test_date_beyond_tomorrow_is_rejected(): void
     {
         $this->travelTo(now()->setTime(10, 0));
@@ -188,6 +246,88 @@ class CheckoutValidationTest extends TestCase
         ]))->assertUnprocessable()->assertInvalid(['pickup_date' => 'Choose today or tomorrow for pickup.']);
 
         $this->assertDatabaseCount('orders', 0);
+    }
+
+    public function test_minimum_order_amount_is_enforced(): void
+    {
+        StoreSetting::current()->update(['min_order_amount' => 25.00]);
+        $product = Product::factory()->create(['price' => 10.00]);
+
+        $response = $this->postJson('/checkout', [
+            'items' => [['id' => $product->id, 'name' => $product->name, 'price' => 10.00, 'quantity' => 1]],
+            'fulfillment_type' => 'Store Pickup',
+        ]);
+
+        $response->assertUnprocessable();
+        $response->assertInvalid(['total']);
+        $this->assertEquals('min_order_not_met', $response->json('errors.error_code.0'));
+        $this->assertDatabaseCount('orders', 0);
+    }
+
+    public function test_store_pickup_operating_days_are_enforced(): void
+    {
+        // 2026-10-04 is Sunday
+        $this->travelTo(now()->setTime(10, 0));
+        StoreSetting::current()->update([
+            'pickup_days' => ['monday', 'tuesday'], // Sunday closed
+        ]);
+
+        $product = Product::factory()->create(['price' => 15.00]);
+
+        $response = $this->postJson('/checkout', [
+            'items' => [['id' => $product->id, 'name' => $product->name, 'price' => 15.00, 'quantity' => 1]],
+            'fulfillment_type' => 'Store Pickup',
+            'pickup_timing_mode' => 'asap',
+        ]);
+
+        $response->assertUnprocessable();
+        $response->assertInvalid(['pickup_slot']);
+        $this->assertEquals('store_closed', $response->json('errors.error_code.0'));
+        $this->assertDatabaseCount('orders', 0);
+    }
+
+    public function test_slot_capacity_limit_is_enforced_and_rejects_overbooking(): void
+    {
+        $this->travelTo(now()->setTime(8, 0));
+        $store = StoreSetting::current();
+        $store->update([
+            'max_orders_per_slot' => 1,
+            'prep_time_minutes' => 15,
+            'pickup_slot_start_time' => '09:00',
+            'pickup_slot_end_time' => '21:00',
+            'pickup_days' => ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'],
+        ]);
+
+        $product = Product::factory()->create(['price' => 15.00]);
+        $slotLabel = '10:00 AM – 11:00 AM';
+        $today = now()->toDateString();
+
+        // 1st order takes the only available capacity
+        $response1 = $this->postJson('/checkout', [
+            'items' => [['id' => $product->id, 'name' => $product->name, 'price' => 15.00, 'quantity' => 1]],
+            'fulfillment_type' => 'Store Pickup',
+            'pickup_timing_mode' => 'scheduled',
+            'pickup_timing_type' => 'slot',
+            'pickup_date' => $today,
+            'pickup_slot' => $slotLabel,
+        ])->assertCreated();
+
+        $this->assertDatabaseCount('orders', 1);
+
+        // 2nd order to the exact same slot is rejected with slot_full
+        $response2 = $this->postJson('/checkout', [
+            'items' => [['id' => $product->id, 'name' => $product->name, 'price' => 15.00, 'quantity' => 1]],
+            'fulfillment_type' => 'Store Pickup',
+            'pickup_timing_mode' => 'scheduled',
+            'pickup_timing_type' => 'slot',
+            'pickup_date' => $today,
+            'pickup_slot' => $slotLabel,
+        ]);
+
+        $response2->assertUnprocessable();
+        $response2->assertInvalid(['pickup_slot']);
+        $this->assertEquals('slot_full', $response2->json('errors.error_code.0'));
+        $this->assertDatabaseCount('orders', 1); // No 2nd order created!
     }
 
     /**

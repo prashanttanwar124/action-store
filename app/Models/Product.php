@@ -6,6 +6,7 @@ use Database\Factories\ProductFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Validation\ValidationException;
 
 class Product extends Model
 {
@@ -136,11 +137,19 @@ class Product extends Model
 
     /**
      * Decrement inventory stock count and update stock badge accordingly.
+     *
+     * @throws ValidationException
      */
     public function decrementStock(int $quantity = 1): void
     {
-        $newStock = max(0, ((int) $this->stock) - $quantity);
-        $this->stock = $newStock;
+        $currentStock = (int) ($this->stock ?? 0);
+        if ($currentStock < $quantity) {
+            throw ValidationException::withMessages([
+                'items' => ["Insufficient stock for '{$this->name}'. Only {$currentStock} available in stock."],
+            ]);
+        }
+
+        $this->stock = $currentStock - $quantity;
         $this->syncStockBadge();
         $this->save();
     }

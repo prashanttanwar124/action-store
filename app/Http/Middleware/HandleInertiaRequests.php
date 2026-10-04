@@ -57,6 +57,7 @@ class HandleInertiaRequests extends Middleware
                 'error' => $request->session()->get('error'),
             ],
             'storeInfo' => fn () => StoreSetting::current(),
+            'storeTimezone' => fn () => config('app.timezone', 'America/Toronto'),
         ];
     }
 }

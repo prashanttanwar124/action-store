@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
@@ -31,11 +32,14 @@ class StoreSetting extends Model
         'pickup_slot_start_time',
         'pickup_slot_end_time',
         'pickup_slot_duration_minutes',
+        'max_orders_per_slot',
         'pickup_slots',
+        'min_order_amount',
         'curbside_instructions',
         'announcement',
         'maps_url',
         'is_pickup_active',
+        'pickup_days',
         'is_delivery_active',
         'delivery_days',
         'delivery_fee',
@@ -52,7 +56,10 @@ class StoreSetting extends Model
         'prep_time_minutes' => 'integer',
         'busy_mode_extra_minutes' => 'integer',
         'pickup_slot_duration_minutes' => 'integer',
+        'max_orders_per_slot' => 'integer',
         'pickup_slots' => 'array',
+        'pickup_days' => 'array',
+        'min_order_amount' => 'float',
         'delivery_days' => 'array',
         'delivery_fee' => 'float',
         'free_delivery_threshold' => 'float',
@@ -65,6 +72,7 @@ class StoreSetting extends Model
         'effective_prep_time_minutes',
         'effective_pickup_time',
         'is_busy',
+        'is_pickup_available_today',
         'is_delivery_available_today',
         'available_pickup_slots',
     ];
@@ -290,8 +298,50 @@ class StoreSetting extends Model
         }
 
         $days = array_map('strtolower', (array) ($this->delivery_days ?? ['friday', 'saturday', 'sunday']));
-        $currentDay = strtolower(now()->format('l'));
+        $currentDay = strtolower(now(config('app.timezone'))->format('l'));
 
         return in_array($currentDay, $days, true);
+    }
+
+    /**
+     * Check if pickup is enabled and available for today.
+     */
+    public function getIsPickupAvailableTodayAttribute(): bool
+    {
+        return $this->isPickupAvailableOn('today');
+    }
+
+    /**
+     * Check if pickup is available for a given day name ('today', 'tomorrow', 'monday', etc.) or Y-m-d date.
+     */
+    public function isPickupAvailableOn(string $dateOrDay): bool
+    {
+        if (! $this->is_pickup_active) {
+            return false;
+        }
+
+        $allowedDays = (array) ($this->pickup_days ?? ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday']);
+        if (empty($allowedDays)) {
+            return true;
+        }
+
+        $tz = config('app.timezone');
+        $normalized = strtolower(trim($dateOrDay));
+
+        if ($normalized === 'today') {
+            $dayOfWeek = strtolower(now($tz)->format('l'));
+        } elseif ($normalized === 'tomorrow') {
+            $dayOfWeek = strtolower(now($tz)->addDay()->format('l'));
+        } elseif (in_array($normalized, ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'], true)) {
+            $dayOfWeek = $normalized;
+        } else {
+            try {
+                $dayOfWeek = strtolower(Carbon::parse($dateOrDay, $tz)->format('l'));
+            } catch (\Throwable) {
+                return false;
+            }
+        }
+
+        return in_array($dayOfWeek, array_map('strtolower', $allowedDays), true);
     }
 }

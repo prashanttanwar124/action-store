@@ -246,7 +246,7 @@ function handleAddAllFbt() {
               type="button"
               @click="activeImage = img"
               class="w-16 h-16 rounded-2xl overflow-hidden border-2 transition-all cursor-pointer shrink-0 bg-stone-100"
-              :class="activeImage === img ? 'border-[#a47a3c] ring-2 ring-[#a47a3c]/30 scale-102' : 'border-stone-200 opacity-70 hover:opacity-100'"
+              :class="activeImage === img ? 'border-[#a47a3c] scale-102' : 'border-stone-200 opacity-70 hover:opacity-100'"
             >
               <img 
                 :src="img" 

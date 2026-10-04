@@ -5,6 +5,7 @@ namespace App\Events;
 use App\Models\Order;
 use Illuminate\Broadcasting\Channel;
 use Illuminate\Broadcasting\InteractsWithSockets;
+use Illuminate\Broadcasting\PrivateChannel;
 use Illuminate\Contracts\Broadcasting\ShouldBroadcastNow;
 use Illuminate\Foundation\Events\Dispatchable;
 use Illuminate\Queue\SerializesModels;
@@ -25,11 +26,8 @@ class OrderPlaced implements ShouldBroadcastNow
      */
     public function broadcastOn(): array
     {
-        $channelKey = ltrim($this->order->order_number, '#');
-
         return [
-            new Channel('orders'),
-            new Channel('orders.'.$channelKey),
+            new PrivateChannel('admin.orders'),
         ];
     }
 

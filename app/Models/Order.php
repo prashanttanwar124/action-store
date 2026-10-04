@@ -32,6 +32,7 @@ class Order extends Model
         'delivery_address',
         'status',
         'notes',
+        'idempotency_key',
     ];
 
     /**

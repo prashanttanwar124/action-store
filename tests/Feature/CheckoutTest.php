@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\Product;
+use App\Models\StoreSetting;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Inertia\Testing\AssertableInertia as Assert;
@@ -199,6 +200,11 @@ class CheckoutTest extends TestCase
 
     public function test_home_delivery_applies_fee_when_subtotal_is_below_threshold(): void
     {
+        StoreSetting::current()->update([
+            'is_delivery_active' => true,
+            'delivery_days' => [strtolower(now()->format('l'))],
+        ]);
+
         $product = Product::factory()->create([
             'name' => 'Basmati Rice',
             'price' => 15.00,
@@ -234,6 +240,11 @@ class CheckoutTest extends TestCase
 
     public function test_home_delivery_is_free_when_subtotal_meets_threshold(): void
     {
+        StoreSetting::current()->update([
+            'is_delivery_active' => true,
+            'delivery_days' => [strtolower(now()->format('l'))],
+        ]);
+
         $product = Product::factory()->create([
             'name' => 'Saffron Box',
             'price' => 60.00,
@@ -265,5 +276,59 @@ class CheckoutTest extends TestCase
             'delivery_fee' => 0.00,
             'total' => 60.00,
         ]);
+    }
+
+    public function test_home_delivery_is_rejected_when_delivery_is_disabled(): void
+    {
+        StoreSetting::current()->update(['is_delivery_active' => false]);
+
+        $product = Product::factory()->create(['stock' => 10]);
+
+        $response = $this->postJson('/checkout', [
+            'items' => [
+                ['id' => $product->id, 'name' => $product->name, 'price' => $product->price, 'quantity' => 1],
+            ],
+            'fulfillment_type' => 'Home Delivery',
+            'delivery_address' => '123 Fake Street',
+        ]);
+
+        $response->assertStatus(422)
+            ->assertJsonValidationErrors(['fulfillment_type']);
+    }
+
+    public function test_insufficient_stock_rejects_order(): void
+    {
+        $product = Product::factory()->create(['stock' => 2]);
+
+        $response = $this->postJson('/checkout', [
+            'items' => [
+                ['id' => $product->id, 'name' => $product->name, 'price' => $product->price, 'quantity' => 10],
+            ],
+            'fulfillment_type' => 'Store Pickup',
+        ]);
+
+        $response->assertStatus(422)
+            ->assertJsonValidationErrors(['items']);
+        $this->assertEquals(2, $product->fresh()->stock);
+    }
+
+    public function test_multiple_rows_of_same_product_aggregate_stock_correctly(): void
+    {
+        $product = Product::factory()->create([
+            'stock' => 10,
+            'price' => 10.00,
+            'has_subscription' => true,
+        ]);
+
+        $response = $this->postJson('/checkout', [
+            'items' => [
+                ['id' => $product->id, 'name' => $product->name, 'price' => 10.00, 'quantity' => 2, 'is_subscribed' => false],
+                ['id' => $product->id, 'name' => $product->name, 'price' => 9.50, 'quantity' => 2, 'is_subscribed' => true],
+            ],
+            'fulfillment_type' => 'Store Pickup',
+        ]);
+
+        $response->assertStatus(201);
+        $this->assertEquals(6, $product->fresh()->stock);
     }
 }

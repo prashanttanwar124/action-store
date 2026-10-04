@@ -18,7 +18,7 @@ const forwardedProps = useForwardProps(props);
     v-bind="forwardedProps"
     :class="
       cn(
-        'mt-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1a1a1a]/20',
+        'mt-2 focus-visible:outline-none',
         props.class,
       )
     "

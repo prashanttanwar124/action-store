@@ -41,6 +41,35 @@ test('closed or paused pickup produces no custom times', () => {
   assert.deepEqual(pickupOptions({ ...info, is_pickup_active: false }, 'tomorrow', new Date('2026-10-03T10:00Z'), 'UTC').times, []);
 });
 
+test('slot capacity limit marks slot as full and disabled', () => {
+  const options = pickupOptions(
+    info,
+    'today',
+    new Date('2026-10-03T14:00:00Z'),
+    'America/Toronto',
+    { '2026-10-03': { '10:30 AM – 11:00 AM': 15 } },
+    15
+  );
+  assert.equal(options.slots[0].isFull, true);
+  assert.equal(options.slots[0].disabled, true);
+});
+
+test('store pickup closed day marks isDayOpen false and disables all slots', () => {
+  // 2026-10-03 is a Saturday
+  const options = pickupOptions(
+    info,
+    'today',
+    new Date('2026-10-03T14:00:00Z'),
+    'America/Toronto',
+    {},
+    15,
+    ['monday', 'tuesday', 'wednesday', 'thursday', 'friday'] // Saturday closed
+  );
+  assert.equal(options.isDayOpen, false);
+  assert.equal(options.slots[0].disabled, true);
+  assert.deepEqual(options.times, []);
+});
+
 test('confirmation rejects missing and malformed orders', () => {
   const order = { id: 1, order_number: '#MM-12345', total: '12.99', points_earned: 12, pickup_slot: 'ASAP', items: [{ name: 'Rice' }] };
   assert.equal(confirmedOrder({ success: true, order }), order);

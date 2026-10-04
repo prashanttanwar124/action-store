@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed } from 'vue';
+import { ref, computed, watch } from 'vue';
 import { confirmedOrder } from '../composables/checkoutConfirmation';
 import { useCheckoutSchedule } from '../composables/useCheckoutSchedule';
 import CheckoutOrderSummary from '../Components/Store/CheckoutOrderSummary.vue';
@@ -20,7 +20,13 @@ import {
   AlertCircle,
   Truck,
   Zap,
-  Calendar
+  Calendar,
+  Sun,
+  Moon,
+  Sunrise,
+  LayoutGrid,
+  Flame,
+  ChevronDown
 } from 'lucide-vue-next';
 import IconApplePay from '../Components/Icons/IconApplePay.vue';
 import IconGooglePay from '../Components/Icons/IconGooglePay.vue';
@@ -59,7 +65,17 @@ const {
   customHour, customMinute, customPeriod, availableHours, availableMinutes,
   isAmAvailable, isPmAvailable, popularTimesList, formattedCustomTime,
   availableScheduledSlots, setCustomTime, scheduleError, pickupPayload,
-} = useCheckoutSchedule(storeInfo, computed(() => page.props.storeTimezone || 'UTC'));
+  todayFormatted, tomorrowFormatted, isDayOpen, isAsapAvailable, storeOpenTimeFormatted,
+  isTodayAvailable, isTomorrowAvailable,
+} = useCheckoutSchedule(
+  storeInfo,
+  computed(() => page.props.storeTimezone || 'America/Toronto'),
+  {
+    bookedSlots: computed(() => page.props.bookedSlots || {}),
+    maxOrdersPerSlot: computed(() => page.props.maxOrdersPerSlot || 0),
+    pickupDays: computed(() => page.props.pickupDays || null),
+  }
+);
 
 // Delivery Inputs
 const deliveryAddress = ref('');
@@ -68,6 +84,8 @@ const deliveryNotes = ref('');
 
 const paymentMethod = ref('apple-pay'); // 'apple-pay' | 'google-pay' | 'card'
 const isProcessing = ref(false);
+const isMobileSummaryOpen = ref(false);
+const checkoutIdempotencyKey = ref('chk_' + Date.now() + '_' + Math.random().toString(36).slice(2, 9));
 const orderPlaced = ref(false);
 
 const confirmedOrderNumber = ref('');
@@ -75,6 +93,40 @@ const confirmedTotalPaid = ref('0.00');
 const confirmedPointsEarned = ref(0);
 const confirmedSlotLabel = ref('');
 const errorMessage = ref('');
+const pickupError = ref('');
+const deliveryError = ref('');
+const paymentError = ref('');
+const generalError = ref('');
+
+function clearErrors() {
+  errorMessage.value = '';
+  pickupError.value = '';
+  deliveryError.value = '';
+  paymentError.value = '';
+  generalError.value = '';
+}
+
+function scrollToError() {
+  if (pickupError.value || (fulfillmentMode.value === 'pickup' && scheduleError.value)) {
+    document.getElementById('fulfillment-section')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  } else if (deliveryError.value) {
+    document.getElementById('delivery-section')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  } else {
+    document.getElementById('payment-section')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+}
+
+// Clear errors when customer interacts
+watch([selectedScheduledTime, scheduledDay, scheduledTimingType, customHour, customMinute, customPeriod], () => {
+  pickupError.value = '';
+  if (errorMessage.value) errorMessage.value = '';
+});
+
+watch(deliveryAddress, () => {
+  deliveryError.value = '';
+  if (errorMessage.value) errorMessage.value = '';
+});
+
 
 const effectivePrepTime = computed(() => {
   return Number(storeInfo.value.effective_prep_time_minutes || 15);
@@ -82,6 +134,36 @@ const effectivePrepTime = computed(() => {
 
 const isStoreBusy = computed(() => {
   return Boolean(storeInfo.value.is_busy);
+});
+
+// Slot Period Categorization (Morning, Afternoon, Evening)
+const slotPeriodFilter = ref('all'); // 'all' | 'morning' | 'afternoon' | 'evening'
+
+function getSlotPeriod(slotLabel) {
+  const match = slotLabel.match(/^(\d{1,2}):(\d{2})\s*(AM|PM)/i);
+  if (!match) return 'afternoon';
+  let hour = parseInt(match[1], 10);
+  const period = match[3].toUpperCase();
+  if (period === 'PM' && hour !== 12) hour += 12;
+  if (period === 'AM' && hour === 12) hour = 0;
+
+  if (hour < 12) return 'morning';
+  if (hour < 17) return 'afternoon';
+  return 'evening';
+}
+
+const filteredScheduledSlots = computed(() => {
+  if (slotPeriodFilter.value === 'all') return availableScheduledSlots.value;
+  return availableScheduledSlots.value.filter(s => getSlotPeriod(s.label) === slotPeriodFilter.value);
+});
+
+const slotCountsByPeriod = computed(() => {
+  const counts = { all: availableScheduledSlots.value.length, morning: 0, afternoon: 0, evening: 0 };
+  availableScheduledSlots.value.forEach(s => {
+    const p = getSlotPeriod(s.label);
+    counts[p] = (counts[p] || 0) + 1;
+  });
+  return counts;
 });
 
 // Delivery Calculation
@@ -107,11 +189,14 @@ const effectiveFulfillmentSlotLabel = computed(() => {
     return `Home Delivery · ${storeInfo.value.delivery_estimated_time || '5:00 PM – 8:00 PM'}`;
   }
   if (pickupTimingMode.value === 'asap') {
-    return `ASAP (Ready in ~${effectivePrepTime.value} mins)`;
+    return isAsapAvailable.value
+      ? `ASAP (Ready in ~${effectivePrepTime.value} mins)`
+      : `Store Closed · Opens at ${storeOpenTimeFormatted.value || '9:00 AM'}`;
   }
-  const dayText = scheduledDay.value === 'today' ? 'Today' : 'Tomorrow';
+  const dayDate = scheduledDay.value === 'today' ? todayFormatted.value : tomorrowFormatted.value;
+  const dayText = scheduledDay.value === 'today' ? `Today (${dayDate})` : `Tomorrow (${dayDate})`;
   if (scheduledTimingType.value === 'custom') {
-    return `${dayText} at ${formattedCustomTime.value} (Custom Time)`;
+    return `${dayText} at ${formattedCustomTime.value}`;
   }
   return `${dayText} · ${selectedScheduledTime.value}`;
 });
@@ -121,25 +206,33 @@ async function completeOrder() {
     return;
   }
   isProcessing.value = true;
-  errorMessage.value = '';
+  clearErrors();
 
-  const isDelivery = fulfillmentMode.value === 'delivery';
-  if (isDelivery && !deliveryAddress.value.trim()) {
-    errorMessage.value = 'Please provide a delivery street address.';
+  const minRequired = Number(page.props.minOrderAmount || 0);
+  if (minRequired > 0 && store.subtotal < minRequired) {
+    generalError.value = `Minimum order amount is $${minRequired.toFixed(2)}. Please add more items to your cart.`;
+    errorMessage.value = generalError.value;
     isProcessing.value = false;
     return;
   }
 
-  const pickupLoc = isDelivery
-    ? `${deliveryAddress.value.trim()}${deliveryApt.value ? ', Apt ' + deliveryApt.value.trim() : ''}`
-    : (store.pickupLocation || `${storeInfo.value.address} · ${storeInfo.value.name || 'Masala Mart'}`);
+  const isDelivery = fulfillmentMode.value === 'delivery';
+  if (isDelivery && !deliveryAddress.value.trim()) {
+    deliveryError.value = 'Please provide a delivery street address.';
+    errorMessage.value = deliveryError.value;
+    isProcessing.value = false;
+    document.getElementById('delivery-section')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    return;
+  }
 
   let schedule = {};
   try {
     if (!isDelivery) schedule = pickupPayload();
   } catch (error) {
+    pickupError.value = error.message;
     errorMessage.value = error.message;
     isProcessing.value = false;
+    document.getElementById('fulfillment-section')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
     return;
   }
 
@@ -157,6 +250,8 @@ async function completeOrder() {
     payment_method: paymentMethod.value,
     fulfillment_type: isDelivery ? 'Home Delivery' : 'Store Pickup',
     ...schedule,
+    expected_total: Number(checkoutTotal.value),
+    idempotency_key: checkoutIdempotencyKey.value,
     delivery_address: isDelivery ? pickupLoc : null,
     pickup_location: pickupLoc,
     notes: isDelivery ? deliveryNotes.value : (storeInfo.value.curbside_instructions || null),
@@ -200,9 +295,61 @@ async function completeOrder() {
     });
 
     store.clearCart();
+    // Refresh idempotency key for next checkout
+    checkoutIdempotencyKey.value = 'chk_' + Date.now() + '_' + Math.random().toString(36).slice(2, 9);
   } catch (error) {
     console.error('Checkout error:', error);
-    errorMessage.value = error.response?.data?.message || error.message || 'Something went wrong while processing your order. Please try again.';
+    const errors = error.response?.data?.errors;
+    const errorCode = Array.isArray(errors?.error_code) ? errors.error_code[0] : errors?.error_code;
+    
+    // Contextual routing: Pickup errors
+    if (errors?.pickup_slot || errors?.pickup_time || errors?.pickup_date || ['slot_inactive', 'slot_full', 'slot_missing', 'store_closed', 'date_invalid'].includes(errorCode)) {
+      const msg = (Array.isArray(errors?.pickup_slot) ? errors.pickup_slot[0] : errors?.pickup_slot)
+        || (Array.isArray(errors?.pickup_time) ? errors.pickup_time[0] : errors?.pickup_time)
+        || (errorCode === 'slot_full' ? 'This pickup window just reached maximum capacity. Please pick another available time slot below.' : 'The selected pickup window is unavailable. Please select another time slot below.');
+      
+      pickupError.value = msg;
+      errorMessage.value = msg;
+
+      // Automatically select the next valid slot if available
+      const nextValid = availableScheduledSlots.value.find(s => !s.disabled && s.label !== selectedScheduledTime.value);
+      if (nextValid) {
+        selectedScheduledTime.value = nextValid.label;
+      }
+
+      document.getElementById('fulfillment-section')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      return;
+    }
+
+    // Contextual routing: Delivery errors
+    if (errors?.delivery_address || errors?.delivery_zip_codes || errorCode === 'delivery_closed') {
+      const msg = (Array.isArray(errors?.delivery_address) ? errors.delivery_address[0] : errors?.delivery_address) || 'Please provide a valid delivery street address.';
+      deliveryError.value = msg;
+      errorMessage.value = msg;
+      document.getElementById('delivery-section')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      return;
+    }
+
+    // Contextual routing: Payment errors
+    if (errors?.payment_method || errorCode === 'payment_failed') {
+      const msg = (Array.isArray(errors?.payment_method) ? errors.payment_method[0] : errors?.payment_method) || 'Payment authorization failed. Please check your payment details.';
+      paymentError.value = msg;
+      errorMessage.value = msg;
+      document.getElementById('payment-section')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      return;
+    }
+
+    let errorDetails = null;
+    if (errors && typeof errors === 'object') {
+      errorDetails = Object.entries(errors)
+        .filter(([key]) => key !== 'error_code')
+        .map(([, val]) => Array.isArray(val) ? val.join(' ') : String(val))
+        .join(' ');
+    }
+
+    const fallbackMsg = errorDetails || error.response?.data?.message || error.message || 'Something went wrong while processing your order. Please try again.';
+    generalError.value = fallbackMsg;
+    errorMessage.value = fallbackMsg;
   } finally {
     isProcessing.value = false;
   }
@@ -212,20 +359,90 @@ async function completeOrder() {
 <template>
   <Head title="Checkout — Masala Mart" />
 
-  <StoreLayout :showHeader="false" :showFooter="false" :showCartBar="false" :showBottomNav="false">
-    <div class="space-y-6 max-w-4xl mx-auto pb-24 sm:pb-8 pt-2 sm:pt-4">
+  <StoreLayout 
+    headerMode="cart" 
+    headerTitle="Checkout" 
+    backUrl="/cart" 
+    :showCartBar="false" 
+    :showBottomNav="false"
+  >
+    <div class="space-y-4 sm:space-y-6 max-w-5xl mx-auto pb-20 sm:pb-8 pt-1 sm:pt-3">
 
-      <!-- Breadcrumbs / Top Navigation -->
-      <div class="flex items-center gap-1">
-        <Link href="/cart" class="inline-flex items-center gap-1 text-[#1d1d1f] hover:text-[#a47a3c] transition-colors -ml-1">
-          <ChevronLeft class="w-6 h-6 stroke-[2.5]" />
-          <h1 class="text-xl sm:text-2xl font-serif font-medium tracking-tight text-[#1d1d1f]">Checkout</h1>
-        </Link>
+      <!-- Breadcrumbs -->
+      <nav class="flex items-center gap-2 text-xs font-normal text-stone-500">
+        <Link href="/" class="hover:text-stone-900 transition-colors font-semibold text-stone-700">Home</Link>
+        <span>/</span>
+        <Link href="/cart" class="hover:text-stone-900 transition-colors font-semibold text-stone-700">Cart</Link>
+        <span>/</span>
+        <span class="text-stone-950 font-bold">Checkout</span>
+      </nav>
+
+      <!-- Mobile Collapsible Order Summary Bar (Shopify-Style: Zero Scroll Required) -->
+      <div v-if="!orderPlaced && store.cartItems.length > 0" class="lg:hidden bg-white rounded-2xl border border-[#e0d9cc] overflow-hidden shadow-xs">
+        <button
+          type="button"
+          @click="isMobileSummaryOpen = !isMobileSummaryOpen"
+          class="w-full px-4 py-3 flex items-center justify-between text-xs font-semibold text-stone-800 bg-[#fbf9f5] hover:bg-[#f5efe4] transition-colors cursor-pointer"
+        >
+          <div class="flex items-center gap-2">
+            <ShoppingBag class="w-4 h-4 text-[#a47a3c]" />
+            <span class="font-bold">{{ isMobileSummaryOpen ? 'Hide order summary' : 'Show order summary' }}</span>
+            <ChevronDown class="w-3.5 h-3.5 transition-transform text-stone-500 duration-200" :class="{ 'rotate-180': isMobileSummaryOpen }" />
+          </div>
+          <div class="flex items-center gap-2">
+            <span class="text-stone-500 font-normal">({{ store.totalItemCount }} {{ store.totalItemCount === 1 ? 'item' : 'items' }})</span>
+            <span class="font-serif font-bold text-sm text-[#1d1d1f]">${{ checkoutTotal }}</span>
+          </div>
+        </button>
+
+        <div v-show="isMobileSummaryOpen" class="p-4 border-t border-[#e0d9cc] space-y-3 bg-white animate-in slide-in-from-top-1 duration-150">
+          <div class="max-h-52 overflow-y-auto divide-y divide-[#e0d9cc]/60 pr-1">
+            <div
+              v-for="item in store.cartItems"
+              :key="item.id"
+              class="py-2.5 flex items-center justify-between gap-3 text-xs"
+            >
+              <div class="flex items-center gap-2.5 min-w-0">
+                <div class="w-10 h-10 rounded-lg bg-[#f3efe7] border border-[#e0d9cc] overflow-hidden shrink-0">
+                  <img
+                    :src="item.image || (item.name.toLowerCase().includes('atta') ? '/images/products/atta.jpg' : (item.name.toLowerCase().includes('ghee') ? '/images/products/ghee.jpg' : (item.name.toLowerCase().includes('paneer') ? '/images/products/paneer.jpg' : (item.name.toLowerCase().includes('rice') ? '/images/products/rice.jpg' : (item.name.toLowerCase().includes('biscuit') ? '/images/products/biscuits.jpg' : (item.name.toLowerCase().includes('masala') ? '/images/products/garam_masala.jpg' : '/images/products/sweets.jpg'))))))"
+                    :alt="item.name"
+                    class="w-full h-full object-cover object-center"
+                  />
+                </div>
+                <div class="min-w-0">
+                  <div class="font-bold text-[#1d1d1f] truncate leading-tight">{{ item.name }}</div>
+                  <div class="text-[11px] text-stone-600 mt-0.5">{{ item.quantity }}x · {{ item.weight }}</div>
+                </div>
+              </div>
+              <div class="font-serif font-bold text-[#1d1d1f] shrink-0">
+                ${{ (item.price * item.quantity).toFixed(2) }}
+              </div>
+            </div>
+          </div>
+
+          <div class="pt-2.5 border-t border-[#e0d9cc] space-y-2 text-xs">
+            <div class="flex justify-between text-stone-600">
+              <span>Subtotal</span>
+              <span class="font-serif font-bold text-stone-900">${{ store.subtotal.toFixed(2) }}</span>
+            </div>
+            <div class="flex justify-between text-stone-600">
+              <span>Fulfillment ({{ fulfillmentMode === 'delivery' ? 'Home Delivery' : 'Store Pickup' }})</span>
+              <span :class="deliveryFeeAmount === 0 ? 'text-[#8a6b32] font-bold' : 'text-stone-900 font-bold'">
+                {{ deliveryFeeAmount === 0 ? 'FREE' : `$${deliveryFeeAmount.toFixed(2)}` }}
+              </span>
+            </div>
+            <div class="pt-2 border-t border-[#e0d9cc] flex justify-between items-baseline text-[#1d1d1f]">
+              <span class="font-serif font-semibold">Total Due</span>
+              <span class="font-serif font-bold text-lg text-[#1d1d1f]">${{ checkoutTotal }}</span>
+            </div>
+          </div>
+        </div>
       </div>
 
       <!-- Order Confirmation State -->
       <div v-if="orderPlaced" class="bg-white rounded-3xl border border-[#e0d9cc] p-6 sm:p-10 text-center space-y-6 shadow-sm">
-        <div class="w-16 h-16 bg-[#f5eee2] text-[#7a5620] rounded-full flex items-center justify-center mx-auto border-2 border-[#e0d9cc]">
+        <div class="w-16 h-16 bg-[#f5eee2] text-[#7a5620] rounded-full flex items-center justify-center mx-auto border border-[#e0d9cc]">
           <CheckCircle2 class="w-9 h-9 stroke-[2.2]" />
         </div>
 
@@ -236,28 +453,28 @@ async function completeOrder() {
           <h2 class="text-2xl sm:text-4xl text-[#1d1d1f] tracking-tight mt-3 leading-tight font-serif font-medium">
             Thank you for your order!
           </h2>
-          <p class="text-sm text-[#6e6e73] mt-2.5 max-w-md mx-auto font-normal leading-relaxed">
+          <p class="text-sm text-stone-600 mt-2.5 max-w-md mx-auto font-normal leading-relaxed">
             Your items are being hand-picked at <strong>{{ storeInfo.name || 'Masala Mart' }}</strong> and will be ready for <strong>{{ confirmedSlotLabel }}</strong>.
           </p>
         </div>
 
         <div class="max-w-md mx-auto bg-[#f3efe7] rounded-2xl p-5 border border-[#e0d9cc] text-left space-y-3 text-xs">
           <div class="flex justify-between items-center">
-            <span class="text-[#6e6e73] font-normal">Fulfillment Window:</span>
+            <span class="text-stone-600 font-normal">Fulfillment Window:</span>
             <span class="font-bold text-[#1d1d1f]">{{ confirmedSlotLabel }}</span>
           </div>
           <div class="flex justify-between items-center">
-            <span class="text-[#6e6e73] font-normal">Location / Address:</span>
+            <span class="text-stone-600 font-normal">Location / Address:</span>
             <span class="font-bold text-[#1d1d1f] truncate max-w-[240px]">
               {{ fulfillmentMode === 'delivery' ? deliveryAddress : (storeInfo.address || '214 Main St.') }}
             </span>
           </div>
           <div class="flex justify-between items-center">
-            <span class="text-[#6e6e73] font-normal">Total Paid:</span>
-            <span class="font-serif font-medium text-lg text-[#1d1d1f]">${{ confirmedTotalPaid }}</span>
+            <span class="text-stone-600 font-normal">Total Paid:</span>
+            <span class="font-serif font-bold text-lg text-[#1d1d1f]">${{ confirmedTotalPaid }}</span>
           </div>
           <div class="flex justify-between items-center">
-            <span class="text-[#6e6e73] font-normal">Masala Points Earned:</span>
+            <span class="text-stone-600 font-normal">Masala Points Earned:</span>
             <span class="font-bold text-[#7a5620]">+{{ confirmedPointsEarned }} pts</span>
           </div>
         </div>
@@ -272,7 +489,7 @@ async function completeOrder() {
           </Link>
           <Link
             href="/account"
-            class="px-6 py-3.5 bg-[#ece7de] text-[#1d1d1f] font-semibold text-xs rounded-full text-center hover:bg-[#e0d9cc] transition-colors"
+            class="px-6 py-3.5 bg-[#f4efe6] text-[#1d1d1f] font-semibold text-xs rounded-full text-center hover:bg-[#ede6da] border border-[#dfd6c8] transition-colors"
           >
             View Account & Orders
           </Link>
@@ -287,11 +504,11 @@ async function completeOrder() {
 
       <!-- Empty Cart State -->
       <div v-else-if="store.cartItems.length === 0" class="bg-white rounded-3xl border border-[#e0d9cc] p-10 text-center space-y-4 shadow-xs max-w-lg mx-auto my-8">
-        <div class="w-16 h-16 rounded-full bg-[#f3efe7] flex items-center justify-center mx-auto text-[#6e6e73]">
+        <div class="w-16 h-16 rounded-full bg-[#f3efe7] flex items-center justify-center mx-auto text-stone-600">
           <ShoppingBag class="w-8 h-8 stroke-[1.8]" />
         </div>
         <h2 class="text-xl font-serif font-medium text-[#1d1d1f]">Your cart is empty</h2>
-        <p class="text-xs text-[#6e6e73] font-normal leading-relaxed">
+        <p class="text-xs text-stone-600 font-normal leading-relaxed">
           You don't have any items in your cart to checkout. Add groceries to your cart first.
         </p>
         <Link
@@ -307,10 +524,10 @@ async function completeOrder() {
       <div v-else class="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 items-start">
 
         <!-- LEFT COLUMN: Form Steps -->
-        <div class="lg:col-span-7 space-y-6">
+        <div class="lg:col-span-7 space-y-4 sm:space-y-5">
 
           <!-- STEP 01: FULFILLMENT METHOD & TIMINGS -->
-          <div class="space-y-4">
+          <div id="fulfillment-section" class="space-y-4 scroll-mt-6">
             <div class="flex items-center justify-between">
               <div class="text-[11px] font-semibold text-stone-500 uppercase tracking-wider">
                 01 · FULFILLMENT & TIME SLOT
@@ -325,163 +542,255 @@ async function completeOrder() {
               </span>
             </div>
 
+            <!-- Contextual Pickup Error Banner -->
+            <div
+              v-if="fulfillmentMode === 'pickup' && (pickupError || scheduleError)"
+              class="p-4 bg-rose-50/95 border border-rose-200 text-rose-950 rounded-2xl flex items-start gap-3 shadow-xs animate-in fade-in slide-in-from-top-2 duration-200"
+            >
+              <div class="w-8 h-8 rounded-xl bg-rose-100 flex items-center justify-center shrink-0 text-rose-600 mt-0.5">
+                <AlertCircle class="w-4.5 h-4.5 stroke-[2.2]" />
+              </div>
+              <div class="flex-1 text-xs">
+                <div class="font-bold text-rose-950 flex items-center justify-between">
+                  <span>Pickup Timing Issue</span>
+                  <button
+                    v-if="pickupError"
+                    type="button"
+                    @click="pickupError = ''; errorMessage = ''"
+                    class="text-rose-500 hover:text-rose-800 text-[11px] font-semibold cursor-pointer"
+                  >
+                    Dismiss
+                  </button>
+                </div>
+                <p class="text-rose-800 mt-1 leading-relaxed">{{ pickupError || scheduleError }}</p>
+                <div class="mt-2 text-[11px] text-rose-700 font-medium">
+                  Please pick an available window or select an exact minute below:
+                </div>
+              </div>
+            </div>
+
             <!-- Fulfillment Mode Switcher Tabs (Store Pickup vs Home Delivery) -->
             <div
               v-if="storeInfo.is_delivery_active"
-              class="grid grid-cols-2 p-1 bg-[#ece7de] rounded-2xl border border-[#dfd6c8]"
+              class="grid grid-cols-2 p-1.5 bg-[#f4efe6] rounded-2xl border border-[#dfd6c8]"
             >
               <button
                 type="button"
                 @click="fulfillmentMode = 'pickup'"
-                class="py-2.5 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 cursor-pointer"
+                class="py-3 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 cursor-pointer"
                 :class="fulfillmentMode === 'pickup'
-                  ? 'bg-white text-[#1d1d1f] shadow-xs'
-                  : 'text-[#6e6e73] hover:text-[#1d1d1f]'"
+                  ? 'bg-[#1a1a1a] text-white shadow-xs'
+                  : 'text-stone-700 hover:text-stone-900 font-semibold'"
               >
-                <Store class="w-4 h-4 text-[#a47a3c]" />
+                <Store class="w-4 h-4" :class="fulfillmentMode === 'pickup' ? 'text-[#e4b97a]' : 'text-[#a47a3c]'" />
                 <span>Store Pickup (Free)</span>
               </button>
 
               <button
                 type="button"
                 @click="fulfillmentMode = 'delivery'"
-                class="py-2.5 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 cursor-pointer"
+                class="py-3 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 cursor-pointer"
                 :class="fulfillmentMode === 'delivery'
-                  ? 'bg-white text-[#1d1d1f] shadow-xs'
-                  : 'text-[#6e6e73] hover:text-[#1d1d1f]'"
+                  ? 'bg-[#1a1a1a] text-white shadow-xs'
+                  : 'text-stone-700 hover:text-stone-900 font-semibold'"
               >
-                <Truck class="w-4 h-4 text-[#a47a3c]" />
+                <Truck class="w-4 h-4" :class="fulfillmentMode === 'delivery' ? 'text-[#e4b97a]' : 'text-[#a47a3c]'" />
                 <span>Home Delivery {{ isDeliveryFree ? '(Free)' : `($${deliveryOptionFee.toFixed(2)})` }}</span>
               </button>
             </div>
 
             <!-- OPTION A: STORE PICKUP SELECTED -->
-            <div v-if="fulfillmentMode === 'pickup'" class="space-y-3.5">
+            <div v-if="fulfillmentMode === 'pickup'" class="space-y-4">
 
-              <!-- Store Location Card -->
-              <div class="p-5 rounded-2xl bg-[#1a1a1a] text-white shadow-md border border-stone-800 space-y-3">
-                <div class="flex items-center justify-between">
-                  <div class="flex items-center gap-3">
-                    <div class="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center text-[#e4b97a]">
-                      <Store class="w-5 h-5 stroke-[2]" />
+              <!-- Store Location Card (Compact Luxury Obsidian Strip) -->
+              <div class="px-4 py-3 rounded-2xl bg-[#1a1a1a] text-white border border-[#e0d9cc]/20 flex items-center justify-between gap-3 shadow-xs">
+                <div class="flex items-center gap-3 min-w-0">
+                  <div class="w-8 h-8 rounded-xl bg-white/10 flex items-center justify-center shrink-0 text-[#e4b97a]">
+                    <Store class="w-4 h-4 stroke-[2]" />
+                  </div>
+                  <div class="min-w-0">
+                    <div class="font-serif font-bold text-xs sm:text-sm text-white truncate">
+                      {{ storeInfo.name || 'Masala Mart — Main St.' }}
                     </div>
-                    <div>
-                      <div class="font-bold text-sm text-white">{{ storeInfo.name || 'Masala Mart — Main St.' }}</div>
-                      <div class="text-xs text-stone-300 font-normal mt-0.5">
-                        {{ storeInfo.address || '214 Main St.' }} · {{ storeInfo.city || 'Edison' }}
-                      </div>
+                    <div class="text-[11px] text-stone-300 truncate">
+                      {{ storeInfo.address || '214 Main St.' }} · {{ storeInfo.opening_hours || 'Daily 9:00 AM – 9:00 PM' }}
                     </div>
                   </div>
-                  <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-[#a47a3c]/20 text-[#e4b97a] text-[10px] font-bold border border-[#a47a3c]/40">
-                    <CheckCircle2 class="w-3 h-3" />
-                    Free Curbside
-                  </span>
                 </div>
-
-                <div class="pt-2 border-t border-white/10 flex items-center justify-between text-xs text-stone-400 font-normal">
-                  <span class="flex items-center gap-1.5 text-stone-300">
-                    <Clock class="w-3.5 h-3.5 text-[#e4b97a]" />
-                    <span>{{ storeInfo.opening_hours || 'Daily 9:00 AM – 9:00 PM' }}</span>
-                  </span>
-                  <span class="text-[11px] text-[#e4b97a] font-medium">Curbside Bay 3 or Express Desk</span>
-                </div>
+                <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-[#a47a3c]/20 text-[#e4b97a] text-[10px] sm:text-[11px] font-bold border border-[#a47a3c]/30 shrink-0">
+                  <CheckCircle2 class="w-3 h-3" />
+                  Free Pickup
+                </span>
               </div>
 
-              <!-- Pickup Timing Mode Tabs: ASAP vs Schedule For Later -->
-              <div class="space-y-2.5">
-                <div class="text-xs font-semibold text-[#1d1d1f] flex items-center justify-between">
-                  <span>Choose When to Pick Up</span>
-                  <span class="text-[11px] text-[#6e6e73] font-normal">Bagged fresh before arrival</span>
-                </div>
+              <!-- Pickup Timing Mode: Side-by-Side Compact Choice -->
+              <div class="grid grid-cols-2 gap-2.5">
+                <!-- ASAP Option Button -->
+                <button
+                  type="button"
+                  :disabled="!isAsapAvailable"
+                  @click="isAsapAvailable ? pickupTimingMode = 'asap' : null"
+                  class="p-3 sm:p-3.5 rounded-2xl border text-left transition-all relative cursor-pointer"
+                  :class="[
+                    !isAsapAvailable
+                      ? 'bg-stone-100 border-stone-200 text-stone-400 cursor-not-allowed opacity-80'
+                      : (pickupTimingMode === 'asap'
+                          ? 'bg-[#1a1a1a] text-white border-[#a47a3c]'
+                          : 'bg-white hover:bg-stone-50 text-[#1d1d1f] border-[#e0d9cc] hover:border-stone-400')
+                  ]"
+                >
+                  <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-1.5 min-w-0">
+                      <Zap class="w-3.5 h-3.5 shrink-0" :class="pickupTimingMode === 'asap' ? 'text-[#e4b97a]' : 'text-[#a47a3c]'" />
+                      <span class="text-xs sm:text-sm font-bold tracking-tight truncate">Fastest ASAP</span>
+                    </div>
+                    <span
+                      v-if="!isAsapAvailable"
+                      class="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-rose-100 text-rose-700"
+                    >Closed</span>
+                    <CheckCircle2 v-else-if="pickupTimingMode === 'asap'" class="w-3.5 h-3.5 text-[#e4b97a] shrink-0" />
+                  </div>
 
-                <div class="grid grid-cols-2 gap-2.5">
-                  <!-- ASAP Option Button -->
-                  <button
-                    type="button"
-                    @click="pickupTimingMode = 'asap'"
-                    class="p-3.5 rounded-2xl border text-left transition-all cursor-pointer relative"
-                    :class="pickupTimingMode === 'asap'
-                      ? 'bg-[#1a1a1a] text-white border-black shadow-xs'
-                      : 'bg-white text-[#1d1d1f] border-[#e0d9cc] hover:border-[#1a1a1a]'"
-                  >
-                    <div class="flex items-center gap-1.5 text-xs font-bold">
-                      <Zap class="w-3.5 h-3.5 text-amber-400" />
-                      <span>Fastest ASAP Pickup</span>
+                  <div class="mt-1.5">
+                    <div
+                      class="text-xs font-bold truncate"
+                      :class="pickupTimingMode === 'asap' ? 'text-[#e4b97a]' : 'text-[#a47a3c]'"
+                    >
+                      {{ isAsapAvailable ? `~${effectivePrepTime} mins` : (storeOpenTimeFormatted || '11:00 AM') }}
                     </div>
-                    <div class="text-xs mt-1.5" :class="pickupTimingMode === 'asap' ? 'text-[#e4b97a] font-semibold' : 'text-[#7a5620] font-medium'">
-                      Ready in ~{{ effectivePrepTime }} mins
+                    <div
+                      class="text-[10px] mt-0.5 truncate"
+                      :class="pickupTimingMode === 'asap' ? 'text-stone-300' : 'text-stone-500'"
+                    >
+                      {{ isAsapAvailable ? (isStoreBusy ? 'Rush buffer (+15m)' : 'Standard packing') : 'Please schedule' }}
                     </div>
-                    <div class="text-[10px] opacity-75 mt-0.5">
-                      {{ isStoreBusy ? 'Store is busy (Rush Buffer applied)' : 'Standard express packing' }}
-                    </div>
-                  </button>
+                  </div>
+                </button>
 
-                  <!-- Schedule for Later Option Button -->
-                  <button
-                    type="button"
-                    @click="pickupTimingMode = 'scheduled'"
-                    class="p-3.5 rounded-2xl border text-left transition-all cursor-pointer relative"
-                    :class="pickupTimingMode === 'scheduled'
-                      ? 'bg-[#1a1a1a] text-white border-black shadow-xs'
-                      : 'bg-white text-[#1d1d1f] border-[#e0d9cc] hover:border-[#1a1a1a]'"
-                  >
-                    <div class="flex items-center gap-1.5 text-xs font-bold">
-                      <Calendar class="w-3.5 h-3.5 text-[#a47a3c]" />
-                      <span>Schedule for Later</span>
+                <!-- Schedule for Later Option Button -->
+                <button
+                  type="button"
+                  @click="pickupTimingMode = 'scheduled'"
+                  class="p-3 sm:p-3.5 rounded-2xl border text-left transition-all relative cursor-pointer"
+                  :class="[
+                    pickupTimingMode === 'scheduled'
+                      ? 'bg-[#1a1a1a] text-white border-[#a47a3c]'
+                      : 'bg-white hover:bg-stone-50 text-[#1d1d1f] border-[#e0d9cc] hover:border-stone-400'
+                  ]"
+                >
+                  <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-1.5 min-w-0">
+                      <Calendar class="w-3.5 h-3.5 shrink-0" :class="pickupTimingMode === 'scheduled' ? 'text-[#e4b97a]' : 'text-[#a47a3c]'" />
+                      <span class="text-xs sm:text-sm font-bold tracking-tight truncate">Schedule</span>
                     </div>
-                    <div class="text-xs mt-1.5 font-semibold" :class="pickupTimingMode === 'scheduled' ? 'text-white' : 'text-[#1d1d1f]'">
-                      {{ storeInfo.pickup_slot_window_label ? `Pick Day & ${storeInfo.pickup_slot_window_label}` : `Pick Day & ${pickupSlotWindowLabel}` }}
+                    <CheckCircle2 v-if="pickupTimingMode === 'scheduled'" class="w-3.5 h-3.5 text-[#e4b97a] shrink-0" />
+                  </div>
+
+                  <div class="mt-1.5">
+                    <div
+                      class="text-xs font-bold truncate"
+                      :class="pickupTimingMode === 'scheduled' ? 'text-[#e4b97a]' : 'text-[#a47a3c]'"
+                    >
+                      {{ selectedScheduledTime || 'Pick a Slot' }}
                     </div>
-                    <div class="text-[10px] opacity-75 mt-0.5">
-                      Choose exact time today or tomorrow
+                    <div
+                      class="text-[10px] mt-0.5 truncate"
+                      :class="pickupTimingMode === 'scheduled' ? 'text-stone-300' : 'text-stone-500'"
+                    >
+                      {{ scheduledDay === 'today' ? 'Today' : 'Tomorrow' }} · Convenient
                     </div>
-                  </button>
-                </div>
+                  </div>
+                </button>
               </div>
 
               <!-- Customer Time Slot Picker (When 'Schedule for Later' is selected) -->
-              <div v-if="pickupTimingMode === 'scheduled'" class="p-4 bg-[#fbf9f5] rounded-2xl border border-[#e0d9cc] space-y-3.5 animate-in fade-in duration-150">
+              <div v-if="pickupTimingMode === 'scheduled'" class="p-4 sm:p-5 bg-white rounded-2xl border border-[#e0d9cc] space-y-4 shadow-xs animate-in fade-in duration-150">
 
-                <!-- Day Switcher -->
-                <div class="flex items-center justify-between">
-                  <span class="text-xs font-bold text-[#1d1d1f]">Select Pickup Day:</span>
-                  <div class="flex gap-1.5">
+                <!-- 1. Day Switcher -->
+                <div class="space-y-2">
+                  <div class="flex items-center justify-between text-xs font-bold text-stone-900 uppercase tracking-wider">
+                    <span>1. Select Pickup Day</span>
+                    <span class="text-xs font-normal text-stone-500">Prepared fresh before arrival</span>
+                  </div>
+
+                  <div class="grid grid-cols-2 gap-2.5">
                     <button
                       type="button"
-                      @click="scheduledDay = 'today'"
-                      class="px-3 py-1 rounded-full text-xs font-bold transition-all cursor-pointer"
-                      :class="scheduledDay === 'today' ? 'bg-[#1a1a1a] text-white' : 'bg-white text-[#6e6e73] border border-[#e0d9cc]'"
+                      :disabled="!isTodayAvailable"
+                      @click="isTodayAvailable ? scheduledDay = 'today' : null"
+                      class="p-3 rounded-xl border text-left transition-all relative flex flex-col justify-between cursor-pointer"
+                      :class="[
+                        !isTodayAvailable
+                          ? 'bg-stone-100 border-stone-200 text-stone-400 cursor-not-allowed opacity-60'
+                          : (scheduledDay === 'today'
+                              ? 'bg-[#1a1a1a] text-white border-[#a47a3c]'
+                              : 'bg-white hover:bg-stone-50 text-[#1d1d1f] border-[#e0d9cc] hover:border-stone-400')
+                      ]"
                     >
-                      Today
+                      <div class="flex items-center justify-between">
+                        <span class="text-xs sm:text-sm font-bold">Today</span>
+                        <span
+                          v-if="!isTodayAvailable"
+                          class="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-stone-200 text-stone-700"
+                        >Closed</span>
+                        <div
+                          v-else-if="scheduledDay === 'today'"
+                          class="w-2 h-2 rounded-full bg-[#e4b97a]"
+                        ></div>
+                      </div>
+                      <div class="text-[11px] font-semibold mt-1" :class="scheduledDay === 'today' ? 'text-[#e4b97a]' : 'text-stone-600'">
+                        {{ todayFormatted }}
+                      </div>
                     </button>
+
                     <button
                       type="button"
-                      @click="scheduledDay = 'tomorrow'"
-                      class="px-3 py-1 rounded-full text-xs font-bold transition-all cursor-pointer"
-                      :class="scheduledDay === 'tomorrow' ? 'bg-[#1a1a1a] text-white' : 'bg-white text-[#6e6e73] border border-[#e0d9cc]'"
+                      :disabled="!isTomorrowAvailable"
+                      @click="isTomorrowAvailable ? scheduledDay = 'tomorrow' : null"
+                      class="p-3 rounded-xl border text-left transition-all relative flex flex-col justify-between cursor-pointer"
+                      :class="[
+                        !isTomorrowAvailable
+                          ? 'bg-stone-100 border-stone-200 text-stone-400 cursor-not-allowed opacity-60'
+                          : (scheduledDay === 'tomorrow'
+                              ? 'bg-[#1a1a1a] text-white border-[#a47a3c]'
+                              : 'bg-white hover:bg-stone-50 text-[#1d1d1f] border-[#e0d9cc] hover:border-stone-400')
+                      ]"
                     >
-                      Tomorrow
+                      <div class="flex items-center justify-between">
+                        <span class="text-xs sm:text-sm font-bold">Tomorrow</span>
+                        <span
+                          v-if="!isTomorrowAvailable"
+                          class="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-stone-200 text-stone-700"
+                        >Closed</span>
+                        <div
+                          v-else-if="scheduledDay === 'tomorrow'"
+                          class="w-2 h-2 rounded-full bg-[#e4b97a]"
+                        ></div>
+                      </div>
+                      <div class="text-[11px] font-semibold mt-1" :class="scheduledDay === 'tomorrow' ? 'text-[#e4b97a]' : 'text-stone-600'">
+                        {{ tomorrowFormatted }}
+                      </div>
                     </button>
                   </div>
                 </div>
 
-                <!-- Timing Type Switcher (1-Hr Windows vs Custom Time) -->
-                <div class="flex items-center justify-between pt-1 border-t border-[#e0d9cc]/60">
-                  <span class="text-xs font-bold text-[#1d1d1f]">Pickup Timing Preference:</span>
-                  <div class="flex gap-1 bg-[#ece7de] p-0.5 rounded-xl border border-[#dfd6c8]">
+                <!-- 2. Timing Preference Switcher -->
+                <div class="flex items-center justify-between pt-2.5 border-t border-[#e0d9cc]">
+                  <span class="text-xs font-bold text-stone-900 uppercase tracking-wider">2. Timing Preference</span>
+                  <div class="inline-flex bg-[#f4efe6] p-1 rounded-xl border border-[#dfd6c8] text-xs">
                     <button
                       type="button"
                       @click="scheduledTimingType = 'slot'"
-                      class="px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all cursor-pointer"
-                      :class="scheduledTimingType === 'slot' ? 'bg-white text-[#1d1d1f] shadow-2xs' : 'text-[#6e6e73] hover:text-[#1d1d1f]'"
+                      class="px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer"
+                      :class="scheduledTimingType === 'slot' ? 'bg-[#1a1a1a] text-white shadow-xs' : 'text-stone-700 hover:text-stone-900'"
                     >
                       {{ pickupSlotWindowLabel }}
                     </button>
                     <button
                       type="button"
                       @click="scheduledTimingType = 'custom'"
-                      class="px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all cursor-pointer flex items-center gap-1"
-                      :class="scheduledTimingType === 'custom' ? 'bg-white text-[#1d1d1f] shadow-2xs' : 'text-[#6e6e73] hover:text-[#1d1d1f]'"
+                      class="px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5"
+                      :class="scheduledTimingType === 'custom' ? 'bg-[#1a1a1a] text-white shadow-xs' : 'text-stone-700 hover:text-stone-900'"
                     >
                       <span>Custom Time</span>
                       <span class="w-1.5 h-1.5 rounded-full bg-[#a47a3c]"></span>
@@ -489,70 +798,150 @@ async function completeOrder() {
                   </div>
                 </div>
 
-                <!-- SUB-OPTION A: 1-HOUR TIME SLOT GRID -->
-                <div v-if="scheduledTimingType === 'slot'" class="space-y-2">
-                  <div class="flex items-center justify-between text-[11px] text-[#6e6e73]">
-                    <span>Select {{ pickupSlotWindowLabel }} for {{ scheduledDay === 'today' ? 'Today' : 'Tomorrow' }}:</span>
+                <!-- Closed on Day Notice -->
+                <div v-if="!isDayOpen" class="p-3 bg-amber-50 rounded-xl border border-amber-300 text-xs text-amber-950 flex items-center gap-2.5">
+                  <AlertCircle class="w-4 h-4 text-amber-700 shrink-0" />
+                  <span>Store pickup is closed on this day. Please select another day.</span>
+                </div>
+
+                <!-- SUB-OPTION A: TIME SLOT GRID WITH PERIOD FILTERS -->
+                <div v-if="scheduledTimingType === 'slot'" class="space-y-2.5 pt-0.5">
+                  <!-- Period Filter Pills -->
+                  <div class="flex items-center justify-between flex-wrap gap-2">
+                    <div class="flex items-center gap-1.5 flex-wrap">
+                      <button
+                        type="button"
+                        @click="slotPeriodFilter = 'all'"
+                        class="px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1 border"
+                        :class="slotPeriodFilter === 'all'
+                          ? 'bg-[#1a1a1a] text-white border-[#1a1a1a]'
+                          : 'bg-[#f4efe6] text-stone-800 hover:bg-[#ede6da] border-[#dfd6c8]'"
+                      >
+                        <LayoutGrid class="w-3 h-3" />
+                        <span>All</span>
+                        <span class="text-[10px] opacity-80">({{ slotCountsByPeriod.all }})</span>
+                      </button>
+
+                      <button
+                        v-if="slotCountsByPeriod.morning > 0"
+                        type="button"
+                        @click="slotPeriodFilter = 'morning'"
+                        class="px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1 border"
+                        :class="slotPeriodFilter === 'morning'
+                          ? 'bg-[#1a1a1a] text-white border-[#1a1a1a]'
+                          : 'bg-[#f4efe6] text-stone-800 hover:bg-[#ede6da] border-[#dfd6c8]'"
+                      >
+                        <Sunrise class="w-3 h-3 text-[#e4b97a]" />
+                        <span>Morning</span>
+                      </button>
+
+                      <button
+                        v-if="slotCountsByPeriod.afternoon > 0"
+                        type="button"
+                        @click="slotPeriodFilter = 'afternoon'"
+                        class="px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1 border"
+                        :class="slotPeriodFilter === 'afternoon'
+                          ? 'bg-[#1a1a1a] text-white border-[#1a1a1a]'
+                          : 'bg-[#f4efe6] text-stone-800 hover:bg-[#ede6da] border-[#dfd6c8]'"
+                      >
+                        <Sun class="w-3 h-3 text-[#e4b97a]" />
+                        <span>Afternoon</span>
+                      </button>
+
+                      <button
+                        v-if="slotCountsByPeriod.evening > 0"
+                        type="button"
+                        @click="slotPeriodFilter = 'evening'"
+                        class="px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1 border"
+                        :class="slotPeriodFilter === 'evening'
+                          ? 'bg-[#1a1a1a] text-white border-[#1a1a1a]'
+                          : 'bg-[#f4efe6] text-stone-800 hover:bg-[#ede6da] border-[#dfd6c8]'"
+                      >
+                        <Moon class="w-3 h-3 text-indigo-400" />
+                        <span>Evening</span>
+                      </button>
+                    </div>
+
                     <button
                       type="button"
                       @click="scheduledTimingType = 'custom'"
-                      class="text-[#a47a3c] font-semibold hover:underline cursor-pointer"
+                      class="text-xs text-[#a47a3c] hover:text-[#8a6b32] font-bold cursor-pointer flex items-center gap-1 ml-auto"
                     >
-                      Enter exact time ➔
+                      Exact minute ➔
                     </button>
                   </div>
 
-                  <div class="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                  <!-- Slot Grid: 2 or 3 columns with high contrast and compact max-height -->
+                  <div class="grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-48 overflow-y-auto pr-1">
                     <button
-                      v-for="slot in availableScheduledSlots"
+                      v-for="slot in filteredScheduledSlots"
                       :key="slot.label"
                       type="button"
                       :disabled="slot.disabled"
                       @click="!slot.disabled ? selectedScheduledTime = slot.label : null"
-                      class="p-2.5 rounded-xl border text-center transition-all flex flex-col items-center justify-center min-h-[46px]"
+                      class="p-2.5 rounded-xl border text-center transition-all flex flex-col items-center justify-center min-h-[46px] relative"
                       :class="[
                         slot.disabled
-                          ? 'bg-[#ece7de] text-[#a19f9d] border-[#dfd6c8] cursor-not-allowed opacity-60'
+                          ? 'bg-stone-100 text-stone-400 border-stone-200 cursor-not-allowed opacity-60'
                           : (selectedScheduledTime === slot.label
-                              ? 'bg-[#1a1a1a] text-white font-bold border-black shadow-xs cursor-pointer'
-                              : 'bg-white text-[#1d1d1f] border-[#e0d9cc] hover:border-[#1a1a1a] cursor-pointer')
+                              ? 'bg-[#1a1a1a] text-white font-bold border-[#a47a3c] cursor-pointer'
+                              : 'bg-white hover:bg-stone-50 text-[#1d1d1f] font-bold border-[#e0d9cc] hover:border-[#1a1a1a] cursor-pointer')
                       ]"
                     >
-                      <span class="text-[11px] font-semibold">{{ slot.label }}</span>
-                      <span v-if="slot.disabled" class="text-[9px] text-[#86868b] mt-0.5">Unavailable</span>
+                      <div class="flex items-center justify-center gap-1.5 w-full">
+                        <span class="text-xs sm:text-sm font-bold tracking-tight">{{ slot.label }}</span>
+                        <CheckCircle2 v-if="selectedScheduledTime === slot.label" class="w-3.5 h-3.5 text-[#e4b97a] shrink-0" />
+                      </div>
+                      <span v-if="slot.isFull" class="text-[9px] font-bold text-rose-700 mt-0.5 tracking-wider bg-rose-100 px-1.5 py-0.2 rounded-full border border-rose-300">
+                        FULL
+                      </span>
+                      <span v-else-if="slot.disabled" class="text-[9px] text-stone-400 font-medium mt-0.5">
+                        Unavailable
+                      </span>
                     </button>
+                  </div>
+
+                  <!-- Confirmation Banner -->
+                  <div
+                    v-if="selectedScheduledTime && !availableScheduledSlots.find(s => s.label === selectedScheduledTime)?.disabled"
+                    class="p-2.5 bg-emerald-50 border border-emerald-300 rounded-xl flex items-center gap-2.5 text-xs text-emerald-950 font-medium"
+                  >
+                    <CheckCircle2 class="w-4 h-4 text-emerald-600 shrink-0 stroke-[2.2]" />
+                    <div>
+                      Pickup: <strong class="font-bold text-emerald-950">{{ scheduledDay === 'today' ? 'Today' : 'Tomorrow' }}, {{ selectedScheduledTime }}</strong>
+                    </div>
                   </div>
                 </div>
 
-                <!-- SUB-OPTION B: CUSTOM EXACT TIME PICKER (OUR UI FRAMEWORK) -->
-                <div v-else class="space-y-3.5 p-4 bg-white rounded-2xl border border-[#e0d9cc] shadow-2xs">
+                <!-- SUB-OPTION B: CUSTOM EXACT TIME PICKER -->
+                <div v-else class="space-y-4 p-5 bg-[#fbf9f5] rounded-2xl border border-[#e0d9cc]">
                   <div class="flex items-center justify-between">
-                    <div class="flex items-center gap-2">
-                      <div class="w-7 h-7 rounded-lg bg-[#f3efe7] text-[#a47a3c] flex items-center justify-center border border-[#e0d9cc]">
-                        <Clock class="w-3.5 h-3.5 stroke-[2.2]" />
+                    <div class="flex items-center gap-3">
+                      <div class="w-9 h-9 rounded-xl bg-[#f5eee2] text-[#7a5620] flex items-center justify-center border border-[#e0d9cc] shrink-0">
+                        <Clock class="w-4.5 h-4.5 stroke-[2.2]" />
                       </div>
                       <div>
-                        <div class="text-xs font-bold text-[#1d1d1f]">Select Exact Pickup Time</div>
-                        <div class="text-[10px] text-[#6e6e73]">Custom hour, minute & period</div>
+                        <div class="text-sm font-bold text-stone-950">Select Exact Pickup Minute</div>
+                        <div class="text-xs text-stone-600 font-medium">Pick any available 15-minute slot</div>
                       </div>
                     </div>
 
-                    <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-mono font-bold bg-[#1a1a1a] text-[#e4b97a] border border-[#a47a3c]/30 shadow-2xs">
+                    <span class="inline-flex items-center gap-1 px-3.5 py-1.5 rounded-full text-xs font-mono font-bold bg-[#1a1a1a] text-[#e4b97a] border border-stone-800 shadow-xs">
                       {{ formattedCustomTime }}
                     </span>
                   </div>
 
-                  <!-- 3-Column Custom Time Selector (Using UI Style Framework) -->
-                  <div class="grid grid-cols-3 gap-2">
+                  <!-- 3-Column Custom Time Selector -->
+                  <div class="grid grid-cols-3 gap-3">
                     <!-- Hour Select -->
-                    <div class="space-y-1">
-                      <label class="text-[10px] font-bold text-stone-500 uppercase tracking-wider">Hour</label>
+                    <div class="space-y-1.5">
+                      <label class="text-xs font-bold text-stone-800 uppercase tracking-wider">Hour</label>
                       <Select v-model="customHour">
-                        <SelectTrigger class="h-10 w-full rounded-xl border border-[#e0d9cc] bg-[#fbf9f5] hover:bg-white text-xs font-bold text-[#1d1d1f] focus:ring-2 focus:ring-[#1a1a1a]">
+                        <SelectTrigger class="h-11 w-full rounded-xl border border-[#e0d9cc] bg-white hover:border-[#1a1a1a] text-sm font-bold text-stone-900 focus:outline-none focus:border-[#1a1a1a]">
                           <SelectValue placeholder="Hour" />
                         </SelectTrigger>
-                        <SelectContent class="rounded-xl border border-[#e0d9cc] bg-white shadow-xl max-h-56 z-50">
-                          <SelectItem v-for="h in availableHours" :key="h" :value="h" class="text-xs font-semibold cursor-pointer">
+                        <SelectContent class="rounded-xl border border-stone-200 bg-white shadow-xl max-h-56 z-50">
+                          <SelectItem v-for="h in availableHours" :key="h" :value="h" class="text-sm font-bold cursor-pointer">
                             {{ h }}
                           </SelectItem>
                         </SelectContent>
@@ -560,14 +949,14 @@ async function completeOrder() {
                     </div>
 
                     <!-- Minute Select -->
-                    <div class="space-y-1">
-                      <label class="text-[10px] font-bold text-stone-500 uppercase tracking-wider">Minute</label>
+                    <div class="space-y-1.5">
+                      <label class="text-xs font-bold text-stone-800 uppercase tracking-wider">Minute</label>
                       <Select v-model="customMinute">
-                        <SelectTrigger class="h-10 w-full rounded-xl border border-[#e0d9cc] bg-[#fbf9f5] hover:bg-white text-xs font-bold text-[#1d1d1f] focus:ring-2 focus:ring-[#1a1a1a]">
+                        <SelectTrigger class="h-11 w-full rounded-xl border border-[#e0d9cc] bg-white hover:border-[#1a1a1a] text-sm font-bold text-stone-900 focus:outline-none focus:border-[#1a1a1a]">
                           <SelectValue placeholder="Minute" />
                         </SelectTrigger>
-                        <SelectContent class="rounded-xl border border-[#e0d9cc] bg-white shadow-xl max-h-56 z-50">
-                          <SelectItem v-for="m in availableMinutes" :key="m" :value="m" class="text-xs font-semibold cursor-pointer">
+                        <SelectContent class="rounded-xl border border-stone-200 bg-white shadow-xl max-h-56 z-50">
+                          <SelectItem v-for="m in availableMinutes" :key="m" :value="m" class="text-sm font-bold cursor-pointer">
                             :{{ m }}
                           </SelectItem>
                         </SelectContent>
@@ -575,15 +964,15 @@ async function completeOrder() {
                     </div>
 
                     <!-- AM/PM Segmented Switcher -->
-                    <div class="space-y-1">
-                      <label class="text-[10px] font-bold text-stone-500 uppercase tracking-wider">Period</label>
-                      <div class="grid grid-cols-2 p-0.5 bg-[#ece7de] rounded-xl border border-[#dfd6c8] h-10">
+                    <div class="space-y-1.5">
+                      <label class="text-xs font-bold text-stone-800 uppercase tracking-wider">Period</label>
+                      <div class="grid grid-cols-2 p-1 bg-[#f4efe6] rounded-xl h-11 border border-[#dfd6c8]">
                         <button
                           type="button"
                           :disabled="!isAmAvailable"
                           @click="isAmAvailable && (customPeriod = 'AM')"
                           class="rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center justify-center disabled:opacity-30 disabled:cursor-not-allowed"
-                          :class="customPeriod === 'AM' ? 'bg-[#1a1a1a] text-white shadow-2xs' : 'text-[#6e6e73] hover:text-[#1d1d1f]'"
+                          :class="customPeriod === 'AM' ? 'bg-[#1a1a1a] text-white shadow-xs' : 'text-stone-700 hover:text-stone-950'"
                         >
                           AM
                         </button>
@@ -592,7 +981,7 @@ async function completeOrder() {
                           :disabled="!isPmAvailable"
                           @click="isPmAvailable && (customPeriod = 'PM')"
                           class="rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center justify-center disabled:opacity-30 disabled:cursor-not-allowed"
-                          :class="customPeriod === 'PM' ? 'bg-[#1a1a1a] text-white shadow-2xs' : 'text-[#6e6e73] hover:text-[#1d1d1f]'"
+                          :class="customPeriod === 'PM' ? 'bg-[#1a1a1a] text-white shadow-xs' : 'text-stone-700 hover:text-stone-950'"
                         >
                           PM
                         </button>
@@ -601,25 +990,29 @@ async function completeOrder() {
                   </div>
 
                   <!-- Quick Preset Time Chips -->
-                  <div class="space-y-1.5 pt-1">
-                    <div class="text-[10px] font-semibold text-[#86868b] uppercase tracking-wider">Popular Times:</div>
-                    <div class="flex flex-wrap gap-1.5">
+                  <div class="space-y-2 pt-1">
+                    <div class="text-xs font-bold text-stone-700 uppercase tracking-wider">Popular Times:</div>
+                    <div class="flex flex-wrap gap-2">
                       <button
                         v-for="t in popularTimesList"
                         :key="t"
                         type="button"
                         @click="setCustomTime(t)"
-                        class="px-2.5 py-1 rounded-lg text-[10px] font-semibold transition-all cursor-pointer border"
-                        :class="formattedCustomTime === t ? 'bg-[#1a1a1a] text-white border-black shadow-2xs' : 'bg-[#fbf9f5] text-[#1d1d1f] border-[#e0d9cc] hover:bg-[#ece7de]'"
+                        class="px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer border"
+                        :class="formattedCustomTime === t ? 'bg-[#1a1a1a] text-white border-[#1a1a1a]' : 'bg-white text-stone-900 border-[#e0d9cc] hover:border-stone-400'"
                       >
                         {{ t }}
                       </button>
                     </div>
                   </div>
 
-                  <p class="text-[11px] text-[#6e6e73] leading-relaxed pt-1 border-t border-[#e0d9cc]/60">
-                    Pickup scheduled for <strong class="text-[#1d1d1f]">{{ scheduledDay === 'today' ? 'Today' : 'Tomorrow' }} at {{ formattedCustomTime }}</strong>. Our team will pack and have your order ready by this exact minute.
-                  </p>
+                  <!-- Confirmation Banner -->
+                  <div class="p-3.5 bg-emerald-50 border border-emerald-300 rounded-2xl flex items-center gap-3 text-xs sm:text-sm text-emerald-950 font-medium">
+                    <CheckCircle2 class="w-5 h-5 text-emerald-600 shrink-0 stroke-[2.2]" />
+                    <div class="leading-snug">
+                      Pickup set for <strong class="font-bold text-emerald-950">{{ scheduledDay === 'today' ? 'Today' : 'Tomorrow' }} at {{ formattedCustomTime }}</strong>.
+                    </div>
+                  </div>
                 </div>
 
               </div>
@@ -627,22 +1020,31 @@ async function completeOrder() {
             </div>
 
             <!-- OPTION B: HOME DELIVERY SELECTED -->
-            <div v-else-if="fulfillmentMode === 'delivery'" class="space-y-4 animate-in fade-in duration-150">
+            <div v-else-if="fulfillmentMode === 'delivery'" id="delivery-section" class="space-y-4 animate-in fade-in duration-150 scroll-mt-6">
+
+              <!-- Contextual Delivery Error Banner -->
+              <div
+                v-if="deliveryError"
+                class="p-4 bg-rose-50 border border-rose-300 text-rose-950 rounded-2xl flex items-center gap-3 text-xs sm:text-sm shadow-xs font-medium"
+              >
+                <AlertCircle class="w-5 h-5 text-rose-600 shrink-0" />
+                <span>{{ deliveryError }}</span>
+              </div>
 
               <!-- Delivery Schedule & Status Banner -->
               <div
-                class="p-4 rounded-2xl border space-y-1.5"
+                class="p-4 sm:p-5 rounded-2xl border space-y-2"
                 :class="storeInfo.is_delivery_available_today
-                  ? 'bg-emerald-50 text-emerald-900 border-emerald-200'
-                  : 'bg-amber-50 text-amber-900 border-amber-200'"
+                  ? 'bg-emerald-50 text-emerald-950 border-emerald-300'
+                  : 'bg-amber-50 text-amber-950 border-amber-300'"
               >
-                <div class="flex items-center gap-2 font-bold text-xs">
-                  <Truck class="w-4 h-4 text-[#a47a3c]" />
+                <div class="flex items-center gap-2 font-bold text-sm">
+                  <Truck class="w-4.5 h-4.5 text-[#a47a3c]" />
                   <span>{{ storeInfo.is_delivery_available_today ? 'Delivery is active today!' : 'Home Delivery Schedule Notice' }}</span>
                 </div>
-                <div class="text-[11px] leading-relaxed">
+                <div class="text-xs leading-relaxed font-medium">
                   <span v-if="storeInfo.is_delivery_available_today">
-                    Your order will be hand-delivered during today's window: <strong>{{ storeInfo.delivery_estimated_time || '5:00 PM – 8:00 PM' }}</strong>.
+                    Your order will be hand-delivered during today's window: <strong class="text-stone-900">{{ storeInfo.delivery_estimated_time || '5:00 PM – 8:00 PM' }}</strong>.
                   </span>
                   <span v-else>
                     Weekly delivery is active on <strong>{{ Array.isArray(storeInfo.delivery_days) ? storeInfo.delivery_days.map(d => d.toUpperCase()).join(', ') : 'weekends' }}</strong>. Orders placed today will be delivered on the next scheduled run.
@@ -651,14 +1053,14 @@ async function completeOrder() {
               </div>
 
               <!-- Address Inputs -->
-              <div class="p-4 bg-white rounded-2xl border border-[#e0d9cc] space-y-3">
-                <div class="text-xs font-bold text-[#1d1d1f] flex items-center gap-1.5">
-                  <MapPin class="w-4 h-4 text-[#a47a3c]" />
+              <div class="p-5 sm:p-6 bg-white rounded-3xl border border-[#e0d9cc] space-y-4 shadow-xs">
+                <div class="text-sm font-bold text-[#1d1d1f] flex items-center gap-2">
+                  <MapPin class="w-4.5 h-4.5 text-[#a47a3c]" />
                   <span>Delivery Address</span>
                 </div>
 
                 <div>
-                  <Label class="block text-xs font-normal text-[#6e6e73] mb-1">
+                  <Label class="block text-xs font-bold text-stone-800 uppercase tracking-wider mb-1.5">
                     Street Address *
                   </Label>
                   <Input
@@ -666,31 +1068,31 @@ async function completeOrder() {
                     type="text"
                     required
                     placeholder="e.g. 142 Oak Tree Rd"
-                    class="w-full bg-[#f3efe7] border-[#e0d9cc] text-xs h-10"
+                    class="w-full bg-[#fbf9f5] hover:bg-white focus:bg-white border border-[#e0d9cc] focus:border-[#1a1a1a] text-[#1d1d1f] text-sm font-semibold h-12 rounded-xl shadow-xs transition-all"
                   />
                 </div>
 
                 <div class="grid grid-cols-2 gap-3">
                   <div>
-                    <Label class="block text-xs font-normal text-[#6e6e73] mb-1">
+                    <Label class="block text-xs font-bold text-stone-800 uppercase tracking-wider mb-1.5">
                       Apt / Suite / Unit (Optional)
                     </Label>
                     <Input
                       v-model="deliveryApt"
                       type="text"
                       placeholder="e.g. Apt 4B"
-                      class="w-full bg-[#f3efe7] border-[#e0d9cc] text-xs h-10"
+                      class="w-full bg-[#fbf9f5] hover:bg-white focus:bg-white border border-[#e0d9cc] focus:border-[#1a1a1a] text-[#1d1d1f] text-sm font-semibold h-12 rounded-xl shadow-xs transition-all"
                     />
                   </div>
                   <div>
-                    <Label class="block text-xs font-normal text-[#6e6e73] mb-1">
-                      Delivery Driver Notes
+                    <Label class="block text-xs font-bold text-stone-800 uppercase tracking-wider mb-1.5">
+                      Driver Notes (Optional)
                     </Label>
                     <Input
                       v-model="deliveryNotes"
                       type="text"
                       placeholder="e.g. Leave at front door"
-                      class="w-full bg-[#f3efe7] border-[#e0d9cc] text-xs h-10"
+                      class="w-full bg-[#fbf9f5] hover:bg-white focus:bg-white border border-[#e0d9cc] focus:border-[#1a1a1a] text-[#1d1d1f] text-sm font-semibold h-12 rounded-xl shadow-xs transition-all"
                     />
                   </div>
                 </div>
@@ -701,50 +1103,56 @@ async function completeOrder() {
           </div>
 
           <!-- STEP 02: PAYMENT -->
-          <div class="space-y-3.5 pt-3 border-t border-[#e0d9cc]">
-            <div class="text-[11px] font-semibold text-[#86868b] uppercase tracking-wider">
-              02 · PAYMENT METHOD
+          <div id="payment-section" class="bg-white rounded-3xl border border-[#e0d9cc] p-4 sm:p-6 space-y-4 shadow-xs scroll-mt-6">
+            <div class="flex items-center justify-between">
+              <div class="text-xs font-bold text-stone-900 uppercase tracking-wider flex items-center gap-2">
+                <Lock class="w-4 h-4 text-[#a47a3c]" />
+                <span>02 · PAYMENT METHOD</span>
+              </div>
+              <span class="text-[11px] font-semibold text-stone-500 uppercase tracking-wider hidden sm:inline">
+                256-Bit Encrypted
+              </span>
             </div>
 
             <!-- Apple Pay / Google Pay Pills -->
-            <div class="grid grid-cols-2 gap-3">
+            <div class="grid grid-cols-2 gap-2.5">
               <button
                 type="button"
                 @click="paymentMethod = 'apple-pay'"
                 :class="[
-                  'h-12 bg-black hover:bg-neutral-900 text-white font-semibold rounded-full flex items-center justify-center transition-all cursor-pointer shadow-xs active:scale-[0.99] border border-black',
-                  paymentMethod === 'apple-pay' ? 'ring-2 ring-[#a47a3c] ring-offset-2' : ''
+                  'h-11 sm:h-12 bg-black hover:bg-neutral-900 text-white font-semibold rounded-2xl flex items-center justify-center transition-all cursor-pointer active:scale-[0.99] border',
+                  paymentMethod === 'apple-pay' ? 'border-[#a47a3c]' : 'border-transparent'
                 ]"
                 aria-label="Pay with Apple Pay"
               >
-                <IconApplePay :width="62" :height="25" class="text-white" />
+                <IconApplePay :width="60" :height="24" class="text-white" />
               </button>
 
               <button
                 type="button"
                 @click="paymentMethod = 'google-pay'"
                 :class="[
-                  'h-12 bg-black hover:bg-neutral-900 text-white font-semibold rounded-full flex items-center justify-center transition-all cursor-pointer shadow-xs active:scale-[0.99] border border-black',
-                  paymentMethod === 'google-pay' ? 'ring-2 ring-[#a47a3c] ring-offset-2' : ''
+                  'h-11 sm:h-12 bg-black hover:bg-neutral-900 text-white font-semibold rounded-2xl flex items-center justify-center transition-all cursor-pointer active:scale-[0.99] border',
+                  paymentMethod === 'google-pay' ? 'border-[#a47a3c]' : 'border-transparent'
                 ]"
                 aria-label="Pay with Google Pay"
               >
-                <IconGooglePay :width="62" :height="25" class="text-white" />
+                <IconGooglePay :width="60" :height="24" class="text-white" />
               </button>
             </div>
 
             <!-- "or pay by card" divider -->
-            <div class="relative flex items-center justify-center my-3">
+            <div class="relative flex items-center justify-center my-1.5">
               <Separator class="w-full bg-[#e0d9cc]" />
-              <span class="bg-[#fbf9f5] px-3 text-[11px] font-normal text-[#86868b] absolute">
+              <span class="bg-white px-3 text-xs font-bold text-stone-600 uppercase tracking-wider absolute">
                 or pay with card
               </span>
             </div>
 
-            <!-- Card Inputs -->
-            <div class="space-y-3">
+            <!-- Card Inputs (Seamless Direct Form Fields) -->
+            <div class="space-y-3 pt-0.5">
               <div>
-                <Label class="block text-xs font-normal text-[#6e6e73] mb-1">
+                <Label class="block text-xs font-bold text-stone-800 uppercase tracking-wider mb-1">
                   Card number
                 </Label>
                 <div class="relative flex items-center">
@@ -752,63 +1160,71 @@ async function completeOrder() {
                     type="text"
                     placeholder="1234 1234 1234 1234"
                     value="1234 1234 1234 1234"
-                    class="w-full px-4 h-11 bg-[#f3efe7] border-[#e0d9cc] rounded-xl text-xs font-normal text-[#1d1d1f] placeholder-[#86868b] focus-visible:bg-white"
+                    class="w-full px-4 h-11 bg-[#fbf9f5] hover:bg-white focus:bg-white border border-[#e0d9cc] focus:border-[#1a1a1a] rounded-xl text-sm font-semibold text-stone-950 placeholder-stone-400 shadow-xs transition-all"
                   />
-                  <div class="absolute right-3 flex items-center gap-1">
-                    <Badge variant="outline" class="text-[9px] font-bold font-mono px-1.5 py-0.5 bg-white border-[#e0d9cc] text-[#1d1d1f] rounded-xs">VISA</Badge>
-                    <Badge variant="outline" class="text-[9px] font-bold font-mono px-1.5 py-0.5 bg-white border-[#e0d9cc] text-[#1d1d1f] rounded-xs">MC</Badge>
-                    <Badge variant="outline" class="text-[9px] font-bold font-mono px-1.5 py-0.5 bg-white border-[#e0d9cc] text-[#1d1d1f] rounded-xs">AMEX</Badge>
+                  <div class="absolute right-3 flex items-center gap-1.5">
+                    <Badge variant="outline" class="text-[10px] font-bold font-mono px-2 py-0.5 bg-[#f4efe6] border-[#dfd6c8] text-stone-800 rounded-md">VISA</Badge>
+                    <Badge variant="outline" class="text-[10px] font-bold font-mono px-2 py-0.5 bg-[#f4efe6] border-[#dfd6c8] text-stone-800 rounded-md">MC</Badge>
+                    <Badge variant="outline" class="text-[10px] font-bold font-mono px-2 py-0.5 bg-[#f4efe6] border-[#dfd6c8] text-stone-800 rounded-md">AMEX</Badge>
                   </div>
                 </div>
               </div>
 
-              <div class="grid grid-cols-2 gap-3">
+              <div class="grid grid-cols-2 gap-2.5">
                 <div>
-                  <Label class="block text-xs font-normal text-[#6e6e73] mb-1">
+                  <Label class="block text-xs font-bold text-stone-800 uppercase tracking-wider mb-1">
                     Expires (MM/YY)
                   </Label>
                   <Input
                     type="text"
                     placeholder="12/28"
                     value="12/28"
-                    class="w-full px-4 h-11 bg-[#f3efe7] border-[#e0d9cc] rounded-xl text-xs font-normal text-[#1d1d1f] placeholder-[#86868b] focus-visible:bg-white"
+                    class="w-full px-4 h-11 bg-[#fbf9f5] hover:bg-white focus:bg-white border border-[#e0d9cc] focus:border-[#1a1a1a] rounded-xl text-sm font-semibold text-stone-950 placeholder-stone-400 shadow-xs transition-all"
                   />
                 </div>
                 <div>
-                  <Label class="block text-xs font-normal text-[#6e6e73] mb-1">
+                  <Label class="block text-xs font-bold text-stone-800 uppercase tracking-wider mb-1">
                     CVV
                   </Label>
                   <Input
                     type="password"
                     placeholder="•••"
                     value="123"
-                    class="w-full px-4 h-11 bg-[#f3efe7] border-[#e0d9cc] rounded-xl text-xs font-normal text-[#1d1d1f] placeholder-[#86868b] focus-visible:bg-white font-mono"
+                    class="w-full px-4 h-11 bg-[#fbf9f5] hover:bg-white focus:bg-white border border-[#e0d9cc] focus:border-[#1a1a1a] rounded-xl text-sm font-semibold text-stone-950 placeholder-stone-400 shadow-xs font-mono transition-all"
                   />
                 </div>
               </div>
             </div>
 
-            <!-- Error Banner -->
-            <p v-if="fulfillmentMode === 'pickup' && scheduleError" role="alert" class="text-xs text-rose-700">{{ scheduleError }}</p>
-            <div v-if="errorMessage" class="p-3.5 bg-rose-50 border border-rose-200 text-rose-700 text-xs rounded-2xl flex items-center gap-2.5">
-              <AlertCircle class="w-4 h-4 shrink-0 text-rose-600" />
-              <span>{{ errorMessage }}</span>
+            <!-- Minimum Order Amount Warning -->
+            <div v-if="Number(page.props.minOrderAmount || 0) > 0 && store.subtotal < Number(page.props.minOrderAmount)" class="p-3 bg-amber-50 border border-amber-200 text-amber-900 text-xs rounded-xl flex items-center justify-between">
+              <span class="font-medium">Minimum order required: ${{ Number(page.props.minOrderAmount).toFixed(2) }}</span>
+              <span class="font-bold text-amber-950">Add ${{ (Number(page.props.minOrderAmount) - store.subtotal).toFixed(2) }} more</span>
+            </div>
+
+            <!-- Payment / General Error Banner -->
+            <div v-if="paymentError || generalError" class="p-3 bg-rose-50 border border-rose-200 text-rose-900 text-xs rounded-xl flex items-start gap-2.5 shadow-xs">
+              <AlertCircle class="w-4 h-4 shrink-0 text-rose-600 mt-0.5" />
+              <div class="flex-1">
+                <span class="font-semibold block text-rose-950">Payment Authorization Issue</span>
+                <span class="text-rose-800 leading-relaxed">{{ paymentError || generalError }}</span>
+              </div>
             </div>
 
             <!-- Desktop Pay Button -->
-            <div class="pt-2 hidden sm:block">
+            <div class="pt-1 hidden sm:block">
               <Button
                 type="button"
                 @click="completeOrder"
-                :disabled="isProcessing || (fulfillmentMode === 'pickup' && Boolean(scheduleError))"
-                class="w-full h-13 py-3.5 bg-[#1a1a1a] hover:bg-black text-white font-semibold text-sm rounded-full transition-all cursor-pointer flex items-center justify-between px-6 shadow-md active:scale-[0.99] disabled:opacity-60"
+                :disabled="isProcessing || (fulfillmentMode === 'pickup' && Boolean(scheduleError)) || (Number(page.props.minOrderAmount || 0) > 0 && store.subtotal < Number(page.props.minOrderAmount))"
+                class="w-full h-13 bg-[#1a1a1a] hover:bg-black text-white font-bold text-sm rounded-full transition-all cursor-pointer flex items-center justify-between px-6 shadow-md active:scale-[0.99] disabled:opacity-60"
               >
                 <div class="flex items-center gap-2">
                   <Loader2 v-if="isProcessing" class="w-4 h-4 animate-spin" />
-                  <Lock v-else class="w-4 h-4 stroke-[2.2]" />
+                  <Lock v-else class="w-4 h-4 stroke-[2.2] text-[#e4b97a]" />
                   <span>{{ isProcessing ? 'Authorizing Payment...' : `Complete Order · ${effectiveFulfillmentSlotLabel}` }}</span>
                 </div>
-                <span class="font-serif font-medium text-base">${{ checkoutTotal }}</span>
+                <span class="font-serif font-bold text-base text-[#e4b97a]">${{ checkoutTotal }}</span>
               </Button>
             </div>
 
@@ -835,18 +1251,38 @@ async function completeOrder() {
         <button
           type="button"
           @click="completeOrder"
-          :disabled="isProcessing || (fulfillmentMode === 'pickup' && Boolean(scheduleError))"
+          :disabled="isProcessing || (fulfillmentMode === 'pickup' && Boolean(scheduleError)) || (Number(page.props.minOrderAmount || 0) > 0 && store.subtotal < Number(page.props.minOrderAmount))"
           class="w-full h-13 py-3.5 bg-[#1a1a1a] active:bg-black text-white font-semibold text-sm rounded-full cursor-pointer flex items-center justify-between px-6 shadow-md disabled:opacity-60"
         >
           <div class="flex items-center gap-2">
             <Loader2 v-if="isProcessing" class="w-4 h-4 animate-spin" />
-            <Lock v-else class="w-4 h-4 stroke-[2.2]" />
+            <Lock v-else class="w-4 h-4 stroke-[2.2] text-[#e4b97a]" />
             <span v-if="isProcessing">Authorizing Payment...</span>
             <span v-else>Pay · ${{ checkoutTotal }}</span>
           </div>
-          <span class="text-xs text-stone-300 font-semibold truncate max-w-[120px]">
+          <span class="text-xs text-[#e4b97a] font-semibold truncate max-w-[140px]">
             {{ effectiveFulfillmentSlotLabel }}
           </span>
+        </button>
+      </div>
+
+      <!-- Mobile Floating Error Toast -->
+      <div
+        v-if="!orderPlaced && (pickupError || deliveryError || paymentError || generalError || (fulfillmentMode === 'pickup' && scheduleError))"
+        class="sm:hidden fixed bottom-22 left-3 right-3 z-50 p-3.5 bg-stone-900/95 backdrop-blur-md text-white text-xs rounded-2xl shadow-2xl flex items-center justify-between border border-rose-500/40 animate-in fade-in slide-in-from-bottom-3 duration-200"
+      >
+        <div class="flex items-center gap-2 pr-2 min-w-0">
+          <AlertCircle class="w-4 h-4 text-rose-400 shrink-0" />
+          <span class="font-medium text-stone-100 truncate text-[11px]">
+            {{ pickupError || scheduleError || deliveryError || paymentError || generalError }}
+          </span>
+        </div>
+        <button
+          type="button"
+          @click="scrollToError"
+          class="text-[11px] font-bold bg-[#a47a3c] hover:bg-[#8a6b32] text-white px-3 py-1.5 rounded-xl shrink-0 cursor-pointer shadow-xs active:scale-95 transition-transform"
+        >
+          Fix ➔
         </button>
       </div>
 
