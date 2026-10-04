@@ -17,6 +17,17 @@ import {
   UserPlus
 } from 'lucide-vue-next';
 
+const props = defineProps({
+  dbOrders: {
+    type: Array,
+    default: () => [],
+  },
+  activeSection: {
+    type: String,
+    default: '',
+  },
+});
+
 const store = useStore();
 const page = usePage();
 const reorderedNotification = ref(false);
@@ -24,6 +35,13 @@ const reorderedItemCount = ref(0);
 
 const authUser = computed(() => page.props.auth?.user);
 const userName = computed(() => authUser.value ? authUser.value.name.split(' ')[0] : 'there');
+
+const displayOrders = computed(() => {
+  if (props.dbOrders && props.dbOrders.length > 0) {
+    return props.dbOrders;
+  }
+  return store.pastOrders;
+});
 
 function handleReorderOrder(order) {
   if (order && Array.isArray(order.items) && order.items.length > 0) {
@@ -264,20 +282,40 @@ function handleReorderOrder(order) {
             <h2 class="text-lg sm:text-xl font-serif font-medium text-[#1d1d1f] tracking-tight">Past orders</h2>
             <span class="font-devanagari text-xs text-[#7a5620] bg-[#f5eee2] px-2 py-0.5 rounded-full border border-[#e0d9cc]">पिछला ऑर्डर</span>
           </div>
-          <span v-if="store.pastOrders.length > 0" class="text-xs font-normal text-[#6e6e73]">
-            {{ store.pastOrders.length }} order{{ store.pastOrders.length > 1 ? 's' : '' }}
+          <span v-if="displayOrders.length > 0" class="text-xs font-normal text-[#6e6e73]">
+            {{ displayOrders.length }} order{{ displayOrders.length > 1 ? 's' : '' }}
           </span>
         </div>
 
         <!-- Dynamic Past Orders List or Empty State -->
-        <div v-if="store.pastOrders.length > 0" class="space-y-4">
+        <div v-if="displayOrders.length > 0" class="space-y-4">
           <div 
-            v-for="order in store.pastOrders" 
+            v-for="order in displayOrders" 
             :key="order.id"
             class="rounded-3xl border border-[#e0d9cc] bg-white p-5 space-y-4 shadow-xs"
           >
             <div class="flex items-center justify-between">
-              <span class="font-bold text-sm text-[#1d1d1f]">{{ order.date }} · {{ order.type }}</span>
+              <div class="flex flex-wrap items-center gap-2">
+                <span class="font-bold text-sm text-[#1d1d1f]">{{ order.date }} · {{ order.type }}</span>
+                <span 
+                  v-if="order.status"
+                  class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-semibold"
+                  :class="[
+                    order.status === 'confirmed' ? 'bg-amber-100 text-amber-800' :
+                    order.status === 'packing' ? 'bg-blue-100 text-blue-800' :
+                    order.status === 'ready_for_pickup' ? 'bg-emerald-100 text-emerald-800 animate-pulse' :
+                    'bg-zinc-100 text-zinc-700'
+                  ]"
+                >
+                  <span v-if="order.status !== 'completed'" class="w-1.5 h-1.5 rounded-full bg-current"></span>
+                  {{ 
+                    order.status === 'confirmed' ? 'Received' :
+                    order.status === 'packing' ? 'Packing' :
+                    order.status === 'ready_for_pickup' ? 'Ready for Pickup' :
+                    (order.status === 'completed' ? 'Completed' : order.status)
+                  }}
+                </span>
+              </div>
               <span class="font-serif font-medium text-base text-[#1d1d1f]">${{ Number(order.total).toFixed(2) }}</span>
             </div>
 
@@ -297,14 +335,21 @@ function handleReorderOrder(order) {
               </div>
             </div>
 
-            <!-- Reorder Button -->
-            <div class="pt-1">
+            <!-- Actions Row: Track Live & Reorder Button -->
+            <div class="pt-1 flex items-center gap-2">
+              <Link 
+                :href="'/orders/' + encodeURIComponent(order.id)"
+                class="flex-1 h-11 bg-[#a47a3c] hover:bg-[#8a6b32] text-white font-semibold text-xs rounded-full transition-colors flex items-center justify-center gap-1.5 cursor-pointer shadow-xs active:scale-[0.99]"
+              >
+                <Sparkles class="w-3.5 h-3.5" />
+                <span>Track Live</span>
+              </Link>
               <button 
                 @click="handleReorderOrder(order)"
-                class="w-full h-11 bg-[#1a1a1a] hover:bg-black text-white font-semibold text-xs rounded-full transition-colors flex items-center justify-center gap-2 cursor-pointer shadow-sm active:scale-[0.99]"
+                class="flex-1 h-11 bg-[#1a1a1a] hover:bg-black text-white font-semibold text-xs rounded-full transition-colors flex items-center justify-center gap-2 cursor-pointer shadow-sm active:scale-[0.99]"
               >
                 <RotateCcw class="w-3.5 h-3.5 stroke-[2.2]" />
-                <span>Reorder {{ order.itemCount }} item{{ order.itemCount > 1 ? 's' : '' }}</span>
+                <span>Reorder ({{ order.itemCount }})</span>
               </button>
             </div>
           </div>

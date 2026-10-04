@@ -46,7 +46,7 @@ class AdminSeeder extends Seeder
             'name' => 'Store Manager',
             'guard_name' => 'admin',
         ]);
-        $storeManagerRole->syncPermissions(['manage products', 'manage orders', 'view reports']);
+        $storeManagerRole->syncPermissions(['manage products', 'manage orders', 'manage users', 'view reports']);
 
         $orderHandlerRole = Role::firstOrCreate([
             'name' => 'Order Handler',

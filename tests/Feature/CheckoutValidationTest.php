@@ -1,0 +1,207 @@
+<?php
+
+namespace Tests\Feature;
+
+use App\Models\Product;
+use App\Models\RecipeKit;
+use App\Models\StoreSetting;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\TestCase;
+
+class CheckoutValidationTest extends TestCase
+{
+    use RefreshDatabase;
+
+    public function test_catalog_price_overrides_tampered_price_and_name(): void
+    {
+        $product = Product::factory()->create(['price' => 20]);
+
+        $response = $this->postJson('/checkout', [
+            'items' => [['id' => $product->id, 'name' => 'Fake name', 'price' => 0.01, 'quantity' => 2]],
+        ]);
+
+        $response->assertCreated();
+        $this->assertDatabaseHas('orders', ['subtotal' => 40, 'total' => 40, 'points_earned' => 40]);
+        $this->assertDatabaseHas('order_items', ['product_id' => $product->id, 'name' => $product->name, 'unit_price' => 20]);
+    }
+
+    public function test_unknown_item_cannot_be_resolved_by_a_forged_name(): void
+    {
+        $product = Product::factory()->create();
+
+        $this->postJson('/checkout', [
+            'items' => [['id' => 'missing-product', 'name' => $product->name, 'price' => 1, 'quantity' => 1]],
+        ])->assertUnprocessable()->assertInvalid(['items.0.id' => 'This item is no longer available.']);
+
+        $this->assertDatabaseCount('orders', 0);
+        $this->assertDatabaseHas('products', ['id' => $product->id, 'stock' => 50]);
+    }
+
+    public function test_subscription_price_is_rounded_per_unit_from_catalog(): void
+    {
+        $product = Product::factory()->create(['price' => 4.99, 'has_subscription' => true]);
+
+        $this->postJson('/checkout', [
+            'items' => [['id' => $product->id, 'name' => $product->name, 'price' => 0, 'quantity' => 3, 'is_subscribed' => true]],
+        ])->assertCreated();
+
+        $this->assertDatabaseHas('order_items', ['unit_price' => 4.74, 'total_price' => 14.22, 'is_subscribed' => true]);
+        $this->assertDatabaseHas('orders', ['total' => 14.22]);
+    }
+
+    public function test_ineligible_subscription_does_not_create_an_order(): void
+    {
+        $product = Product::factory()->create(['has_subscription' => false]);
+
+        $this->postJson('/checkout', [
+            'items' => [['id' => $product->id, 'name' => $product->name, 'price' => 1, 'quantity' => 1, 'is_subscribed' => true]],
+        ])->assertUnprocessable()->assertInvalid(['items.0.is_subscribed' => 'This item is not eligible for subscription pricing.']);
+
+        $this->assertDatabaseCount('orders', 0);
+    }
+
+    public function test_past_custom_pickup_is_rejected_without_changing_stock(): void
+    {
+        $this->travelTo(now()->setTime(17, 0));
+        $product = Product::factory()->create();
+
+        $this->postJson('/checkout', $this->scheduledPayload($product, ['pickup_time' => '12:00']))
+            ->assertUnprocessable()->assertInvalid(['pickup_time' => 'Choose a future pickup time']);
+
+        $this->assertDatabaseCount('orders', 0);
+        $this->assertDatabaseHas('products', ['id' => $product->id, 'stock' => 50]);
+    }
+
+    public function test_pickup_requires_preparation_time(): void
+    {
+        $this->travelTo(now()->setTime(10, 0));
+        $product = Product::factory()->create();
+
+        $this->postJson('/checkout', $this->scheduledPayload($product, ['pickup_time' => '10:05']))
+            ->assertUnprocessable()->assertInvalid(['pickup_time' => 'allowing time for preparation']);
+
+        $this->assertDatabaseCount('orders', 0);
+    }
+
+    public function test_pickup_outside_store_hours_is_rejected(): void
+    {
+        $this->travelTo(now()->setTime(10, 0));
+        $product = Product::factory()->create();
+
+        $this->postJson('/checkout', $this->scheduledPayload($product, ['pickup_time' => '22:00']))
+            ->assertUnprocessable()->assertInvalid(['pickup_time' => 'within store hours']);
+
+        $this->assertDatabaseCount('orders', 0);
+    }
+
+    public function test_inactive_pickup_window_is_rejected(): void
+    {
+        $this->travelTo(now()->setTime(10, 0));
+        StoreSetting::current()->update(['pickup_slots' => [
+            ['id' => '17-18', 'label' => '5:00 PM – 6:00 PM', 'startHour' => 17, 'active' => false],
+        ]]);
+        $product = Product::factory()->create();
+
+        $this->postJson('/checkout', $this->scheduledPayload($product, [
+            'pickup_timing_type' => 'slot', 'pickup_slot' => '5:00 PM – 6:00 PM',
+        ]))->assertUnprocessable()->assertInvalid(['pickup_slot' => 'Choose an available pickup window.']);
+
+        $this->assertDatabaseCount('orders', 0);
+    }
+
+    public function test_half_hour_window_in_current_hour_can_be_booked(): void
+    {
+        $this->travelTo(now()->setTime(10, 0));
+        StoreSetting::current()->update(['pickup_slot_duration_minutes' => 30]);
+        $product = Product::factory()->create();
+
+        $this->postJson('/checkout', $this->scheduledPayload($product, [
+            'pickup_timing_type' => 'slot', 'pickup_slot' => '10:30 AM – 11:00 AM',
+        ]))->assertCreated();
+
+        $this->assertDatabaseHas('orders', ['pickup_slot' => now()->toDateString().' · 10:30 AM – 11:00 AM']);
+    }
+
+    public function test_tomorrow_custom_pickup_is_saved_with_actual_date(): void
+    {
+        $this->travelTo(now()->setTime(17, 0));
+        $product = Product::factory()->create();
+        $date = now()->addDay()->toDateString();
+
+        $this->postJson('/checkout', $this->scheduledPayload($product, [
+            'pickup_date' => $date, 'pickup_time' => '09:00',
+        ]))->assertCreated();
+
+        $this->assertDatabaseHas('orders', ['pickup_slot' => $date.' · 9:00 AM (Custom Time)']);
+    }
+
+    public function test_paused_pickup_is_rejected(): void
+    {
+        StoreSetting::current()->update(['is_pickup_active' => false]);
+        $product = Product::factory()->create();
+
+        $this->postJson('/checkout', ['items' => [
+            ['id' => $product->id, 'name' => $product->name, 'price' => $product->price, 'quantity' => 1],
+        ]])->assertUnprocessable()->assertInvalid(['pickup_slot' => 'Store pickup is currently paused.']);
+
+        $this->assertDatabaseCount('orders', 0);
+    }
+
+    public function test_recipe_kit_slug_uses_catalog_price_and_decrements_ingredients(): void
+    {
+        $product = Product::factory()->create(['stock' => 10]);
+        $kit = RecipeKit::create(['name' => 'Paneer Kit', 'slug' => 'paneer-kit', 'price' => 25, 'is_active' => true]);
+        $kit->products()->attach($product, ['quantity' => 2]);
+
+        $this->postJson('/checkout', ['items' => [
+            ['id' => $kit->slug, 'name' => 'Fake Kit', 'price' => 0, 'quantity' => 2],
+        ]])->assertCreated();
+
+        $this->assertDatabaseHas('orders', ['total' => 50]);
+        $this->assertDatabaseHas('order_items', ['name' => 'Paneer Kit', 'unit_price' => 25]);
+        $this->assertDatabaseHas('products', ['id' => $product->id, 'stock' => 6]);
+    }
+
+    public function test_delivery_fee_and_address_use_validated_order_data(): void
+    {
+        $product = Product::factory()->create(['price' => 20]);
+
+        $this->postJson('/checkout', [
+            'items' => [['id' => $product->id, 'name' => $product->name, 'price' => 100, 'quantity' => 1]],
+            'fulfillment_type' => 'Home Delivery',
+            'delivery_address' => '456 Main St, Apt 2B',
+        ])->assertCreated();
+
+        $this->assertDatabaseHas('orders', [
+            'subtotal' => 20, 'total' => 24.99, 'delivery_fee' => 4.99,
+            'delivery_address' => '456 Main St, Apt 2B',
+        ]);
+    }
+
+    public function test_date_beyond_tomorrow_is_rejected(): void
+    {
+        $this->travelTo(now()->setTime(10, 0));
+        $product = Product::factory()->create();
+
+        $this->postJson('/checkout', $this->scheduledPayload($product, [
+            'pickup_date' => now()->addDays(2)->toDateString(),
+        ]))->assertUnprocessable()->assertInvalid(['pickup_date' => 'Choose today or tomorrow for pickup.']);
+
+        $this->assertDatabaseCount('orders', 0);
+    }
+
+    /**
+     * @param  array<string, mixed>  $overrides
+     * @return array<string, mixed>
+     */
+    private function scheduledPayload(Product $product, array $overrides = []): array
+    {
+        return array_replace([
+            'items' => [['id' => $product->id, 'name' => $product->name, 'price' => $product->price, 'quantity' => 1]],
+            'pickup_timing_mode' => 'scheduled',
+            'pickup_timing_type' => 'custom',
+            'pickup_date' => now()->toDateString(),
+            'pickup_time' => '12:00',
+        ], $overrides);
+    }
+}

@@ -128,13 +128,13 @@ const getInitials = (name) => {
             <div class="flex flex-wrap items-center gap-2 mb-2">
               <span class="inline-flex items-center gap-1.5 text-[11px] font-mono uppercase bg-[#1a1a1a] text-white px-2.5 py-0.5 rounded-full font-semibold shadow-2xs">
                 <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
-                <span>Active Guard: admin</span>
+                <span>Admin Session Active</span>
               </span>
               <span class="text-[11px] text-[#7a5620] bg-white/80 border border-[#e0d9cc] px-2.5 py-0.5 rounded-full font-medium shadow-2xs">
-                Spatie RBAC v8 Enforced
+                Role-Based Access
               </span>
               <span class="text-[11px] text-stone-600 bg-white/60 px-2 py-0.5 rounded-full font-sans">
-                Storefront Isolated
+                Secure Storefront
               </span>
             </div>
             
@@ -142,7 +142,7 @@ const getInitials = (name) => {
               Welcome back, {{ currentAdmin?.name }}
             </h1>
             <p class="text-xs sm:text-sm text-[#6e6e73] max-w-2xl leading-relaxed">
-              Complete oversight of products, registered user accounts, admin credentials, and Spatie authorization rules.
+              Complete oversight of products, registered user accounts, team credentials, and store access rules.
             </p>
           </div>
 
@@ -163,7 +163,7 @@ const getInitials = (name) => {
               class="px-4 py-2 bg-[#1a1a1a] hover:bg-black text-white text-xs font-semibold rounded-full inline-flex items-center gap-1.5 transition-all cursor-pointer shadow-xs hover:scale-[1.02]"
             >
               <Plus class="w-3.5 h-3.5" />
-              <span>New Spatie Role</span>
+              <span>New Staff Role</span>
             </button>
           </div>
         </div>
@@ -184,19 +184,13 @@ const getInitials = (name) => {
           href="#roles-section" 
           class="px-3.5 py-1.5 rounded-full bg-white hover:bg-[#f3efe7] border border-[#e0d9cc] text-[#1d1d1f] font-medium whitespace-nowrap transition-colors shadow-2xs"
         >
-          Spatie Roles & Permissions ({{ roles.length }})
+          Staff Roles & Permissions ({{ roles.length }})
         </a>
         <a 
           href="#admins-section" 
           class="px-3.5 py-1.5 rounded-full bg-white hover:bg-[#f3efe7] border border-[#e0d9cc] text-[#1d1d1f] font-medium whitespace-nowrap transition-colors shadow-2xs"
         >
-          Admin Staff Accounts ({{ admins.length }})
-        </a>
-        <a 
-          href="#architecture-section" 
-          class="px-3.5 py-1.5 rounded-full bg-white hover:bg-[#f3efe7] border border-[#e0d9cc] text-[#1d1d1f] font-medium whitespace-nowrap transition-colors shadow-2xs"
-        >
-          Multi-Guard Architecture
+          Admin Accounts ({{ admins.length }})
         </a>
       </div>
 
@@ -234,7 +228,7 @@ const getInitials = (name) => {
               {{ stats.total_users }}
             </div>
             <div class="flex items-center gap-1.5 mt-1 text-[11px] text-[#6e6e73]">
-              <span>Customer guard (`web`)</span>
+              <span>Customer accounts</span>
             </div>
           </div>
         </div>
@@ -252,7 +246,7 @@ const getInitials = (name) => {
               {{ stats.total_admins }}
             </div>
             <div class="flex items-center gap-1.5 mt-1 text-[11px] text-[#6e6e73]">
-              <span>Admin guard (`admins` table)</span>
+              <span>Store staff & managers</span>
             </div>
           </div>
         </div>
@@ -260,7 +254,7 @@ const getInitials = (name) => {
         <!-- Roles & Permissions -->
         <div class="bg-white border border-[#e0d9cc] rounded-2xl p-5 shadow-2xs flex flex-col justify-between hover:border-[#a47a3c]/50 transition-colors">
           <div class="flex items-center justify-between text-[#6e6e73]">
-            <span class="text-xs font-semibold uppercase tracking-wider">Spatie RBAC</span>
+            <span class="text-xs font-semibold uppercase tracking-wider">Staff Roles</span>
             <div class="w-8 h-8 rounded-xl bg-[#f5eee2] flex items-center justify-center text-[#a47a3c]">
               <Shield class="w-4 h-4" />
             </div>
@@ -270,21 +264,21 @@ const getInitials = (name) => {
               {{ stats.total_roles }} <span class="text-base text-[#6e6e73] font-normal">roles</span>
             </div>
             <div class="flex items-center gap-1.5 mt-1 text-[11px] text-[#6e6e73]">
-              <span>{{ stats.total_permissions }} granular permissions</span>
+              <span>{{ stats.total_permissions }} permissions assigned</span>
             </div>
           </div>
         </div>
       </div>
 
-      <!-- Spatie Roles & Permissions Section -->
+      <!-- Staff Roles & Permissions Section -->
       <section id="roles-section" class="space-y-4 pt-2">
         <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div class="flex items-center gap-2">
             <h2 class="text-xl font-serif font-medium text-[#1d1d1f] tracking-tight">
-              Spatie Roles & Permissions
+              Staff Roles & Permissions
             </h2>
             <span class="text-[11px] font-mono text-[#7a5620] bg-[#f5eee2] px-2 py-0.5 rounded-full border border-[#e0d9cc]">
-              guard: admin
+              Access Control
             </span>
           </div>
 
@@ -295,7 +289,7 @@ const getInitials = (name) => {
               v-model="searchRoleQuery"
               type="text"
               placeholder="Filter roles or permissions..."
-              class="w-full pl-8 pr-3 py-1.5 text-xs bg-white border border-[#e0d9cc] rounded-full focus:outline-none focus:ring-2 focus:ring-[#1a1a1a]"
+              class="w-full pl-8 pr-3 py-1.5 text-xs bg-white border border-[#e0d9cc] rounded-full focus:outline-none focus:ring-1 focus:ring-[#1a1a1a] focus:border-[#1a1a1a]"
             />
           </div>
         </div>
@@ -341,7 +335,7 @@ const getInitials = (name) => {
 
             <div class="mt-4 pt-3 border-t border-[#e0d9cc]/40 text-[11px] text-[#6e6e73] flex items-center gap-1.5">
               <CheckCircle2 class="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-              <span class="truncate">Enforced via <code class="bg-[#f3efe7] px-1 py-0.5 rounded font-mono text-[10px]">role:{{ role.name }},admin</code></span>
+              <span class="truncate font-medium text-emerald-800">Active role configured</span>
             </div>
           </div>
 
@@ -364,7 +358,7 @@ const getInitials = (name) => {
               </span>
             </div>
             <p class="text-xs text-[#6e6e73] mt-0.5">
-              Administrators authenticating strictly against the separate <code class="font-mono text-[#7a5620]">admins</code> database table.
+              Authorized staff members managing store catalog, customer orders, and operations.
             </p>
           </div>
 
@@ -376,7 +370,7 @@ const getInitials = (name) => {
                 v-model="searchAdminQuery"
                 type="text"
                 placeholder="Search staff by name or email..."
-                class="w-full pl-8 pr-3 py-1.5 text-xs bg-white border border-[#e0d9cc] rounded-full focus:outline-none focus:ring-2 focus:ring-[#1a1a1a]"
+                class="w-full pl-8 pr-3 py-1.5 text-xs bg-white border border-[#e0d9cc] rounded-full focus:outline-none focus:ring-1 focus:ring-[#1a1a1a] focus:border-[#1a1a1a]"
               />
             </div>
 
@@ -466,42 +460,7 @@ const getInitials = (name) => {
         </div>
       </section>
 
-      <!-- Architecture Card Explaining Isolation -->
-      <section id="architecture-section" class="bg-[#121214] text-white rounded-3xl p-6 sm:p-8 shadow-sm border border-[#2e2e32] space-y-4">
-        <div class="flex items-center justify-between">
-          <div class="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-[#a47a3c]">
-            <Layers class="w-4 h-4" />
-            <span>MULTI-GUARD ARCHITECTURE & ISOLATION MATRIX</span>
-          </div>
-          <span class="text-[10px] font-mono text-emerald-400 bg-emerald-950/60 border border-emerald-800/40 px-2 py-0.5 rounded-full">
-            Zero Session Collision
-          </span>
-        </div>
-        
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 text-xs leading-relaxed text-stone-300 pt-2">
-          <div class="space-y-2 p-4 rounded-2xl bg-white/5 border border-white/5">
-            <div class="flex items-center gap-2">
-              <span class="w-2 h-2 rounded-full bg-sky-400"></span>
-              <h3 class="font-serif font-medium text-base text-white">1. Customer Guard (`web`)</h3>
-            </div>
-            <p>
-              Operates on the <code class="text-[#e4b97a] font-mono">users</code> database table via <code class="text-[#e4b97a] font-mono">App\Models\User</code>. 
-              Users register and sign in at <code class="text-white font-mono">/login</code> to browse groceries, manage their cart, and review personal order history.
-            </p>
-          </div>
-          
-          <div class="space-y-2 p-4 rounded-2xl bg-white/5 border border-white/5">
-            <div class="flex items-center gap-2">
-              <span class="w-2 h-2 rounded-full bg-[#a47a3c]"></span>
-              <h3 class="font-serif font-medium text-base text-white">2. Admin Guard (`admin`)</h3>
-            </div>
-            <p>
-              Operates on the <code class="text-[#e4b97a] font-mono">admins</code> table via <code class="text-[#e4b97a] font-mono">App\Models\Admin</code>. 
-              Protected by separate session cookies, throttle limits, and Spatie RBAC. Even if an admin and customer share the same browser, their sessions remain completely decoupled.
-            </p>
-          </div>
-        </div>
-      </section>
+
 
     </div>
 
@@ -514,8 +473,8 @@ const getInitials = (name) => {
       <div class="bg-white rounded-3xl max-w-md w-full p-6 sm:p-7 shadow-2xl border border-[#e0d9cc] space-y-4">
         <div class="flex items-center justify-between">
           <div>
-            <h3 class="font-serif font-medium text-lg text-[#1d1d1f]">Create New Spatie Role</h3>
-            <p class="text-xs text-[#6e6e73]">Define an authorization role scoped to guard: admin</p>
+            <h3 class="font-serif font-medium text-lg text-[#1d1d1f]">Create New Staff Role</h3>
+            <p class="text-xs text-[#6e6e73]">Define a role with customized permissions for your team</p>
           </div>
           <button @click="showCreateRoleModal = false" class="text-stone-400 hover:text-stone-700 cursor-pointer text-xl leading-none">&times;</button>
         </div>
@@ -528,7 +487,7 @@ const getInitials = (name) => {
               type="text" 
               placeholder="e.g. Catalog Specialist"
               required
-              class="w-full px-3.5 py-2 border border-[#e0d9cc] rounded-xl text-xs focus:ring-2 focus:ring-[#1a1a1a] focus:outline-none"
+              class="w-full px-3.5 py-2 border border-[#e0d9cc] rounded-xl text-xs focus:ring-1 focus:ring-[#1a1a1a] focus:border-[#1a1a1a] focus:outline-none"
             />
             <p v-if="newRoleForm.errors.name" class="text-xs text-red-600 mt-1">{{ newRoleForm.errors.name }}</p>
           </div>

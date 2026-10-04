@@ -33,13 +33,6 @@ if (typeof window !== 'undefined') {
     activeVisits.delete(visit);
     isNavigating.value = activeVisits.size > 0;
   });
-
-  router.on('cancel', (event) => {
-    const visit = event.detail.visit;
-
-    activeVisits.delete(visit);
-    isNavigating.value = activeVisits.size > 0;
-  });
 }
 
 export function usePageLoading() {

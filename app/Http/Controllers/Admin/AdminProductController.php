@@ -5,7 +5,9 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\StoreProductRequest;
 use App\Http\Requests\Admin\UpdateProductRequest;
+use App\Models\Category;
 use App\Models\Product;
+use App\Models\Supplier;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -30,6 +32,21 @@ class AdminProductController extends Controller
     ];
 
     /**
+     * Get available categories from database or fallback defaults.
+     *
+     * @return array<string, string>
+     */
+    protected function getCategoriesList(): array
+    {
+        $dbCategories = Category::where('is_active', true)->orderBy('sort_order')->pluck('name', 'slug')->toArray();
+        if (! empty($dbCategories)) {
+            return $dbCategories;
+        }
+
+        return $this->defaultCategories;
+    }
+
+    /**
      * Display a listing of products with search and filtering.
      */
     public function index(Request $request): Response
@@ -37,7 +54,7 @@ class AdminProductController extends Controller
         $search = trim((string) $request->input('search', ''));
         $category = trim((string) $request->input('category', ''));
 
-        $query = Product::query()->latest();
+        $query = Product::query()->with('supplier:id,name,code')->latest();
 
         if ($search !== '') {
             $query->where(function ($q) use ($search) {
@@ -61,11 +78,17 @@ class AdminProductController extends Controller
                 'category_title' => $product->category_title,
                 'price' => $product->price,
                 'original_price' => $product->original_price,
+                'stock' => $product->stock,
                 'stock_badge' => $product->stock_badge,
                 'size_main' => $product->size_main,
                 'image' => $product->image,
                 'images' => $product->images_list,
                 'images_count' => count($product->images_list),
+                'supplier' => $product->supplier ? [
+                    'id' => $product->supplier->id,
+                    'name' => $product->supplier->name,
+                    'code' => $product->supplier->code,
+                ] : null,
                 'created_at' => $product->created_at?->format('M d, Y'),
             ];
         });
@@ -84,7 +107,7 @@ class AdminProductController extends Controller
                 'category' => $category,
             ],
             'categories' => $categories,
-            'defaultCategories' => $this->defaultCategories,
+            'defaultCategories' => $this->getCategoriesList(),
             'stats' => $stats,
         ]);
     }
@@ -95,7 +118,8 @@ class AdminProductController extends Controller
     public function create(): Response
     {
         return Inertia::render('Admin/Products/Create', [
-            'defaultCategories' => $this->defaultCategories,
+            'defaultCategories' => $this->getCategoriesList(),
+            'suppliers' => Supplier::where('status', 'active')->orderBy('name')->get(['id', 'name', 'code']),
         ]);
     }
 
@@ -119,9 +143,9 @@ class AdminProductController extends Controller
         }
         $validated['slug'] = $slug;
 
-        // Auto-assign category title if missing
-        if (empty($validated['category_title']) && isset($this->defaultCategories[$validated['category']])) {
-            $validated['category_title'] = $this->defaultCategories[$validated['category']];
+        $categoriesList = $this->getCategoriesList();
+        if (empty($validated['category_title']) && isset($categoriesList[$validated['category']])) {
+            $validated['category_title'] = $categoriesList[$validated['category']];
         }
 
         // Process Multiple Images
@@ -149,6 +173,17 @@ class AdminProductController extends Controller
 
         unset($validated['image_files'], $validated['image_urls']);
 
+        if (isset($validated['stock'])) {
+            $stockVal = (int) $validated['stock'];
+            if ($stockVal <= 0) {
+                $validated['stock_badge'] = 'Out of stock';
+            } elseif ($stockVal <= 25) {
+                $validated['stock_badge'] = "In stock · {$stockVal} left";
+            } else {
+                $validated['stock_badge'] = 'In stock';
+            }
+        }
+
         Product::create($validated);
 
         return redirect()->route('admin.products.index')
@@ -163,6 +198,7 @@ class AdminProductController extends Controller
         return Inertia::render('Admin/Products/Edit', [
             'product' => [
                 'id' => $product->id,
+                'supplier_id' => $product->supplier_id,
                 'name' => $product->name,
                 'slug' => $product->slug,
                 'subtitle_tag' => $product->subtitle_tag,
@@ -171,6 +207,7 @@ class AdminProductController extends Controller
                 'price' => (float) $product->price,
                 'original_price' => $product->original_price ? (float) $product->original_price : null,
                 'unit_price' => $product->unit_price,
+                'stock' => (int) ($product->stock ?? 50),
                 'stock_badge' => $product->stock_badge,
                 'photo_label' => $product->photo_label,
                 'image' => $product->image,
@@ -182,7 +219,11 @@ class AdminProductController extends Controller
                 'buy_again' => (bool) $product->buy_again,
                 'has_subscription' => (bool) $product->has_subscription,
             ],
-            'defaultCategories' => $this->defaultCategories,
+            'defaultCategories' => $this->getCategoriesList(),
+            'suppliers' => Supplier::where('status', 'active')
+                ->when($product->supplier_id, fn ($q) => $q->orWhere('id', $product->supplier_id))
+                ->orderBy('name')
+                ->get(['id', 'name', 'code']),
         ]);
     }
 
@@ -199,8 +240,9 @@ class AdminProductController extends Controller
             $validated['slug'] = Str::slug($validated['slug']);
         }
 
-        if (empty($validated['category_title']) && isset($this->defaultCategories[$validated['category']])) {
-            $validated['category_title'] = $this->defaultCategories[$validated['category']];
+        $categoriesList = $this->getCategoriesList();
+        if (empty($validated['category_title']) && isset($categoriesList[$validated['category']])) {
+            $validated['category_title'] = $categoriesList[$validated['category']];
         }
 
         // Existing images kept by admin
@@ -233,6 +275,17 @@ class AdminProductController extends Controller
         }
 
         unset($validated['image_files'], $validated['existing_images'], $validated['image_urls']);
+
+        if (isset($validated['stock'])) {
+            $stockVal = (int) $validated['stock'];
+            if ($stockVal <= 0) {
+                $validated['stock_badge'] = 'Out of stock';
+            } elseif ($stockVal <= 25) {
+                $validated['stock_badge'] = "In stock · {$stockVal} left";
+            } else {
+                $validated['stock_badge'] = 'In stock';
+            }
+        }
 
         $product->update($validated);
 

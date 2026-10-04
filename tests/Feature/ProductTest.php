@@ -24,23 +24,52 @@ class ProductTest extends TestCase
         $response->assertStatus(200);
         $response->assertInertia(fn (Assert $page) => $page
             ->component('Home')
-            ->has('products', 14)
+            ->has('products', 10)
             ->has('sliders')
             ->has('recipeKits')
+            ->where('totalProductCount', 14)
             ->where('products.0.slug', 'atta')
         );
     }
 
-    public function test_search_route_loads_home_with_focus_search(): void
+    public function test_search_route_renders_search_catalogue_with_products(): void
     {
         $this->seed(ProductSeeder::class);
+        $this->seed(RecipeKitSeeder::class);
 
         $response = $this->get('/search');
 
         $response->assertStatus(200);
         $response->assertInertia(fn (Assert $page) => $page
-            ->component('Home')
-            ->where('focusSearch', true)
+            ->component('Search')
+            ->has('products.data', 10)
+            ->where('products.total', 14)
+            ->where('products.current_page', 1)
+            ->has('recipeKits')
+            ->has('categories')
+        );
+    }
+
+    public function test_search_route_supports_query_filtering_and_pagination_url(): void
+    {
+        $this->seed(ProductSeeder::class);
+
+        $response = $this->get('/search?q=paneer');
+
+        $response->assertStatus(200);
+        $response->assertInertia(fn (Assert $page) => $page
+            ->component('Search')
+            ->has('products.data', 1)
+            ->where('products.data.0.slug', 'paneer')
+            ->where('filters.q', 'paneer')
+        );
+
+        $page2Response = $this->get('/search?page=2');
+        $page2Response->assertStatus(200);
+        $page2Response->assertInertia(fn (Assert $page) => $page
+            ->component('Search')
+            ->where('products.current_page', 2)
+            ->has('products.data', 4)
         );
     }
 
@@ -102,6 +131,35 @@ class ProductTest extends TestCase
         $this->get('/reorder')->assertStatus(200)->assertInertia(fn (Assert $page) => $page
             ->component('Account')
             ->where('activeSection', 'reorder')
+        );
+    }
+
+    public function test_category_route_filters_products_by_category(): void
+    {
+        $this->seed(ProductSeeder::class);
+
+        $response = $this->get('/categories/dairy');
+
+        $response->assertStatus(200);
+        $response->assertInertia(fn (Assert $page) => $page
+            ->component('Search')
+            ->where('filters.category', 'dairy')
+            ->has('products.data')
+        );
+    }
+
+    public function test_recipe_kits_index_route_loads_recipe_kits_catalogue(): void
+    {
+        $this->seed(ProductSeeder::class);
+        $this->seed(RecipeKitSeeder::class);
+
+        $response = $this->get('/recipe-kits');
+
+        $response->assertStatus(200);
+        $response->assertInertia(fn (Assert $page) => $page
+            ->component('Search')
+            ->where('filters.tab', 'kits')
+            ->has('recipeKits.data')
         );
     }
 }

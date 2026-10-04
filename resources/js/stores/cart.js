@@ -137,12 +137,18 @@ export const useStore = defineStore('masalaStore', () => {
     }
   }, { deep: true });
 
-  // Set / merge products from Laravel database
+  // Set / merge products from Laravel database in O(N+M)
   function setProducts(dbProducts) {
     if (!Array.isArray(dbProducts) || dbProducts.length === 0) return;
 
+    const idMap = new Map();
+    const slugMap = new Map();
+    products.value.forEach((p, idx) => {
+      if (p.id != null) idMap.set(p.id, idx);
+      if (p.slug) slugMap.set(p.slug, idx);
+    });
+
     dbProducts.forEach(item => {
-      const idx = products.value.findIndex(p => p.id === item.id || p.slug === item.slug);
       const formatted = {
         id: item.id,
         slug: item.slug,
@@ -171,10 +177,17 @@ export const useStore = defineStore('masalaStore', () => {
         recipeIngredients: item.recipe_ingredients || item.recipeIngredients || [],
       };
 
-      if (idx !== -1) {
-        products.value[idx] = { ...products.value[idx], ...formatted };
+      const existingIdx = (item.id != null && idMap.has(item.id))
+        ? idMap.get(item.id)
+        : (item.slug && slugMap.has(item.slug) ? slugMap.get(item.slug) : -1);
+
+      if (existingIdx !== -1 && existingIdx !== undefined) {
+        products.value[existingIdx] = { ...products.value[existingIdx], ...formatted };
       } else {
+        const newIdx = products.value.length;
         products.value.push(formatted);
+        if (formatted.id != null) idMap.set(formatted.id, newIdx);
+        if (formatted.slug) slugMap.set(formatted.slug, newIdx);
       }
     });
   }
@@ -248,20 +261,12 @@ export const useStore = defineStore('masalaStore', () => {
     return Number(sum.toFixed(2));
   });
 
-  const subscribeSavings = computed(() => {
-    const savings = cart.value.reduce((acc, item) => {
-      if (item.isSubscribed) {
-        const prod = products.value.find(p => p.id === item.id || p.slug === item.slug);
-        const price = prod ? prod.price : Number(item.price || 0);
-        return acc + Number((price * 0.05 * item.quantity).toFixed(2));
-      }
-      return acc;
-    }, 0);
-    return Number(savings.toFixed(2));
+  const subtotal = computed(() => {
+    return Number(cartItems.value.reduce((sum, item) => sum + item.total, 0).toFixed(2));
   });
 
-  const subtotal = computed(() => {
-    return Number((rawSubtotal.value - subscribeSavings.value).toFixed(2));
+  const subscribeSavings = computed(() => {
+    return Number((rawSubtotal.value - subtotal.value).toFixed(2));
   });
 
   const total = computed(() => {

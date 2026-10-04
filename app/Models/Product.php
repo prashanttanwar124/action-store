@@ -5,6 +5,7 @@ namespace App\Models;
 use Database\Factories\ProductFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Product extends Model
 {
@@ -25,6 +26,7 @@ class Product extends Model
         'price',
         'original_price',
         'unit_price',
+        'stock',
         'stock_badge',
         'photo_label',
         'image',
@@ -33,6 +35,7 @@ class Product extends Model
         'size_sub',
         'freshness_line',
         'description',
+        'supplier_id',
         'buy_again',
         'has_subscription',
         'frequently_bought_together',
@@ -57,11 +60,28 @@ class Product extends Model
         return [
             'price' => 'float',
             'original_price' => 'float',
+            'stock' => 'integer',
             'images' => 'array',
             'buy_again' => 'boolean',
             'has_subscription' => 'boolean',
             'frequently_bought_together' => 'array',
         ];
+    }
+
+    /**
+     * @return BelongsTo<Category, $this>
+     */
+    public function categoryRelation(): BelongsTo
+    {
+        return $this->belongsTo(Category::class, 'category', 'slug');
+    }
+
+    /**
+     * @return BelongsTo<Supplier, $this>
+     */
+    public function supplier(): BelongsTo
+    {
+        return $this->belongsTo(Supplier::class);
     }
 
     /**
@@ -90,5 +110,53 @@ class Product extends Model
         }
 
         return ['/images/products/atta.jpg'];
+    }
+
+    /**
+     * Compute dynamic stock badge automatically based on stock quantity.
+     */
+    public function getStockBadgeAttribute(?string $value): string
+    {
+        $stock = (int) ($this->stock ?? 50);
+
+        if ($stock <= 0) {
+            return 'Out of stock';
+        }
+
+        if ($stock <= 25) {
+            return "In stock · {$stock} left";
+        }
+
+        if (! empty($value) && ! preg_match('/\b(in stock|out of stock|\d+\s*left)\b/i', $value)) {
+            return $value;
+        }
+
+        return 'In stock';
+    }
+
+    /**
+     * Decrement inventory stock count and update stock badge accordingly.
+     */
+    public function decrementStock(int $quantity = 1): void
+    {
+        $newStock = max(0, ((int) $this->stock) - $quantity);
+        $this->stock = $newStock;
+        $this->syncStockBadge();
+        $this->save();
+    }
+
+    /**
+     * Keep the stock badge string in sync when stock is edited.
+     */
+    public function syncStockBadge(): void
+    {
+        $stock = (int) ($this->stock ?? 0);
+        if ($stock <= 0) {
+            $this->stock_badge = 'Out of stock';
+        } elseif ($stock <= 25) {
+            $this->stock_badge = "In stock · {$stock} left";
+        } else {
+            $this->stock_badge = 'In stock';
+        }
     }
 }

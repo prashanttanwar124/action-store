@@ -264,7 +264,7 @@ const submit = () => {
                 type="text"
                 v-model="form.name"
                 class="w-full h-11 bg-[#fbfaf8] rounded-2xl text-sm font-serif"
-                :class="{ 'border-rose-400 focus-visible:ring-rose-500': form.errors.name }"
+                :class="{ 'border-rose-400 focus-visible:border-rose-500 focus-visible:ring-rose-500/15 focus:border-rose-500 focus:ring-rose-500/15': form.errors.name }"
                 required
               />
               <div v-if="form.errors.name" class="text-rose-600 text-[11px] mt-1">{{ form.errors.name }}</div>
@@ -279,7 +279,7 @@ const submit = () => {
                 type="text"
                 v-model="form.slug"
                 class="w-full h-10 bg-[#fbfaf8] rounded-2xl text-xs font-mono"
-                :class="{ 'border-rose-400 focus-visible:ring-rose-500': form.errors.slug }"
+                :class="{ 'border-rose-400 focus-visible:border-rose-500 focus-visible:ring-rose-500/15 focus:border-rose-500 focus:ring-rose-500/15': form.errors.slug }"
               />
               <div v-if="form.errors.slug" class="text-rose-600 text-[11px] mt-1">{{ form.errors.slug }}</div>
             </div>
@@ -293,7 +293,7 @@ const submit = () => {
                 type="text"
                 v-model="form.subtitle_tag"
                 class="w-full h-10 bg-[#fbfaf8] rounded-2xl text-xs"
-                :class="{ 'border-rose-400 focus-visible:ring-rose-500': form.errors.subtitle_tag }"
+                :class="{ 'border-rose-400 focus-visible:border-rose-500 focus-visible:ring-rose-500/15 focus:border-rose-500 focus:ring-rose-500/15': form.errors.subtitle_tag }"
               />
               <div v-if="form.errors.subtitle_tag" class="text-rose-600 text-[11px] mt-1">{{ form.errors.subtitle_tag }}</div>
             </div>
@@ -309,7 +309,7 @@ const submit = () => {
                   v-model="form.cooking_time"
                   placeholder="e.g. 25 mins"
                   class="w-full h-10 pl-9 bg-[#fbfaf8] rounded-2xl text-xs"
-                  :class="{ 'border-rose-400 focus-visible:ring-rose-500': form.errors.cooking_time }"
+                  :class="{ 'border-rose-400 focus-visible:border-rose-500 focus-visible:ring-rose-500/15 focus:border-rose-500 focus:ring-rose-500/15': form.errors.cooking_time }"
                 />
                 <Clock class="w-4 h-4 text-stone-400 absolute left-3 top-3 pointer-events-none" />
               </div>
@@ -326,7 +326,7 @@ const submit = () => {
                   v-model="form.servings"
                   placeholder="e.g. Serves 4"
                   class="w-full h-10 pl-9 bg-[#fbfaf8] rounded-2xl text-xs"
-                  :class="{ 'border-rose-400 focus-visible:ring-rose-500': form.errors.servings }"
+                  :class="{ 'border-rose-400 focus-visible:border-rose-500 focus-visible:ring-rose-500/15 focus:border-rose-500 focus:ring-rose-500/15': form.errors.servings }"
                 />
                 <Users class="w-4 h-4 text-stone-400 absolute left-3 top-3 pointer-events-none" />
               </div>
@@ -553,7 +553,7 @@ const submit = () => {
                 step="0.01"
                 v-model="form.price"
                 class="w-full h-11 bg-[#fbfaf8] rounded-2xl text-base font-serif font-medium"
-                :class="{ 'border-rose-400 focus-visible:ring-rose-500': form.errors.price }"
+                :class="{ 'border-rose-400 focus-visible:border-rose-500 focus-visible:ring-rose-500/15 focus:border-rose-500 focus:ring-rose-500/15': form.errors.price }"
                 required
               />
               <div v-if="form.errors.price" class="text-rose-600 text-[11px] mt-1">{{ form.errors.price }}</div>
@@ -569,7 +569,7 @@ const submit = () => {
                 step="0.01"
                 v-model="form.original_price"
                 class="w-full h-11 bg-[#fbfaf8] rounded-2xl text-base font-serif font-medium"
-                :class="{ 'border-rose-400 focus-visible:ring-rose-500': form.errors.original_price }"
+                :class="{ 'border-rose-400 focus-visible:border-rose-500 focus-visible:ring-rose-500/15 focus:border-rose-500 focus:ring-rose-500/15': form.errors.original_price }"
               />
               <div v-if="form.errors.original_price" class="text-rose-600 text-[11px] mt-1">{{ form.errors.original_price }}</div>
             </div>

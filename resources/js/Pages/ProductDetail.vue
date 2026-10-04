@@ -192,7 +192,10 @@ function handleAddAllFbt() {
           <span>Home</span>
         </Link>
         <span>/</span>
-        <span class="text-stone-600 font-semibold">{{ product.categoryTitle }}</span>
+        <Link v-if="product.category" :href="'/categories/' + product.category" class="text-stone-600 font-semibold hover:text-stone-900">
+          {{ product.categoryTitle }}
+        </Link>
+        <span v-else class="text-stone-600 font-semibold">{{ product.categoryTitle }}</span>
         <span>/</span>
         <span class="text-stone-900 font-bold truncate max-w-xs">{{ product.name }}</span>
       </nav>

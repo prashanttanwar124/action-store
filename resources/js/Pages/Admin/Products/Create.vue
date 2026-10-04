@@ -30,22 +30,29 @@ const props = defineProps({
     type: Object,
     default: () => ({}),
   },
+  suppliers: {
+    type: Array,
+    default: () => [],
+  },
 });
 
 const isSlugManuallyEdited = ref(false);
 const previewImages = ref([]);
 const manualUrlInput = ref('');
 const fileInputRef = ref(null);
+const selectedSupplierId = ref('none');
 
 const form = useForm({
   name: '',
   slug: '',
   category: 'grocery',
   category_title: props.defaultCategories['grocery'] || 'Pantry & Groceries',
+  supplier_id: null,
   subtitle_tag: '',
   price: '',
   original_price: '',
   unit_price: '',
+  stock: 50,
   stock_badge: 'In Stock',
   photo_label: 'Organic',
   size_main: '',
@@ -56,6 +63,17 @@ const form = useForm({
   has_subscription: false,
   image_files: [],
   image_urls: [],
+});
+
+// Auto-sync stock badge when stock quantity is updated
+watch(() => form.stock, (newStock) => {
+  if (newStock === '' || newStock === null || newStock === undefined) return;
+  const num = Number(newStock);
+  if (num <= 0) {
+    form.stock_badge = 'Out of stock';
+  } else if (/(\d+)\s*left/i.test(form.stock_badge)) {
+    form.stock_badge = form.stock_badge.replace(/\d+\s*left/i, `${num} left`);
+  }
 });
 
 // Auto-generate slug from name unless manually edited
@@ -75,6 +93,11 @@ watch(() => form.category, (newCat) => {
   if (props.defaultCategories[newCat]) {
     form.category_title = props.defaultCategories[newCat];
   }
+});
+
+// Sync supplier selection
+watch(selectedSupplierId, (val) => {
+  form.supplier_id = val && val !== 'none' ? Number(val) : null;
 });
 
 const handleFilesSelected = (e) => {
@@ -196,7 +219,7 @@ const submit = () => {
                 placeholder="e.g. Malai Paneer Block"
                 required
                 class="w-full bg-[#faf8f5] rounded-xl text-xs"
-                :class="{ 'border-rose-400 focus-visible:ring-rose-500': form.errors.name }"
+                :class="{ 'border-rose-400 focus-visible:border-rose-500 focus-visible:ring-rose-500/15 focus:border-rose-500 focus:ring-rose-500/15': form.errors.name }"
               />
               <p v-if="form.errors.name" class="text-xs text-red-600 mt-1">{{ form.errors.name }}</p>
             </div>
@@ -213,7 +236,7 @@ const submit = () => {
                 placeholder="e.g. malai-paneer"
                 required
                 class="w-full bg-[#faf8f5] rounded-xl text-xs font-mono"
-                :class="{ 'border-rose-400 focus-visible:ring-rose-500': form.errors.slug }"
+                :class="{ 'border-rose-400 focus-visible:border-rose-500 focus-visible:ring-rose-500/15 focus:border-rose-500 focus:ring-rose-500/15': form.errors.slug }"
               />
               <p class="text-[10px] text-[#86868b] mt-1 font-mono">
                 Storefront route: /products/{{ form.slug || 'slug' }}
@@ -268,6 +291,39 @@ const submit = () => {
                 class="w-full bg-[#faf8f5] rounded-xl text-xs"
               />
               <p v-if="form.errors.category_title" class="text-xs text-red-600 mt-1">{{ form.errors.category_title }}</p>
+            </div>
+
+            <!-- Supplier / Vendor -->
+            <div class="sm:col-span-2">
+              <div class="flex items-center justify-between mb-1">
+                <Label class="block">
+                  Supplier / Vendor <span class="text-[11px] text-[#86868b] font-normal">(Optional)</span>
+                </Label>
+                <Link 
+                  :href="route('admin.suppliers.index')" 
+                  target="_blank"
+                  class="text-[11px] text-[#7a5620] hover:underline inline-flex items-center gap-1 font-medium"
+                >
+                  Manage Suppliers
+                  <ArrowLeft class="w-3 h-3 rotate-135" />
+                </Link>
+              </div>
+              <Select v-model="selectedSupplierId">
+                <SelectTrigger class="w-full h-10 bg-[#faf8f5] rounded-xl text-xs">
+                  <SelectValue placeholder="Select supplier (Optional)..." />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">None (Direct / In-House Inventory)</SelectItem>
+                  <SelectItem 
+                    v-for="sup in suppliers" 
+                    :key="sup.id" 
+                    :value="String(sup.id)"
+                  >
+                    {{ sup.name }} ({{ sup.code }})
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+              <p v-if="form.errors.supplier_id" class="text-xs text-red-600 mt-1">{{ form.errors.supplier_id }}</p>
             </div>
           </div>
         </div>
@@ -403,7 +459,7 @@ const submit = () => {
                 placeholder="e.g. 5.99"
                 required
                 class="w-full bg-[#faf8f5] rounded-xl text-xs"
-                :class="{ 'border-rose-400 focus-visible:ring-rose-500': form.errors.price }"
+                :class="{ 'border-rose-400 focus-visible:border-rose-500 focus-visible:ring-rose-500/15 focus:border-rose-500 focus:ring-rose-500/15': form.errors.price }"
               />
               <p v-if="form.errors.price" class="text-xs text-red-600 mt-1">{{ form.errors.price }}</p>
             </div>
@@ -463,17 +519,32 @@ const submit = () => {
               />
             </div>
 
-            <!-- Stock Badge -->
-            <div>
-              <Label class="block mb-1">
-                Stock Status Badge
-              </Label>
+            <!-- Stock Quantity (Inventory Units) -->
+            <div class="sm:col-span-2">
+              <div class="flex items-center justify-between mb-1.5">
+                <Label>Stock Quantity (Units)</Label>
+                <!-- Automatic Live Badge Preview -->
+                <span 
+                  class="text-[11px] font-bold px-2.5 py-0.5 rounded-full border shadow-2xs"
+                  :class="form.stock <= 0 
+                    ? 'bg-red-50 text-red-700 border-red-200' 
+                    : (form.stock <= 25 
+                      ? 'bg-amber-50 text-amber-900 border-amber-200' 
+                      : 'bg-emerald-50 text-emerald-800 border-emerald-200')"
+                >
+                  Live Store Badge: {{ form.stock <= 0 ? 'Out of stock' : (form.stock <= 25 ? `In stock · ${form.stock} left` : 'In stock') }}
+                </span>
+              </div>
               <Input 
-                v-model="form.stock_badge"
-                type="text"
-                placeholder="e.g. In Stock or Limited Stock"
-                class="w-full bg-[#faf8f5] rounded-xl text-xs"
+                v-model.number="form.stock"
+                type="number"
+                min="0"
+                placeholder="e.g. 50"
+                class="w-full bg-[#faf8f5] rounded-xl text-xs font-semibold"
               />
+              <p class="text-[11px] text-stone-500 mt-1">
+                Storefront stock badge is 100% automated and dynamically updates whenever orders are placed.
+              </p>
             </div>
           </div>
         </div>

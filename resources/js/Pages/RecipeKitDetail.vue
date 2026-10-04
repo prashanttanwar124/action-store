@@ -122,7 +122,7 @@ function handleAddKitToCart() {
           <span>Home</span>
         </Link>
         <span>/</span>
-        <Link href="/#recipe-kits" class="text-stone-600 font-semibold hover:text-stone-900">
+        <Link href="/recipe-kits" class="text-stone-600 font-semibold hover:text-stone-900">
           Recipe Kits
         </Link>
         <span>/</span>

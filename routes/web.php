@@ -3,6 +3,7 @@
 use App\Http\Controllers\AccountController;
 use App\Http\Controllers\CartController;
 use App\Http\Controllers\HomeController;
+use App\Http\Controllers\OrderController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\RecipeKitController;
@@ -11,8 +12,10 @@ use Illuminate\Support\Facades\Route;
 // 1a: Home / Storefront
 Route::get('/', [HomeController::class, 'index'])->name('home');
 Route::get('/search', [HomeController::class, 'search'])->name('search');
+Route::get('/categories/{category}', [HomeController::class, 'category'])->name('categories.show');
 
-// Recipe Kit Detail Page (Group Buy Bundle)
+// Recipe Kits
+Route::get('/recipe-kits', [RecipeKitController::class, 'index'])->name('recipe-kits.index');
 Route::get('/recipe-kits/{slug}', [RecipeKitController::class, 'show'])->name('recipe-kits.show');
 
 // 1b & 1c: Product detail pages (e.g. /products/paneer, /products/rice, /products/atta)
@@ -21,6 +24,8 @@ Route::get('/products/{slug}', [ProductController::class, 'show'])->name('produc
 // 1d: Smart Cart & Checkout
 Route::get('/cart', [CartController::class, 'index'])->name('cart');
 Route::get('/checkout', [CartController::class, 'checkout'])->name('checkout');
+Route::post('/checkout', [OrderController::class, 'store'])->name('checkout.store');
+Route::get('/orders/{order_number}', [OrderController::class, 'show'])->name('orders.track');
 
 // 1f: Customer Dashboard & Account
 Route::get('/account', [AccountController::class, 'index'])->name('account');

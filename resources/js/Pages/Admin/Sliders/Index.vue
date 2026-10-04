@@ -34,6 +34,7 @@ const handleDelete = () => {
   if (!deletingSlider.value) return;
   isDeleting.value = true;
   router.delete(route('admin.sliders.destroy', deletingSlider.value.id), {
+    preserveScroll: true,
     onFinish: () => {
       isDeleting.value = false;
       deletingSlider.value = null;

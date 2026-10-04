@@ -7,6 +7,7 @@ use App\Models\Admin;
 use App\Models\Product;
 use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use Inertia\Response;
 use Spatie\Permission\Models\Permission;
@@ -39,12 +40,18 @@ class AdminDashboardController extends Controller
             ];
         });
 
-        $roles = Role::where('guard_name', 'admin')->with('permissions')->get()->map(function (Role $role) {
+        $roleUserCounts = DB::table('model_has_roles')
+            ->where('model_type', Admin::class)
+            ->groupBy('role_id')
+            ->selectRaw('role_id, count(*) as count')
+            ->pluck('count', 'role_id');
+
+        $roles = Role::where('guard_name', 'admin')->with('permissions')->get()->map(function (Role $role) use ($roleUserCounts) {
             return [
                 'id' => $role->id,
                 'name' => $role->name,
                 'permissions' => $role->permissions->pluck('name'),
-                'users_count' => Admin::role($role->name, 'admin')->count(),
+                'users_count' => (int) ($roleUserCounts->get($role->id) ?? 0),
             ];
         });
 

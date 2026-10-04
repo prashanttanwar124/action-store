@@ -26,6 +26,7 @@ class ProductFactory extends Factory
             'category_title' => 'Pantry & Groceries',
             'price' => fake()->randomFloat(2, 2, 50),
             'original_price' => fake()->optional()->randomFloat(2, 5, 60),
+            'stock' => 50,
             'stock_badge' => 'In Stock',
             'size_main' => fake()->randomElement(['500 g', '1 kg', '10 lb', '200 g']),
             'image' => '/images/products/atta.jpg',

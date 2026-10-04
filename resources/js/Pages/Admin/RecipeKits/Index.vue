@@ -59,6 +59,7 @@ const handleDelete = () => {
   if (!deletingKit.value) return;
   isDeleting.value = true;
   router.delete(route('admin.recipe-kits.destroy', deletingKit.value.id), {
+    preserveScroll: true,
     onFinish: () => {
       isDeleting.value = false;
       deletingKit.value = null;

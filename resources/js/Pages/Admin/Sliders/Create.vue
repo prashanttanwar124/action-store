@@ -190,7 +190,7 @@ const submit = () => {
               rows="3"
               placeholder="e.g. Restaurant curry,&#10;cooked at&#10;home."
               class="font-serif text-sm"
-              :class="{ 'border-rose-400 focus-visible:ring-rose-400': form.errors.title }"
+              :class="{ 'border-rose-400 focus-visible:border-rose-500 focus-visible:ring-rose-500/15 focus:border-rose-500 focus:ring-rose-500/15': form.errors.title }"
               required
             />
             <div class="flex items-center justify-between mt-1 text-[11px] text-[#86868b]">
@@ -208,7 +208,7 @@ const submit = () => {
               type="text"
               v-model="form.tag"
               placeholder="e.g. CHEF-CRAFTED · DINNER IN 20 MINS"
-              :class="{ 'border-rose-400 focus-visible:ring-rose-400': form.errors.tag }"
+              :class="{ 'border-rose-400 focus-visible:border-rose-500 focus-visible:ring-rose-500/15 focus:border-rose-500 focus:ring-rose-500/15': form.errors.tag }"
             />
             <div v-if="form.errors.tag" class="text-rose-600 text-[11px] mt-1">{{ form.errors.tag }}</div>
           </div>
@@ -222,7 +222,7 @@ const submit = () => {
               type="text"
               v-model="form.cta_text"
               placeholder="e.g. Order kit for $14.99"
-              :class="{ 'border-rose-400 focus-visible:ring-rose-400': form.errors.cta_text }"
+              :class="{ 'border-rose-400 focus-visible:border-rose-500 focus-visible:ring-rose-500/15 focus:border-rose-500 focus:ring-rose-500/15': form.errors.cta_text }"
               required
             />
             <div v-if="form.errors.cta_text" class="text-rose-600 text-[11px] mt-1">{{ form.errors.cta_text }}</div>
@@ -239,7 +239,7 @@ const submit = () => {
                 v-model="form.link_url"
                 placeholder="e.g. /recipe-kits/paneer-curry or /products/atta"
                 class="pl-9 font-mono text-xs"
-                :class="{ 'border-rose-400 focus-visible:ring-rose-400': form.errors.link_url }"
+                :class="{ 'border-rose-400 focus-visible:border-rose-500 focus-visible:ring-rose-500/15 focus:border-rose-500 focus:ring-rose-500/15': form.errors.link_url }"
                 required
               />
               <LinkIcon class="w-4 h-4 text-stone-400 absolute left-3 top-3" />
@@ -279,7 +279,7 @@ const submit = () => {
               type="text"
               v-model="form.photo_label"
               placeholder="e.g. paneer kit, mithai box"
-              :class="{ 'border-rose-400 focus-visible:ring-rose-400': form.errors.photo_label }"
+              :class="{ 'border-rose-400 focus-visible:border-rose-500 focus-visible:ring-rose-500/15 focus:border-rose-500 focus:ring-rose-500/15': form.errors.photo_label }"
             />
             <div v-if="form.errors.photo_label" class="text-rose-600 text-[11px] mt-1">{{ form.errors.photo_label }}</div>
           </div>
@@ -293,7 +293,7 @@ const submit = () => {
               type="number"
               v-model.number="form.sort_order"
               min="0"
-              :class="{ 'border-rose-400 focus-visible:ring-rose-400': form.errors.sort_order }"
+              :class="{ 'border-rose-400 focus-visible:border-rose-500 focus-visible:ring-rose-500/15 focus:border-rose-500 focus:ring-rose-500/15': form.errors.sort_order }"
             />
             <div v-if="form.errors.sort_order" class="text-rose-600 text-[11px] mt-1">{{ form.errors.sort_order }}</div>
           </div>

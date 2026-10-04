@@ -1,6 +1,6 @@
 <script setup>
 import { ref, computed } from 'vue';
-import { Head, Link, useForm, usePage } from '@inertiajs/vue3';
+import { Head, Link, useForm, usePage, router } from '@inertiajs/vue3';
 import { usePageLoading } from '@/composables/usePageLoading';
 import PageSkeleton from '@/Components/PageSkeleton.vue';
 import { 
@@ -13,6 +13,7 @@ import {
   Users,
   UserCheck,
   Layers,
+  FolderTree,
   Menu,
   X,
   Search,
@@ -22,7 +23,11 @@ import {
   Sparkles,
   BarChart3,
   Sliders,
-  UtensilsCrossed
+  UtensilsCrossed,
+  Truck,
+  Flame,
+  Check,
+  Clock
 } from 'lucide-vue-next';
 
 defineProps({
@@ -34,9 +39,21 @@ defineProps({
 
 const page = usePage();
 const admin = computed(() => page.props.auth?.admin);
+const storeInfo = computed(() => page.props.storeInfo || {});
 const { isPageLoading, isNavigating } = usePageLoading();
 const logoutForm = useForm({});
 const isSidebarOpen = ref(false);
+const isRushMenuOpen = ref(false);
+
+const setRushMode = (extraMinutes, reason = null) => {
+  isRushMenuOpen.value = false;
+  router.post(route('admin.store-info.busy-mode'), {
+    busy_mode_extra_minutes: extraMinutes,
+    busy_mode_reason: reason,
+  }, {
+    preserveScroll: true,
+  });
+};
 
 const adminInitials = computed(() => {
   if (!admin.value?.name) return 'AD';
@@ -75,72 +92,86 @@ const navigationItems = [
     group: 'Store Management',
     items: [
       {
-        name: 'Catalog & Products',
-        href: route('admin.products.index'),
-        icon: Package,
-        isCurrent: () => route().current('admin.products.*'),
-        badge: 'CRUD',
-      },
-      {
-        name: 'Recipe Kits & Group Buy',
-        href: route('admin.recipe-kits.index'),
-        icon: UtensilsCrossed,
-        isCurrent: () => route().current('admin.recipe-kits.*'),
-        badge: 'Group Buy',
-      },
-      {
-        name: 'Hero Sliders',
-        href: route('admin.sliders.index'),
-        icon: Sliders,
-        isCurrent: () => route().current('admin.sliders.*'),
-        badge: 'Hero',
-      },
-      {
-        name: 'Store Info & Pickup',
-        href: route('admin.store-info.edit'),
-        icon: Store,
-        isCurrent: () => route().current('admin.store-info.*'),
-        badge: 'Settings',
-      },
-      {
-        name: 'Orders & Sales',
-        href: route('admin.dashboard') + '#orders-section',
+        name: 'Live Orders',
+        href: route('admin.orders.index'),
         icon: ShoppingBag,
-        isCurrent: () => false,
+        isCurrent: () => route().current('admin.orders.*'),
         badge: 'Live',
       },
       {
-        name: 'Customer Users',
-        href: route('admin.dashboard') + '#customers-section',
+        name: 'Products & Inventory',
+        href: route('admin.products.index'),
+        icon: Package,
+        isCurrent: () => route().current('admin.products.*'),
+        badge: null,
+      },
+      {
+        name: 'Categories',
+        href: route('admin.categories.index'),
+        icon: FolderTree,
+        isCurrent: () => route().current('admin.categories.*'),
+        badge: null,
+      },
+      {
+        name: 'Suppliers & Vendors',
+        href: route('admin.suppliers.index'),
+        icon: Truck,
+        isCurrent: () => route().current('admin.suppliers.*'),
+        badge: null,
+      },
+      {
+        name: 'Recipe Kits',
+        href: route('admin.recipe-kits.index'),
+        icon: UtensilsCrossed,
+        isCurrent: () => route().current('admin.recipe-kits.*'),
+        badge: null,
+      },
+      {
+        name: 'Promotional Banners',
+        href: route('admin.sliders.index'),
+        icon: Sliders,
+        isCurrent: () => route().current('admin.sliders.*'),
+        badge: null,
+      },
+      {
+        name: 'Store Information',
+        href: route('admin.store-info.edit'),
+        icon: Store,
+        isCurrent: () => route().current('admin.store-info.*'),
+        badge: null,
+      },
+      {
+        name: 'Pickup & Slot Settings',
+        href: route('admin.pickup-settings.edit'),
+        icon: Clock,
+        isCurrent: () => route().current('admin.pickup-settings.*'),
+        badge: 'Slots',
+      },
+      {
+        name: 'Customer Accounts',
+        href: route('admin.customers.index'),
         icon: Users,
-        isCurrent: () => false,
+        isCurrent: () => route().current('admin.customers.*'),
         badge: null,
       },
     ],
   },
   {
-    group: 'Security & Access',
+    group: 'Team & Security',
     items: [
       {
-        name: 'Spatie RBAC Roles',
+        name: 'Staff Roles & Permissions',
         href: route('admin.dashboard') + '#roles-section',
         icon: ShieldCheck,
-        isCurrent: () => false,
-        badge: 'RBAC',
-      },
-      {
-        name: 'Admin Staff',
-        href: route('admin.dashboard') + '#admins-section',
-        icon: UserCheck,
         isCurrent: () => false,
         badge: null,
       },
       {
-        name: 'Guard Architecture',
-        href: route('admin.dashboard') + '#architecture-section',
-        icon: Layers,
+        name: 'Admin Team Members',
+        href: route('admin.dashboard') + '#admins-section',
+        icon: UserCheck,
         isCurrent: () => false,
-        badge: 'Isolated',
+        badge: null,
       },
     ],
   },
@@ -154,11 +185,20 @@ const navigationItems = [
     <!-- ========================================== -->
     <!-- MOBILE SIDEBAR DRAWER OVERLAY              -->
     <!-- ========================================== -->
-    <div 
-      v-if="isSidebarOpen" 
-      class="fixed inset-0 z-50 md:hidden bg-black/60 backdrop-blur-xs transition-opacity duration-300"
-      @click="isSidebarOpen = false"
-    ></div>
+    <Transition
+      enter-active-class="transition-opacity duration-300 ease-out"
+      enter-from-class="opacity-0"
+      enter-to-class="opacity-100"
+      leave-active-class="transition-opacity duration-200 ease-in"
+      leave-from-class="opacity-100"
+      leave-to-class="opacity-0"
+    >
+      <div 
+        v-if="isSidebarOpen" 
+        class="fixed inset-0 z-50 md:hidden bg-black/60 backdrop-blur-xs"
+        @click="isSidebarOpen = false"
+      ></div>
+    </Transition>
 
     <aside 
       class="fixed inset-y-0 left-0 z-50 w-72 bg-[#121214] text-stone-300 flex flex-col justify-between border-r border-[#242426] shadow-2xl transition-transform duration-300 ease-in-out md:hidden"
@@ -413,10 +453,80 @@ const navigationItems = [
             </h1>
           </div>
 
-          <!-- Store Status Pill (Desktop) -->
-          <div class="hidden lg:flex items-center gap-1.5 bg-emerald-50 text-emerald-800 border border-emerald-200/80 px-2.5 py-0.5 rounded-full text-[11px] font-medium ml-2">
-            <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-            <span>Storefront Online</span>
+          <!-- Quick Rush / Busy Mode Bar (Desktop & Tablet) -->
+          <div class="relative hidden sm:block">
+            <button
+              type="button"
+              @click="isRushMenuOpen = !isRushMenuOpen"
+              class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all border cursor-pointer shadow-2xs select-none"
+              :class="storeInfo.is_busy 
+                ? 'bg-amber-500/15 text-amber-900 border-amber-300 hover:bg-amber-500/20' 
+                : 'bg-emerald-50 text-emerald-800 border-emerald-200 hover:bg-emerald-100/70'"
+              title="Click to adjust store rush mode & prep buffer"
+            >
+              <span class="w-2 h-2 rounded-full" :class="storeInfo.is_busy ? 'bg-amber-500 animate-ping' : 'bg-emerald-500'"></span>
+              <span class="font-bold">{{ storeInfo.effective_pickup_time || 'Ready in 15 mins' }}</span>
+              <span class="text-[10px] opacity-75 font-mono">({{ storeInfo.is_busy ? `+${storeInfo.busy_mode_extra_minutes}m Rush` : 'Normal' }})</span>
+            </button>
+
+            <!-- Popover dropdown -->
+            <div 
+              v-if="isRushMenuOpen" 
+              class="absolute left-0 mt-2 w-64 bg-white rounded-2xl shadow-xl border border-stone-200 p-3 z-50 text-stone-900 space-y-2 animate-in fade-in zoom-in-95 duration-100"
+            >
+              <div class="text-[11px] font-bold uppercase tracking-wider text-stone-500 px-1 flex items-center justify-between">
+                <span>Store Prep Speed</span>
+                <span class="text-[10px] text-stone-400">Live Customer ETA</span>
+              </div>
+
+              <div class="space-y-1">
+                <button
+                  type="button"
+                  @click="setRushMode(0)"
+                  class="w-full text-left px-2.5 py-2 rounded-xl text-xs flex items-center justify-between hover:bg-stone-100 transition-colors cursor-pointer"
+                  :class="(storeInfo.busy_mode_extra_minutes || 0) === 0 ? 'bg-emerald-50 font-bold text-emerald-900 border border-emerald-200' : 'text-stone-700'"
+                >
+                  <div class="flex items-center gap-2">
+                    <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+                    <span>Normal (15 mins)</span>
+                  </div>
+                  <Check v-if="(storeInfo.busy_mode_extra_minutes || 0) === 0" class="w-3.5 h-3.5 text-emerald-600" />
+                </button>
+
+                <button
+                  type="button"
+                  @click="setRushMode(15, 'Store Busy')"
+                  class="w-full text-left px-2.5 py-2 rounded-xl text-xs flex items-center justify-between hover:bg-stone-100 transition-colors cursor-pointer"
+                  :class="(storeInfo.busy_mode_extra_minutes || 0) === 15 ? 'bg-amber-50 font-bold text-amber-900 border border-amber-200' : 'text-stone-700'"
+                >
+                  <div class="flex items-center gap-2">
+                    <span class="w-2 h-2 rounded-full bg-amber-500"></span>
+                    <span>Busy (+15m · 30m total)</span>
+                  </div>
+                  <Check v-if="(storeInfo.busy_mode_extra_minutes || 0) === 15" class="w-3.5 h-3.5 text-amber-600" />
+                </button>
+
+                <button
+                  type="button"
+                  @click="setRushMode(30, 'Peak Rush')"
+                  class="w-full text-left px-2.5 py-2 rounded-xl text-xs flex items-center justify-between hover:bg-stone-100 transition-colors cursor-pointer"
+                  :class="(storeInfo.busy_mode_extra_minutes || 0) === 30 ? 'bg-rose-50 font-bold text-rose-900 border border-rose-200' : 'text-stone-700'"
+                >
+                  <div class="flex items-center gap-2">
+                    <span class="w-2 h-2 rounded-full bg-rose-500"></span>
+                    <span>Heavy Rush (+30m · 45m total)</span>
+                  </div>
+                  <Check v-if="(storeInfo.busy_mode_extra_minutes || 0) === 30" class="w-3.5 h-3.5 text-rose-600" />
+                </button>
+              </div>
+
+              <div class="pt-2 border-t border-stone-100 text-[10px] text-stone-500 flex items-center justify-between px-1">
+                <span>Manage operations:</span>
+                <Link href="/admin/store-info" @click="isRushMenuOpen = false" class="text-[#a47a3c] font-semibold hover:underline">
+                  Store Settings ➔
+                </Link>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -492,16 +602,12 @@ const navigationItems = [
       <footer class="border-t border-[#e0d9cc]/60 py-6 text-xs text-[#6e6e73] bg-[#f3efe7]/40 mt-auto">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-3">
           <div class="flex items-center gap-2">
-            <span class="font-serif font-medium text-[#1d1d1f]">Masala Mart Admin</span>
+            <span class="font-serif font-medium text-[#1d1d1f]">Masala Mart</span>
             <span>·</span>
-            <span>Multi-Guard Session Isolation Active</span>
+            <span>Store Management Portal</span>
           </div>
-          <div class="text-[11px] font-mono text-[#86868b] flex items-center gap-2">
-            <span>Guard: <strong class="text-[#7a5620]">admin</strong></span>
-            <span>·</span>
-            <span>Table: <code class="text-[#7a5620]">admins</code></span>
-            <span>·</span>
-            <span>Spatie Permission v8</span>
+          <div class="text-xs text-[#86868b] flex items-center gap-2">
+            <span>© {{ new Date().getFullYear() }} Masala Mart. All rights reserved.</span>
           </div>
         </div>
       </footer>

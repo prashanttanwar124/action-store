@@ -10,7 +10,8 @@ import {
   Minus, 
   Sparkles,
   Store,
-  Clock 
+  Clock,
+  Search
 } from 'lucide-vue-next';
 
 const props = defineProps({
@@ -25,6 +26,22 @@ const props = defineProps({
   recipeKits: {
     type: Array,
     default: () => [],
+  },
+  totalProductCount: {
+    type: Number,
+    default: 14,
+  },
+  totalRecipeKitCount: {
+    type: Number,
+    default: 4,
+  },
+  initialSearchQuery: {
+    type: String,
+    default: '',
+  },
+  focusSearch: {
+    type: Boolean,
+    default: false,
   },
 });
 
@@ -312,6 +329,9 @@ onMounted(() => {
   if (props.products && props.products.length > 0) {
     store.setProducts(props.products);
   }
+  if (props.initialSearchQuery) {
+    store.searchQuery = props.initialSearchQuery;
+  }
   startAutoplay();
 });
 
@@ -320,10 +340,31 @@ onUnmounted(() => {
   stopAutoplay();
 });
 
+// Live filtered search results
+const searchFilteredProducts = computed(() => {
+  const q = store.searchQuery.trim().toLowerCase();
+  if (!q) return [];
+  return store.products.filter(p => {
+    const nameMatch = p.name && p.name.toLowerCase().includes(q);
+    const catMatch = p.category && p.category.toLowerCase().includes(q);
+    const tagMatch = p.photoLabel && p.photoLabel.toLowerCase().includes(q);
+    const subMatch = p.subtitleTag && p.subtitleTag.toLowerCase().includes(q);
+    return nameMatch || catMatch || tagMatch || subMatch;
+  });
+});
+
 // Products for "Buy it again"
 const buyAgainItems = computed(() => {
   const items = store.products.filter(p => p.buyAgain);
   return items.length > 0 ? items : store.products.slice(0, 5);
+});
+
+// Top 10 Curated Products for Home
+const homeProducts = computed(() => {
+  if (props.products && props.products.length > 0) {
+    return props.products;
+  }
+  return store.products.slice(0, 10);
 });
 
 // Recipe Kits (from live DB / Admin or fallback)
@@ -429,8 +470,121 @@ const handleAddKitToCart = (kit) => {
   <StoreLayout>
     <div class="space-y-7 sm:space-y-10">
 
-      <!-- HERO SECTION: Premium Editorial Banner & Click & Collect Hub -->
-      <section class="grid grid-cols-1 lg:grid-cols-12 gap-4 lg:gap-5 items-stretch">
+      <!-- LIVE SEARCH RESULTS SECTION -->
+      <section v-if="store.searchQuery.trim()" class="space-y-4 pt-1">
+        <div class="flex items-center justify-between border-b border-[#e0d9cc]/60 pb-3">
+          <div class="flex items-center gap-2">
+            <h2 class="text-xl sm:text-2xl font-serif font-medium text-[#1d1d1f] tracking-tight">
+              Search results for "{{ store.searchQuery.trim() }}"
+            </h2>
+            <span class="text-xs text-[#7a5620] bg-[#f5eee2] px-2.5 py-0.5 rounded-full border border-[#e0d9cc] font-semibold">
+              {{ searchFilteredProducts.length }} item{{ searchFilteredProducts.length === 1 ? '' : 's' }}
+            </span>
+          </div>
+          <button 
+            type="button" 
+            @click="store.searchQuery = ''" 
+            class="text-xs font-semibold text-[#6e6e73] hover:text-[#1d1d1f] underline cursor-pointer"
+          >
+            Clear search
+          </button>
+        </div>
+
+        <!-- Matched Products Grid -->
+        <div v-if="searchFilteredProducts.length > 0" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3.5 sm:gap-5">
+          <Link 
+            v-for="item in searchFilteredProducts" 
+            :key="item.slug || item.id"
+            :href="'/products/' + item.slug"
+            class="relative block flex flex-col group text-left cursor-pointer transition-transform duration-200"
+          >
+            <div class="relative w-full aspect-square bg-[#f3efe7] rounded-[22px] sm:rounded-3xl overflow-hidden img-zoom-container shrink-0 border border-[#e0d9cc]/60 shadow-2xs">
+              <img 
+                :src="item.image || '/images/products/atta.jpg'" 
+                :alt="item.name" 
+                class="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-300"
+              />
+              <span class="photo-label absolute top-2.5 left-2.5 text-[11px] text-[#1d1d1f] font-mono bg-white/80 backdrop-blur-xs px-2 py-0.5 rounded-lg z-10 shadow-2xs">
+                {{ item.photoLabel || item.photo_label || 'item' }}
+              </span>
+              
+              <!-- Stepper or Add button -->
+              <div 
+                v-if="store.getItemQuantity(item.id || item.slug) > 0"
+                class="absolute bottom-2.5 inset-x-2.5 bg-[#1a1a1a] text-white h-8 sm:h-9 rounded-full flex items-center justify-between px-2.5 shadow-md z-10"
+                @click.stop.prevent
+              >
+                <button 
+                  type="button"
+                  @click.stop.prevent="store.removeFromCart(item.id || item.slug)" 
+                  class="p-1 hover:opacity-80 cursor-pointer flex items-center justify-center"
+                  aria-label="Decrease quantity"
+                >
+                  <Minus class="w-3.5 h-3.5 stroke-[2.5]" />
+                </button>
+                <span class="text-xs font-bold">{{ store.getItemQuantity(item.id || item.slug) }}</span>
+                <button 
+                  type="button"
+                  @click.stop.prevent="store.addToCart(item)" 
+                  class="p-1 hover:opacity-80 cursor-pointer flex items-center justify-center"
+                  aria-label="Increase quantity"
+                >
+                  <Plus class="w-3.5 h-3.5 stroke-[2.5]" />
+                </button>
+              </div>
+              <button 
+                v-else
+                type="button"
+                @click.stop.prevent="store.addToCart(item)"
+                class="absolute bottom-2.5 right-2.5 w-8 h-8 sm:w-9 sm:h-9 bg-[#1a1a1a] hover:bg-black text-white rounded-full flex items-center justify-center font-bold cursor-pointer active:scale-95 shadow-md z-10 transition-transform group-hover:scale-105"
+                :aria-label="'Add ' + item.name + ' to cart'"
+              >
+                <Plus class="w-4 h-4 stroke-[2.5]" />
+              </button>
+            </div>
+
+            <div class="pt-2.5 text-left">
+              <div class="text-lg sm:text-xl font-serif font-medium text-[#1d1d1f] leading-none">
+                ${{ Number(item.price).toFixed(2) }}
+              </div>
+              <div class="text-sm sm:text-base font-semibold text-[#1d1d1f] mt-1 truncate">
+                {{ item.name }}
+              </div>
+              <div class="text-xs sm:text-sm text-[#6e6e73] font-normal mt-0.5">
+                {{ item.sizeMain || item.size || 'Standard' }}
+              </div>
+            </div>
+          </Link>
+        </div>
+
+        <!-- No Results Empty State -->
+        <div v-else class="p-8 sm:p-12 rounded-3xl border border-[#e0d9cc] bg-white text-center space-y-3 shadow-2xs">
+          <div class="w-12 h-12 rounded-full bg-[#f3efe7] border border-[#e0d9cc] flex items-center justify-center mx-auto text-[#7a5620]">
+            <Search class="w-5 h-5" />
+          </div>
+          <h3 class="text-base sm:text-lg font-serif font-medium text-[#1d1d1f]">
+            No groceries found for "{{ store.searchQuery.trim() }}"
+          </h3>
+          <p class="text-xs text-[#6e6e73] max-w-sm mx-auto">
+            Try checking spelling or search for common Indian grocery staples like Atta, Ghee, Paneer, or Rice.
+          </p>
+          <div class="pt-1">
+            <button 
+              type="button"
+              @click="store.searchQuery = ''"
+              class="px-5 py-2 bg-[#1a1a1a] hover:bg-black text-white rounded-full text-xs font-semibold shadow-xs cursor-pointer"
+            >
+              Browse All Groceries
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <!-- NORMAL STOREFRONT SECTIONS (When not searching) -->
+      <div v-if="!store.searchQuery.trim()" class="space-y-7 sm:space-y-10">
+
+        <!-- HERO SECTION: Premium Editorial Banner & Click & Collect Hub -->
+        <section class="grid grid-cols-1 lg:grid-cols-12 gap-4 lg:gap-5 items-stretch">
         <!-- Main Festival Pre-Order Banner (Interactive Sliding Carousel with Drag & Swipe) -->
         <div class="lg:col-span-8 flex flex-col justify-between">
           <div 
@@ -788,6 +942,116 @@ const handleAddKitToCart = (kit) => {
         </div>
       </section>
 
+      <!-- SECTION: Curated Essentials & Groceries (Top 10 Products with View All Button) -->
+      <section class="space-y-3.5">
+        <div class="flex items-center justify-between">
+          <div>
+            <div class="flex items-center gap-2">
+              <h2 class="text-xl sm:text-2xl font-serif font-medium text-[#1d1d1f] tracking-tight">Curated Staples & Groceries</h2>
+              <span class="font-devanagari text-xs text-[#7a5620] bg-[#f5eee2] px-2.5 py-0.5 rounded-full border border-[#e0d9cc]">ताज़ा किराना</span>
+            </div>
+            <p class="text-xs text-[#6e6e73] font-normal mt-0.5">
+              Hand-picked pantry staples, fresh dairy, and authentic Indian essentials.
+            </p>
+          </div>
+          <Link 
+            href="/search" 
+            class="text-xs font-semibold text-[#7a5620] hover:underline inline-flex items-center gap-1"
+          >
+            <span>View All ({{ totalProductCount || 14 }})</span>
+            <ChevronRight class="w-3.5 h-3.5" />
+          </Link>
+        </div>
+
+        <!-- 2 Columns on mobile, 3 on sm, 4 on md, 5 on lg -->
+        <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3.5 sm:gap-5 pt-1">
+          <Link 
+            v-for="item in homeProducts" 
+            :key="item.slug || item.id"
+            :href="'/products/' + item.slug"
+            class="relative block flex flex-col group text-left cursor-pointer transition-transform duration-200"
+          >
+            <!-- Card Image Tile -->
+            <div class="relative w-full aspect-square bg-[#f3efe7] rounded-[22px] sm:rounded-3xl overflow-hidden img-zoom-container shrink-0 border border-[#e0d9cc]/60 shadow-2xs group-hover:border-[#a47a3c]/60 transition-colors">
+              <img 
+                :src="item.image || '/images/products/atta.jpg'" 
+                :alt="item.name" 
+                class="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-300"
+              />
+              <span class="photo-label absolute top-2.5 left-2.5 text-[11px] text-[#1d1d1f] font-mono bg-white/80 backdrop-blur-xs px-2 py-0.5 rounded-lg z-10 shadow-2xs">
+                {{ item.photo_label || item.photoLabel || item.category || 'product' }}
+              </span>
+
+              <span 
+                v-if="item.has_subscription"
+                class="absolute top-2.5 right-2.5 bg-[#a47a3c] text-white text-[9.5px] font-bold px-1.5 py-0.5 rounded-md shadow-xs z-10"
+              >
+                -5% SUB
+              </span>
+
+              <!-- Stepper or Add button -->
+              <div 
+                v-if="store.getItemQuantity(item.id || item.slug) > 0"
+                class="absolute bottom-2.5 inset-x-2.5 bg-[#1a1a1a] text-white h-8 sm:h-9 rounded-full flex items-center justify-between px-2.5 shadow-md z-10"
+                @click.stop.prevent
+              >
+                <button 
+                  type="button"
+                  @click.stop.prevent="store.removeFromCart(item.id || item.slug)" 
+                  class="p-1 hover:opacity-80 cursor-pointer flex items-center justify-center"
+                  aria-label="Decrease quantity"
+                >
+                  <Minus class="w-3.5 h-3.5 stroke-[2.5]" />
+                </button>
+                <span class="text-xs font-bold">{{ store.getItemQuantity(item.id || item.slug) }}</span>
+                <button 
+                  type="button"
+                  @click.stop.prevent="store.addToCart(item)" 
+                  class="p-1 hover:opacity-80 cursor-pointer flex items-center justify-center"
+                  aria-label="Increase quantity"
+                >
+                  <Plus class="w-3.5 h-3.5 stroke-[2.5]" />
+                </button>
+              </div>
+
+              <button 
+                v-else
+                type="button"
+                @click.stop.prevent="store.addToCart(item)"
+                class="absolute bottom-2.5 right-2.5 w-8 h-8 sm:w-9 sm:h-9 bg-[#1a1a1a] hover:bg-black text-white rounded-full flex items-center justify-center font-bold cursor-pointer active:scale-95 shadow-md z-10 transition-transform group-hover:scale-105"
+                :aria-label="'Add ' + item.name + ' to cart'"
+              >
+                <Plus class="w-4 h-4 stroke-[2.5]" />
+              </button>
+            </div>
+
+            <!-- Card Typography -->
+            <div class="pt-2.5 text-left">
+              <div class="text-lg sm:text-xl font-serif font-medium text-[#1d1d1f] leading-none group-hover:text-[#a47a3c] transition-colors">
+                ${{ Number(item.price).toFixed(2) }}
+              </div>
+              <div class="text-sm sm:text-base font-semibold text-[#1d1d1f] mt-1 truncate">
+                {{ item.name }}
+              </div>
+              <div class="text-xs sm:text-sm text-[#6e6e73] font-normal mt-0.5 truncate">
+                {{ item.size_main || item.sizeMain || item.unit_price || 'Standard pack' }}
+              </div>
+            </div>
+          </Link>
+        </div>
+
+        <!-- View All Products CTA Button -->
+        <div class="pt-4 text-center">
+          <Link 
+            href="/search"
+            class="inline-flex items-center gap-2.5 px-8 py-3.5 bg-[#1a1a1a] hover:bg-black text-white font-semibold text-xs sm:text-sm rounded-full transition-all duration-200 shadow-sm hover:shadow-md cursor-pointer group active:scale-[0.99]"
+          >
+            <span>View All Products ({{ totalProductCount || 14 }})</span>
+            <ChevronRight class="w-4 h-4 stroke-[2.5] text-stone-300 group-hover:translate-x-0.5 transition-transform" />
+          </Link>
+        </div>
+      </section>
+
       <!-- SECTION: "Recipe kits" (Screen 1a Specification with Devanagari badge) -->
       <section id="recipe-kits" class="space-y-3.5">
         <div class="flex items-center justify-between">
@@ -800,7 +1064,13 @@ const handleAddKitToCart = (kit) => {
               Every ingredient for one dish, added in one tap.
             </p>
           </div>
-          <span class="text-xs font-semibold text-[#7a5620] hover:underline cursor-pointer">All 14 kits</span>
+          <Link 
+            href="/recipe-kits" 
+            class="text-xs font-semibold text-[#7a5620] hover:underline inline-flex items-center gap-1 cursor-pointer"
+          >
+            <span>All {{ totalRecipeKitCount || recipeKitItems.length }} kits</span>
+            <ChevronRight class="w-3.5 h-3.5" />
+          </Link>
         </div>
 
         <!-- 2 Columns on mobile, 4 Columns on desktop -->
@@ -856,7 +1126,6 @@ const handleAddKitToCart = (kit) => {
               </div>
             </div>
 
-            <!-- Full-width CTA Button: "+ Add all to cart" -->
             <button 
               type="button"
               @click.stop.prevent="handleAddKitToCart(kit)"
@@ -867,7 +1136,17 @@ const handleAddKitToCart = (kit) => {
               <span>Add all {{ kit.productsCount || 3 }} to cart</span>
             </button>
           </div>
+        </div>
 
+        <!-- View All Recipe Kits CTA -->
+        <div class="pt-2 text-center">
+          <Link 
+            href="/recipe-kits"
+            class="inline-flex items-center gap-2 px-6 py-3 bg-[#f5eee2] hover:bg-[#ede6da] border border-[#e0d9cc] text-[#7a5620] font-semibold text-xs rounded-full transition-all cursor-pointer group shadow-2xs"
+          >
+            <span>Explore All Recipe Kits ({{ totalRecipeKitCount || recipeKitItems.length }})</span>
+            <ChevronRight class="w-3.5 h-3.5 stroke-[2.5] text-[#7a5620] group-hover:translate-x-0.5 transition-transform" />
+          </Link>
         </div>
       </section>
 
@@ -888,7 +1167,7 @@ const handleAddKitToCart = (kit) => {
 
         <div class="shrink-0 flex flex-row gap-3 w-full md:w-auto">
           <Link 
-            href="/products/rice" 
+            href="/categories/staples" 
             class="flex-1 sm:flex-none px-5 py-3 bg-[#a47a3c] hover:bg-[#8e6630] text-white text-xs font-semibold rounded-full text-center transition-colors shadow-sm"
           >
             Explore Staples (-5%)
@@ -902,6 +1181,7 @@ const handleAddKitToCart = (kit) => {
         </div>
       </section>
 
+      </div>
     </div>
   </StoreLayout>
 </template>

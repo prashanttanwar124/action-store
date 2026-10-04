@@ -1,25 +1,11 @@
 <script setup>
-import { computed } from 'vue';
-import { usePage } from '@inertiajs/vue3';
 import { Skeleton } from '@/Components/ui/skeleton';
 
 const props = defineProps({
   type: {
     type: String,
-    default: 'auto', // 'auto' | 'home' | 'product' | 'cart' | 'admin'
+    required: true,
   },
-});
-
-const page = usePage();
-
-const detectedType = computed(() => {
-  if (props.type !== 'auto') return props.type;
-  const url = page.url || '';
-  if (url.startsWith('/admin')) return 'admin';
-  if (url.startsWith('/products') || url.startsWith('/recipe-kits')) return 'product';
-  if (url.startsWith('/cart') || url.startsWith('/checkout')) return 'cart';
-  if (url.startsWith('/account') || url.startsWith('/reorder')) return 'account';
-  return 'home';
 });
 </script>
 
@@ -27,7 +13,7 @@ const detectedType = computed(() => {
   <div class="w-full space-y-8 animate-in fade-in duration-200">
     
     <!-- HOME STOREFRONT SKELETON -->
-    <div v-if="detectedType === 'home'" class="space-y-8">
+    <div v-if="props.type === 'home'" class="space-y-8">
       <!-- Hero Banner Skeleton -->
       <div class="grid grid-cols-1 lg:grid-cols-12 gap-4">
         <div class="lg:col-span-8 border border-border/60 rounded-3xl p-6 sm:p-8 min-h-[190px] sm:min-h-[220px] flex justify-between gap-4 bg-card/50">
@@ -105,7 +91,7 @@ const detectedType = computed(() => {
     </div>
 
     <!-- PRODUCT DETAIL SKELETON -->
-    <div v-else-if="detectedType === 'product'" class="space-y-8">
+    <div v-else-if="props.type === 'product'" class="space-y-8">
       <div class="flex items-center gap-2">
         <Skeleton class="h-4 w-20" />
         <Skeleton class="h-4 w-4" />
@@ -137,7 +123,7 @@ const detectedType = computed(() => {
     </div>
 
     <!-- CART / CHECKOUT SKELETON -->
-    <div v-else-if="detectedType === 'cart'" class="space-y-6 max-w-5xl mx-auto">
+    <div v-else-if="props.type === 'cart'" class="space-y-6 max-w-5xl mx-auto">
       <Skeleton class="h-20 w-full rounded-3xl border border-border" />
       
       <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
@@ -161,7 +147,7 @@ const detectedType = computed(() => {
     </div>
 
     <!-- ADMIN DASHBOARD SKELETON -->
-    <div v-else-if="detectedType === 'admin'" class="space-y-6">
+    <div v-else-if="props.type === 'admin'" class="space-y-6">
       <Skeleton class="h-28 w-full rounded-3xl border border-border" />
       
       <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">

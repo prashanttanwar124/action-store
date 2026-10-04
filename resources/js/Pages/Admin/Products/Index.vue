@@ -81,6 +81,7 @@ const handleDelete = () => {
   if (!deletingProduct.value) return;
   isDeleting.value = true;
   router.delete(route('admin.products.destroy', deletingProduct.value.id), {
+    preserveScroll: true,
     onFinish: () => {
       isDeleting.value = false;
       deletingProduct.value = null;
@@ -260,6 +261,11 @@ const getCategoryBadgeClass = (category) => {
                       <div class="text-[11px] font-mono text-[#86868b] truncate max-w-xs">
                         /products/{{ prod.slug }}
                       </div>
+                      <div v-if="prod.supplier" class="inline-flex items-center gap-1 mt-1 text-[10px] font-medium text-[#7a5620] bg-[#fbf6ec] border border-[#e6d8c3] px-1.5 py-0.5 rounded-md">
+                        <span class="w-1.5 h-1.5 rounded-full bg-[#a47a3c]"></span>
+                        <span class="truncate max-w-[140px]">{{ prod.supplier.name }}</span>
+                        <span class="text-[9px] font-mono text-[#a47a3c]">({{ prod.supplier.code }})</span>
+                      </div>
                     </div>
                   </div>
                 </td>
@@ -289,11 +295,21 @@ const getCategoryBadgeClass = (category) => {
 
                 <!-- Size & Stock -->
                 <td class="py-3.5 px-4">
-                  <div class="text-[#1d1d1f] font-medium">
-                    {{ prod.size_main || 'Standard' }}
+                  <div class="text-[#1d1d1f] font-medium flex items-center gap-1.5">
+                    <span>{{ prod.size_main || 'Standard' }}</span>
+                    <span 
+                      class="text-[10.5px] font-bold px-1.5 py-0.5 rounded-md"
+                      :class="(prod.stock ?? 50) <= 0 ? 'bg-red-100 text-red-700' : ((prod.stock ?? 50) <= 10 ? 'bg-amber-100 text-amber-800' : 'bg-stone-100 text-stone-700')"
+                    >
+                      {{ prod.stock ?? 50 }} left
+                    </span>
                   </div>
-                  <div class="text-[10px] text-emerald-700 font-medium">
-                    {{ prod.stock_badge || 'In Stock' }}
+                  <div 
+                    class="text-[10px] font-medium mt-0.5 flex items-center gap-1"
+                    :class="(prod.stock ?? 50) <= 0 ? 'text-red-600 font-semibold' : ((prod.stock ?? 50) <= 10 ? 'text-amber-700 font-medium' : 'text-emerald-700 font-medium')"
+                  >
+                    <span class="inline-block w-1.5 h-1.5 rounded-full" :class="(prod.stock ?? 50) <= 0 ? 'bg-red-500' : ((prod.stock ?? 50) <= 10 ? 'bg-amber-500' : 'bg-emerald-500')"></span>
+                    <span>{{ (prod.stock ?? 50) <= 0 ? 'Out of stock' : ((prod.stock ?? 50) <= 10 ? 'Low stock' : 'In stock') }}</span>
                   </div>
                 </td>
 
