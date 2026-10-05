@@ -173,4 +173,81 @@ class StripeWebhookTest extends TestCase
         $response->assertStatus(403)
             ->assertJson(['error' => 'Payment intent does not belong to your active checkout session.']);
     }
+
+    public function test_webhook_recovers_order_with_delivery_address_and_pickup_slot(): void
+    {
+        $product = Product::factory()->create([
+            'stock' => 10,
+            'price' => 30.00,
+        ]);
+
+        $payload = [
+            'type' => 'payment_intent.succeeded',
+            'data' => [
+                'object' => [
+                    'id' => 'pi_recovered_with_address_789',
+                    'amount_received' => 3499,
+                    'currency' => 'cad',
+                    'metadata' => [
+                        'customer_name' => 'John Doe',
+                        'customer_email' => 'john@example.com',
+                        'customer_phone' => '123-456-7890',
+                        'fulfillment_type' => 'Home Delivery',
+                        'delivery_address' => '456 Queen St, Apt 10B, Toronto',
+                        'pickup_slot' => 'Tomorrow (2:00 PM - 2:30 PM)',
+                        'items_json' => json_encode([
+                            [
+                                'id' => $product->id,
+                                'price' => 30.00,
+                                'quantity' => 1,
+                            ],
+                        ]),
+                    ],
+                ],
+            ],
+        ];
+
+        $response = $this->postJson('/stripe/webhook', $payload);
+
+        $response->assertStatus(200);
+
+        $this->assertDatabaseHas('orders', [
+            'stripe_payment_id' => 'pi_recovered_with_address_789',
+            'customer_email' => 'john@example.com',
+            'delivery_address' => '456 Queen St, Apt 10B, Toronto',
+            'pickup_slot' => 'Tomorrow (2:00 PM - 2:30 PM)',
+            'fulfillment_type' => 'Home Delivery',
+        ]);
+    }
+
+    public function test_browser_checkout_succeeds_when_webhook_already_created_order(): void
+    {
+        $product = Product::factory()->create(['stock' => 10, 'price' => 20]);
+
+        // 1. Webhook arrives first and creates the order
+        $order = Order::factory()->create([
+            'order_number' => 'MM-20261004-9999',
+            'stripe_payment_id' => 'pi_webhook_first_555',
+            'total' => 20.00,
+            'status' => 'confirmed',
+        ]);
+
+        // 2. Browser subsequently posts /checkout with the same stripe_payment_id
+        $response = $this->postJson('/checkout', [
+            'items' => [['id' => $product->id, 'name' => $product->name, 'price' => 20, 'quantity' => 1]],
+            'payment_method' => 'card',
+            'stripe_payment_id' => 'pi_webhook_first_555',
+            'fulfillment_type' => 'Store Pickup',
+        ]);
+
+        // 3. Must not throw "already used" validation error; must return 200 with the confirmed order
+        $response->assertStatus(200)
+            ->assertJson([
+                'success' => true,
+                'order' => [
+                    'order_number' => 'MM-20261004-9999',
+                    'stripe_payment_id' => 'pi_webhook_first_555',
+                ],
+            ]);
+    }
 }

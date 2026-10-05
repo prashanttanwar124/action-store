@@ -56,23 +56,30 @@ class OrderController extends Controller
             'notes' => ['nullable', 'string', 'max:1000'],
         ]);
 
-        // Duplicate order protection via idempotency key
+        // Duplicate / concurrent order protection via idempotency key or stripe_payment_id (e.g. webhook won the race)
         $idempotencyKey = $validated['idempotency_key'] ?? $request->header('X-Idempotency-Key');
-        if ($idempotencyKey) {
+        $stripePaymentId = $validated['stripe_payment_id'] ?? null;
+
+        $existingOrder = null;
+        if (! empty($idempotencyKey)) {
             $existingOrder = Order::where('idempotency_key', $idempotencyKey)->first();
-            if ($existingOrder) {
-                $existingOrder->load(['items', 'user']);
-                $request->session()->push('placed_order_numbers', $existingOrder->order_number);
+        }
+        if (! $existingOrder && ! empty($stripePaymentId)) {
+            $existingOrder = Order::where('stripe_payment_id', $stripePaymentId)->first();
+        }
 
-                if ($request->wantsJson()) {
-                    return response()->json([
-                        'success' => true,
-                        'order' => $existingOrder,
-                    ], 200);
-                }
+        if ($existingOrder) {
+            $existingOrder->load(['items', 'user']);
+            $request->session()->push('placed_order_numbers', $existingOrder->order_number);
 
-                return redirect()->route('account')->with('success', "Order {$existingOrder->order_number} confirmed!");
+            if ($request->wantsJson()) {
+                return response()->json([
+                    'success' => true,
+                    'order' => $existingOrder,
+                ], 200);
             }
+
+            return redirect()->route('account')->with('success', "Order {$existingOrder->order_number} confirmed!");
         }
 
         $user = Auth::user();
@@ -196,13 +203,11 @@ class OrderController extends Controller
 
             $stripePaymentId = $validated['stripe_payment_id'] ?? null;
 
-            // Prevent replay attacks: ensure this payment ID has not already been used
+            // Concurrency check: if a webhook or parallel request finished creating the order just now
             if (! empty($stripePaymentId)) {
-                $alreadyUsed = Order::where('stripe_payment_id', $stripePaymentId)->exists();
+                $alreadyUsed = Order::where('stripe_payment_id', $stripePaymentId)->first();
                 if ($alreadyUsed) {
-                    throw ValidationException::withMessages([
-                        'stripe_payment_id' => 'This payment reference has already been applied to an existing order.',
-                    ]);
+                    return $alreadyUsed;
                 }
             }
 
@@ -576,7 +581,13 @@ class OrderController extends Controller
             'amount' => ['nullable', 'numeric', 'min:0.50'],
             'currency' => ['nullable', 'string', 'size:3'],
             'items' => ['nullable', 'array'],
-            'fulfillment_type' => ['nullable', 'string'],
+            'fulfillment_type' => ['nullable', 'string', 'in:Store Pickup,Home Delivery'],
+            'delivery_address' => ['nullable', 'string', 'max:500'],
+            'pickup_slot' => ['nullable', 'string', 'max:255'],
+            'pickup_location' => ['nullable', 'string', 'max:255'],
+            'customer_name' => ['nullable', 'string', 'max:255'],
+            'customer_email' => ['nullable', 'string', 'max:255'],
+            'customer_phone' => ['nullable', 'string', 'max:50'],
             'payment_intent_id' => ['nullable', 'string'],
             'idempotency_key' => ['nullable', 'string'],
         ]);
@@ -627,6 +638,27 @@ class OrderController extends Controller
                 'user_id' => (string) (Auth::id() ?? 'guest'),
                 'fulfillment_type' => $validated['fulfillment_type'] ?? 'Store Pickup',
             ];
+            if (! empty($validated['delivery_address'])) {
+                $metadata['delivery_address'] = $validated['delivery_address'];
+            }
+            if (! empty($validated['pickup_slot'])) {
+                $metadata['pickup_slot'] = $validated['pickup_slot'];
+            }
+            if (! empty($validated['pickup_location'])) {
+                $metadata['pickup_location'] = $validated['pickup_location'];
+            }
+            if (! empty($validated['customer_name'])) {
+                $metadata['customer_name'] = $validated['customer_name'];
+            }
+            if (! empty($validated['customer_email'])) {
+                $metadata['customer_email'] = $validated['customer_email'];
+            }
+            if (! empty($validated['customer_phone'])) {
+                $metadata['customer_phone'] = $validated['customer_phone'];
+            }
+            if (! empty($validated['idempotency_key'])) {
+                $metadata['idempotency_key'] = $validated['idempotency_key'];
+            }
             if (! empty($validated['items'])) {
                 $metadata['items_json'] = json_encode(array_slice($validated['items'], 0, 30));
             }

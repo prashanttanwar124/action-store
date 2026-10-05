@@ -198,6 +198,11 @@ async function initStripe() {
         is_subscribed: Boolean(item.isSubscribed),
       })),
       fulfillment_type: fulfillmentMode.value === 'delivery' ? 'Home Delivery' : 'Store Pickup',
+      delivery_address: fulfillmentMode.value === 'delivery' ? deliveryAddress.value : null,
+      pickup_slot: fulfillmentMode.value === 'pickup' ? effectiveFulfillmentSlotLabel.value : null,
+      customer_name: customerName.value || page.props.auth?.user?.name || 'Guest Customer',
+      customer_email: customerEmail.value || page.props.auth?.user?.email || 'guest@example.com',
+      customer_phone: customerPhone.value || null,
       payment_intent_id: activePaymentIntentId.value || undefined,
       idempotency_key: checkoutIdempotencyKey.value,
     });
@@ -302,6 +307,11 @@ async function syncPaymentIntentAmount(newTotal) {
           is_subscribed: Boolean(i.isSubscribed),
         })),
         fulfillment_type: fulfillmentMode.value === 'delivery' ? 'Home Delivery' : 'Store Pickup',
+        delivery_address: fulfillmentMode.value === 'delivery' ? deliveryAddress.value : null,
+        pickup_slot: fulfillmentMode.value === 'pickup' ? effectiveFulfillmentSlotLabel.value : null,
+        customer_name: customerName.value || page.props.auth?.user?.name || 'Guest Customer',
+        customer_email: customerEmail.value || page.props.auth?.user?.email || 'guest@example.com',
+        customer_phone: customerPhone.value || null,
         payment_intent_id: activePaymentIntentId.value,
         idempotency_key: `${checkoutIdempotencyKey.value}_amt_${Math.round(Number(newTotal) * 100)}`,
       });
@@ -508,6 +518,12 @@ async function completeOrder() {
     }
   }
 
+  const formattedDeliveryAddress = isDelivery
+    ? (deliveryApt.value.trim() ? `${deliveryAddress.value.trim()}, Apt ${deliveryApt.value.trim()}` : deliveryAddress.value.trim())
+    : null;
+  const storePickupLocation = `${storeInfo.value.name || 'Masala Mart'} · ${storeInfo.value.address || '456 Curry Road, Flavor Town'}`;
+  const effectivePickupSlot = isDelivery ? null : (schedule.pickup_slot || effectiveFulfillmentSlotLabel.value);
+
   let stripePaymentId = null;
   if (isStripeConfigured.value) {
     if (!stripe.value || !elements.value) {
@@ -515,6 +531,32 @@ async function completeOrder() {
       errorMessage.value = paymentError.value;
       isProcessing.value = false;
       return;
+    }
+
+    try {
+      if (activePaymentIntentId.value) {
+        await axios.post('/checkout/create-payment-intent', {
+          amount: Number(checkoutTotal.value),
+          currency: 'cad',
+          items: store.cartItems.map(i => ({
+            id: i.id,
+            price: Number(i.price),
+            quantity: Number(i.quantity || 1),
+            is_subscribed: Boolean(i.isSubscribed),
+          })),
+          fulfillment_type: isDelivery ? 'Home Delivery' : 'Store Pickup',
+          delivery_address: formattedDeliveryAddress,
+          pickup_slot: effectivePickupSlot,
+          pickup_location: isDelivery ? (formattedDeliveryAddress || 'Delivery Address') : storePickupLocation,
+          customer_name: customerName.value || page.props.auth?.user?.name || 'Guest Customer',
+          customer_email: customerEmail.value || page.props.auth?.user?.email || 'guest@example.com',
+          customer_phone: customerPhone.value || null,
+          payment_intent_id: activePaymentIntentId.value,
+          idempotency_key: checkoutIdempotencyKey.value,
+        });
+      }
+    } catch (syncErr) {
+      console.warn('Metadata sync before confirmation warning:', syncErr);
     }
 
     try {
@@ -552,11 +594,6 @@ async function completeOrder() {
     // Only in local development without Stripe configured in .env
     stripePaymentId = 'pi_demo_' + Date.now();
   }
-
-  const formattedDeliveryAddress = isDelivery
-    ? (deliveryApt.value.trim() ? `${deliveryAddress.value.trim()}, Apt ${deliveryApt.value.trim()}` : deliveryAddress.value.trim())
-    : null;
-  const storePickupLocation = `${storeInfo.value.name || 'Masala Mart'} · ${storeInfo.value.address || '456 Curry Road, Flavor Town'}`;
 
   const payload = {
     items: store.cartItems.map(item => ({
