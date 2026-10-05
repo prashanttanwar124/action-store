@@ -101,19 +101,23 @@ const isStripeConfigured = computed(() => Boolean(stripePublishableKey.value));
 
 async function initStripe() {
   if (!isStripeConfigured.value) return;
+  const total = Number(checkoutTotal.value);
+  if (!total || total < 0.5) return;
   if (isStripeMounted.value || isStripeLoading.value) return;
 
   isStripeLoading.value = true;
   stripeError.value = '';
 
   try {
-    stripe.value = await loadStripe(stripePublishableKey.value);
+    if (!stripe.value) {
+      stripe.value = await loadStripe(stripePublishableKey.value);
+    }
     if (!stripe.value) {
       throw new Error('Failed to load Stripe SDK');
     }
 
     const { data } = await axios.post('/checkout/create-payment-intent', {
-      amount: Number(checkoutTotal.value),
+      amount: total,
       currency: 'cad',
     });
 
@@ -164,7 +168,13 @@ async function initStripe() {
 }
 
 onMounted(() => {
-  if (isStripeConfigured.value) {
+  if (isStripeConfigured.value && Number(checkoutTotal.value) >= 0.5) {
+    initStripe();
+  }
+});
+
+watch(() => checkoutTotal.value, (newTotal) => {
+  if (Number(newTotal) >= 0.5 && !isStripeMounted.value && !isStripeLoading.value && isStripeConfigured.value) {
     initStripe();
   }
 });
@@ -941,7 +951,7 @@ async function completeOrder() {
             </div>
 
             <!-- TAB 1: CARD -->
-            <div v-if="paymentMethod === 'card'" class="space-y-3">
+            <div v-show="paymentMethod === 'card'" class="space-y-3">
               <!-- Stripe Live Elements (when STRIPE_KEY is set in .env) -->
               <div v-if="isStripeConfigured" class="space-y-3">
                 <div id="stripe-payment-element-mount" class="min-h-[140px] p-3.5 sm:p-4 bg-[#fbf9f5] rounded-2xl border border-[#e0d9cc]">
@@ -951,9 +961,18 @@ async function completeOrder() {
                   </div>
                 </div>
 
-                <div v-if="stripeError" class="p-3 bg-rose-50 border border-rose-200 text-rose-900 text-xs rounded-xl flex items-center gap-2">
-                  <AlertCircle class="w-4 h-4 text-rose-600 shrink-0" />
-                  <span>{{ stripeError }}</span>
+                <div v-if="stripeError" class="p-3 bg-rose-50 border border-rose-200 text-rose-900 text-xs rounded-xl flex items-center justify-between gap-2">
+                  <div class="flex items-center gap-2">
+                    <AlertCircle class="w-4 h-4 text-rose-600 shrink-0" />
+                    <span>{{ stripeError }}</span>
+                  </div>
+                  <button
+                    type="button"
+                    @click="isStripeMounted = false; initStripe()"
+                    class="px-2.5 py-1 text-[11px] font-bold bg-rose-100 hover:bg-rose-200 text-rose-900 rounded-lg shrink-0 cursor-pointer"
+                  >
+                    Retry
+                  </button>
                 </div>
               </div>
 
@@ -1006,7 +1025,7 @@ async function completeOrder() {
             </div>
 
             <!-- TAB 2: APPLE PAY (Apple Wallet) -->
-            <div v-else-if="paymentMethod === 'apple-pay'" class="p-4 sm:p-5 bg-gradient-to-b from-[#1a1a1a] to-black rounded-2xl text-white space-y-3.5 shadow-sm animate-in fade-in duration-150">
+            <div v-show="paymentMethod === 'apple-pay'" class="p-4 sm:p-5 bg-gradient-to-b from-[#1a1a1a] to-black rounded-2xl text-white space-y-3.5 shadow-sm animate-in fade-in duration-150">
               <div class="flex items-center justify-between">
                 <div class="flex items-center gap-2.5">
                   <div class="w-9 h-9 rounded-xl bg-white/10 flex items-center justify-center">
@@ -1027,13 +1046,20 @@ async function completeOrder() {
                 <span class="font-mono text-white font-bold">•••• 8824 (Apple Card)</span>
               </div>
 
-              <p class="text-[11px] text-stone-400">
-                Click below to authorize <strong>${{ checkoutTotal }}</strong> securely via Apple Pay.
-              </p>
+              <button
+                type="button"
+                @click="completeOrder"
+                :disabled="isProcessing"
+                class="w-full h-11 bg-white hover:bg-stone-100 text-black font-bold text-xs rounded-xl flex items-center justify-center gap-2 transition-all cursor-pointer active:scale-[0.99] disabled:opacity-50"
+              >
+                <Loader2 v-if="isProcessing" class="w-4 h-4 animate-spin text-black" />
+                <IconApplePay v-else :width="36" :height="16" class="text-black" />
+                <span>{{ isProcessing ? 'Authorizing Biometrics...' : `Authorize & Pay $${checkoutTotal}` }}</span>
+              </button>
             </div>
 
             <!-- TAB 3: GOOGLE WALLET (Google Pay) -->
-            <div v-else-if="paymentMethod === 'google-pay'" class="p-4 sm:p-5 bg-[#fbf9f5] rounded-2xl border border-[#e0d9cc] space-y-3.5 shadow-2xs animate-in fade-in duration-150">
+            <div v-show="paymentMethod === 'google-pay'" class="p-4 sm:p-5 bg-[#fbf9f5] rounded-2xl border border-[#e0d9cc] space-y-3.5 shadow-2xs animate-in fade-in duration-150">
               <div class="flex items-center justify-between">
                 <div class="flex items-center gap-2.5">
                   <div class="w-9 h-9 rounded-xl bg-white border border-[#e0d9cc] flex items-center justify-center">
@@ -1054,9 +1080,16 @@ async function completeOrder() {
                 <span class="font-mono text-stone-900 font-bold">•••• 4012 (Google Pay)</span>
               </div>
 
-              <p class="text-[11px] text-stone-500">
-                Click below to authorize <strong>${{ checkoutTotal }}</strong> instantly using your Google Wallet.
-              </p>
+              <button
+                type="button"
+                @click="completeOrder"
+                :disabled="isProcessing"
+                class="w-full h-11 bg-[#1a1a1a] hover:bg-black text-white font-bold text-xs rounded-xl flex items-center justify-center gap-2 transition-all cursor-pointer active:scale-[0.99] disabled:opacity-50"
+              >
+                <Loader2 v-if="isProcessing" class="w-4 h-4 animate-spin text-white" />
+                <IconGooglePay v-else :width="38" :height="16" />
+                <span>{{ isProcessing ? 'Authorizing Google Wallet...' : `Pay $${checkoutTotal} with Google Wallet` }}</span>
+              </button>
             </div>
 
             <!-- Minimum Order Amount Warning -->
