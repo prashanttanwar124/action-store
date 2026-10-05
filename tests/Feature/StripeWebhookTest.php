@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Jobs\RecoverStripeOrderJob;
 use App\Models\Order;
 use App\Models\Product;
 use Illuminate\Database\QueryException;
@@ -249,5 +250,88 @@ class StripeWebhookTest extends TestCase
                     'stripe_payment_id' => 'pi_webhook_first_555',
                 ],
             ]);
+    }
+
+    public function test_pre_payment_validate_endpoint_checks_stock_before_charging(): void
+    {
+        $product = Product::factory()->create(['stock' => 2, 'price' => 15.00]);
+
+        // 1. Requesting quantity > stock should fail validation with 422 BEFORE any card charge
+        $response = $this->postJson('/checkout/validate', [
+            'items' => [['id' => $product->id, 'price' => 15.00, 'quantity' => 5]],
+            'fulfillment_type' => 'Store Pickup',
+        ]);
+
+        $response->assertStatus(422)
+            ->assertJsonValidationErrors(['items']);
+
+        // 2. Requesting valid stock passes
+        $validResponse = $this->postJson('/checkout/validate', [
+            'items' => [['id' => $product->id, 'price' => 15.00, 'quantity' => 2]],
+            'fulfillment_type' => 'Store Pickup',
+        ]);
+
+        $validResponse->assertStatus(200)
+            ->assertJson([
+                'valid' => true,
+                'subtotal' => 30.00,
+            ]);
+    }
+
+    public function test_delayed_recovery_job_executes_recovery_from_metadata(): void
+    {
+        $product = Product::factory()->create(['stock' => 10, 'price' => 25.00]);
+
+        $job = new RecoverStripeOrderJob([
+            'id' => 'pi_delayed_job_recovery_111',
+            'amount_received' => 2500,
+            'currency' => 'cad',
+            'metadata' => [
+                'customer_name' => 'Delayed Customer',
+                'customer_email' => 'delayed@example.com',
+                'fulfillment_type' => 'Store Pickup',
+                'pickup_slot' => 'Tomorrow (11:00 AM - 11:30 AM)',
+                'items_json' => json_encode([
+                    ['id' => $product->id, 'price' => 25.00, 'quantity' => 1],
+                ]),
+            ],
+        ]);
+
+        $job->handle();
+
+        $this->assertDatabaseHas('orders', [
+            'stripe_payment_id' => 'pi_delayed_job_recovery_111',
+            'customer_email' => 'delayed@example.com',
+            'pickup_slot' => 'Tomorrow (11:00 AM - 11:30 AM)',
+        ]);
+        $this->assertEquals(9, $product->fresh()->stock);
+    }
+
+    public function test_delayed_recovery_job_skips_if_order_already_created_by_browser(): void
+    {
+        $product = Product::factory()->create(['stock' => 10, 'price' => 25.00]);
+
+        // Order already placed by customer
+        Order::factory()->create([
+            'stripe_payment_id' => 'pi_already_placed_222',
+            'total' => 25.00,
+        ]);
+
+        $job = new RecoverStripeOrderJob([
+            'id' => 'pi_already_placed_222',
+            'amount_received' => 2500,
+            'currency' => 'cad',
+            'metadata' => [
+                'items_json' => json_encode([
+                    ['id' => $product->id, 'price' => 25.00, 'quantity' => 1],
+                ]),
+            ],
+        ]);
+
+        $job->handle();
+
+        // Count should remain 1 and stock should remain 10 (not double decremented)
+        $this->assertEquals(1, Order::where('stripe_payment_id', 'pi_already_placed_222')->count());
+        $this->assertEquals(10, $product->fresh()->stock);
     }
 }

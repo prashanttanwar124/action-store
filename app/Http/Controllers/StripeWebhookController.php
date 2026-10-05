@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Events\OrderPlaced;
+use App\Jobs\RecoverStripeOrderJob;
 use App\Models\Order;
 use App\Models\Product;
 use App\Models\RecipeKit;
@@ -98,6 +99,36 @@ class StripeWebhookController extends Controller
             return;
         }
 
+        // In testing, run recovery synchronously to allow deterministic test assertions.
+        // In production/local, schedule a delayed job so customer's browser POST /checkout has
+        // a 90-second window to create the authentic order without being preempted.
+        if (app()->environment('testing')) {
+            static::processRecovery($intent);
+        } else {
+            $intentArray = json_decode(json_encode($intent), true) ?: [];
+            RecoverStripeOrderJob::dispatch($intentArray)->delay(now()->addSeconds(90));
+            Log::info("Stripe webhook: Scheduled delayed recovery job for payment {$stripePaymentId} (90s grace window).");
+        }
+    }
+
+    /**
+     * Perform the actual order recovery from PaymentIntent metadata.
+     */
+    public static function processRecovery(object|array $intent): ?Order
+    {
+        if (is_array($intent)) {
+            $intent = json_decode(json_encode($intent));
+        }
+
+        $stripePaymentId = $intent->id ?? null;
+        if (empty($stripePaymentId)) {
+            return null;
+        }
+
+        if (Order::where('stripe_payment_id', $stripePaymentId)->exists()) {
+            return Order::where('stripe_payment_id', $stripePaymentId)->first();
+        }
+
         // Robust metadata extraction supporting Stripe\StripeObject, stdClass, and array
         $metadata = [];
         if (isset($intent->metadata)) {
@@ -118,7 +149,7 @@ class StripeWebhookController extends Controller
         if (empty($items)) {
             Log::warning("Stripe webhook: Received payment {$stripePaymentId} without cart metadata. Manual reconciliation needed.");
 
-            return;
+            return null;
         }
 
         // Validate Currency
@@ -128,10 +159,11 @@ class StripeWebhookController extends Controller
             throw new \RuntimeException("Payment currency ({$intentCurrency}) does not match store currency ({$storeCurrency}).");
         }
 
-        DB::transaction(function () use ($stripePaymentId, $metadata, $items, $intent) {
+        return DB::transaction(function () use ($stripePaymentId, $metadata, $items, $intent) {
             // Guard against concurrent execution
-            if (Order::where('stripe_payment_id', $stripePaymentId)->exists()) {
-                return;
+            $existing = Order::where('stripe_payment_id', $stripePaymentId)->first();
+            if ($existing) {
+                return $existing;
             }
 
             $subtotal = 0.00;
@@ -243,6 +275,8 @@ class StripeWebhookController extends Controller
             }
 
             Log::info("Stripe webhook: Successfully recovered and created order {$order->order_number} for payment {$stripePaymentId}.");
+
+            return $order;
         });
     }
 }

@@ -26,6 +26,7 @@ Route::get('/products/{slug}', [ProductController::class, 'show'])->name('produc
 Route::get('/cart', [CartController::class, 'index'])->name('cart');
 Route::get('/checkout', [CartController::class, 'checkout'])->name('checkout');
 Route::post('/checkout/create-payment-intent', [OrderController::class, 'createPaymentIntent'])->name('checkout.payment-intent');
+Route::post('/checkout/validate', [OrderController::class, 'validateOrder'])->name('checkout.validate');
 Route::post('/checkout', [OrderController::class, 'store'])->name('checkout.store');
 Route::post('/stripe/webhook', [StripeWebhookController::class, 'handle'])->name('stripe.webhook');
 Route::get('/orders/{order_number}', [OrderController::class, 'show'])->name('orders.track');

@@ -18,6 +18,7 @@ use Inertia\Inertia;
 use Inertia\Response;
 use Stripe\Exception\ApiErrorException;
 use Stripe\PaymentIntent;
+use Stripe\Refund;
 use Stripe\Stripe;
 
 class OrderController extends Controller
@@ -86,242 +87,286 @@ class OrderController extends Controller
         $customerName = $user?->name ?? $validated['customer_name'] ?? 'Guest Customer';
         $customerEmail = $user?->email ?? $validated['customer_email'] ?? 'guest@example.com';
         $customerPhone = $validated['customer_phone'] ?? null;
+        $stripePaymentId = $validated['stripe_payment_id'] ?? null;
 
-        $order = DB::transaction(function () use ($request, $validated, $user, $customerName, $customerEmail, $customerPhone, $idempotencyKey) {
-            $subtotal = 0;
-            $resolvedItems = [];
-            $requiredProductQuantities = [];
+        try {
+            $order = DB::transaction(function () use ($request, $validated, $user, $customerName, $customerEmail, $customerPhone, $idempotencyKey) {
+                $subtotal = 0;
+                $resolvedItems = [];
+                $requiredProductQuantities = [];
 
-            foreach ($validated['items'] as $index => $item) {
-                $model = ($item['type'] ?? 'product') === 'recipe-kit' ? RecipeKit::class : Product::class;
-                $catalogItem = $model::query()
-                    ->where(is_numeric($item['id']) ? 'id' : 'slug', $item['id'])->first();
-
-                if (! $catalogItem && ! isset($item['type'])) {
-                    $catalogItem = RecipeKit::query()
+                foreach ($validated['items'] as $index => $item) {
+                    $model = ($item['type'] ?? 'product') === 'recipe-kit' ? RecipeKit::class : Product::class;
+                    $catalogItem = $model::query()
                         ->where(is_numeric($item['id']) ? 'id' : 'slug', $item['id'])->first();
-                }
 
-                if (! $catalogItem || ($catalogItem instanceof RecipeKit && ! $catalogItem->is_active)) {
-                    throw ValidationException::withMessages(["items.{$index}.id" => 'This item is no longer available. Please update your cart.']);
-                }
-
-                $isSubscribed = ! empty($item['is_subscribed']);
-                if ($isSubscribed && ! ($catalogItem instanceof Product && $catalogItem->has_subscription)) {
-                    throw ValidationException::withMessages(["items.{$index}.is_subscribed" => 'This item is not eligible for subscription pricing.']);
-                }
-
-                $unitPrice = round($catalogItem->price * ($isSubscribed ? 0.95 : 1), 2);
-                $quantity = (int) $item['quantity'];
-
-                // Track total quantities required per unique product ID (including kit ingredients)
-                if ($catalogItem instanceof Product) {
-                    $requiredProductQuantities[$catalogItem->id] = ($requiredProductQuantities[$catalogItem->id] ?? 0) + $quantity;
-                } else {
-                    $catalogItem->load('products');
-                    foreach ($catalogItem->products as $kitProduct) {
-                        $needed = ($kitProduct->pivot->quantity ?? 1) * $quantity;
-                        $requiredProductQuantities[$kitProduct->id] = ($requiredProductQuantities[$kitProduct->id] ?? 0) + $needed;
+                    if (! $catalogItem && ! isset($item['type'])) {
+                        $catalogItem = RecipeKit::query()
+                            ->where(is_numeric($item['id']) ? 'id' : 'slug', $item['id'])->first();
                     }
+
+                    if (! $catalogItem || ($catalogItem instanceof RecipeKit && ! $catalogItem->is_active)) {
+                        throw ValidationException::withMessages(["items.{$index}.id" => 'This item is no longer available. Please update your cart.']);
+                    }
+
+                    $isSubscribed = ! empty($item['is_subscribed']);
+                    if ($isSubscribed && ! ($catalogItem instanceof Product && $catalogItem->has_subscription)) {
+                        throw ValidationException::withMessages(["items.{$index}.is_subscribed" => 'This item is not eligible for subscription pricing.']);
+                    }
+
+                    $unitPrice = round($catalogItem->price * ($isSubscribed ? 0.95 : 1), 2);
+                    $quantity = (int) $item['quantity'];
+
+                    // Track total quantities required per unique product ID (including kit ingredients)
+                    if ($catalogItem instanceof Product) {
+                        $requiredProductQuantities[$catalogItem->id] = ($requiredProductQuantities[$catalogItem->id] ?? 0) + $quantity;
+                    } else {
+                        $catalogItem->load('products');
+                        foreach ($catalogItem->products as $kitProduct) {
+                            $needed = ($kitProduct->pivot->quantity ?? 1) * $quantity;
+                            $requiredProductQuantities[$kitProduct->id] = ($requiredProductQuantities[$kitProduct->id] ?? 0) + $needed;
+                        }
+                    }
+
+                    $item['price'] = $unitPrice;
+                    $item['name'] = $catalogItem->name;
+                    $item['image'] = $catalogItem->image;
+                    $item['size'] = $catalogItem instanceof Product ? $catalogItem->size_main : null;
+                    $item['catalog_item'] = $catalogItem;
+                    $resolvedItems[] = $item;
+                    $subtotal += round($unitPrice * $quantity, 2);
                 }
+                $subtotal = round($subtotal, 2);
 
-                $item['price'] = $unitPrice;
-                $item['name'] = $catalogItem->name;
-                $item['image'] = $catalogItem->image;
-                $item['size'] = $catalogItem instanceof Product ? $catalogItem->size_main : null;
-                $item['catalog_item'] = $catalogItem;
-                $resolvedItems[] = $item;
-                $subtotal += round($unitPrice * $quantity, 2);
-            }
-            $subtotal = round($subtotal, 2);
+                // Lock each unique product, check aggregate quantity against stock, and decrement atomically
+                $lockedProducts = Product::query()
+                    ->whereIn('id', array_keys($requiredProductQuantities))
+                    ->lockForUpdate()
+                    ->get()
+                    ->keyBy('id');
 
-            // Lock each unique product, check aggregate quantity against stock, and decrement atomically
-            $lockedProducts = Product::query()
-                ->whereIn('id', array_keys($requiredProductQuantities))
-                ->lockForUpdate()
-                ->get()
-                ->keyBy('id');
-
-            foreach ($requiredProductQuantities as $productId => $totalQty) {
-                $product = $lockedProducts->get($productId);
-                if (! $product) {
-                    throw ValidationException::withMessages(['items' => ['One or more products could not be located for inventory check.']]);
-                }
-                $currentStock = (int) ($product->stock ?? 0);
-                if ($currentStock < $totalQty) {
-                    throw ValidationException::withMessages([
-                        'items' => ["Insufficient stock for '{$product->name}'. Total requested: {$totalQty}, but only {$currentStock} available."],
-                        'error_code' => 'out_of_stock',
-                    ]);
-                }
-                $product->decrementStock($totalQty);
-            }
-
-            $storeInfo = StoreSetting::current();
-
-            // Check Minimum Order Amount
-            if (($storeInfo->min_order_amount ?? 0) > 0 && $subtotal < $storeInfo->min_order_amount) {
-                $minFormatted = number_format($storeInfo->min_order_amount, 2);
-                throw ValidationException::withMessages([
-                    'total' => "Minimum order amount is \${$minFormatted}. Please add more items to your cart.",
-                    'error_code' => 'min_order_not_met',
-                ]);
-            }
-
-            $fulfillmentType = $validated['fulfillment_type'] ?? 'Store Pickup';
-            $pickupSlot = $this->pickupSlot($validated, $storeInfo, $fulfillmentType);
-            $deliveryFee = 0.00;
-            if ($fulfillmentType === 'Home Delivery') {
-                if ($subtotal < ($storeInfo->free_delivery_threshold ?? 50.00)) {
-                    $deliveryFee = (float) ($storeInfo->delivery_fee ?? 4.99);
-                }
-            }
-
-            $discount = 0.00;
-            $total = max(0, round($subtotal - $discount + $deliveryFee, 2));
-
-            // Validate expected total if provided from client
-            if (isset($validated['expected_total'])) {
-                $expectedTotal = round((float) $validated['expected_total'], 2);
-                if (abs($total - $expectedTotal) > 0.05) {
-                    throw ValidationException::withMessages([
-                        'total' => "Order total has changed. Expected \${$expectedTotal}, but current total is \${$total}. Please review and confirm your order.",
-                        'error_code' => 'price_changed',
-                    ]);
-                }
-            }
-
-            $pointsEarned = (int) floor($subtotal);
-
-            // Generate clean, collision-free, chronological order number (e.g. #MM-20261004-1001)
-            $orderNumber = Order::generateOrderNumber();
-
-            $deliveryAddress = $validated['delivery_address'] ?? null;
-            $defaultLocation = $fulfillmentType === 'Home Delivery'
-                ? ($deliveryAddress ?: 'Delivery Address')
-                : ($storeInfo->address.' · '.$storeInfo->name);
-
-            $stripePaymentId = $validated['stripe_payment_id'] ?? null;
-
-            // Concurrency check: if a webhook or parallel request finished creating the order just now
-            if (! empty($stripePaymentId)) {
-                $alreadyUsed = Order::where('stripe_payment_id', $stripePaymentId)->first();
-                if ($alreadyUsed) {
-                    return $alreadyUsed;
-                }
-            }
-
-            // Strict Payment Verification: All online orders must have verified Stripe payment
-            $paymentMethod = $validated['payment_method'] ?? 'card';
-            $stripeSecret = config('services.stripe.secret');
-
-            if (! app()->environment('testing')) {
-                if (! empty($stripeSecret) || app()->environment('production')) {
-                    if (empty($stripePaymentId)) {
+                foreach ($requiredProductQuantities as $productId => $totalQty) {
+                    $product = $lockedProducts->get($productId);
+                    if (! $product) {
+                        throw ValidationException::withMessages(['items' => ['One or more products could not be located for inventory check.']]);
+                    }
+                    $currentStock = (int) ($product->stock ?? 0);
+                    if ($currentStock < $totalQty) {
                         throw ValidationException::withMessages([
-                            'stripe_payment_id' => 'Payment reference is required to complete this order.',
+                            'items' => ["Insufficient stock for '{$product->name}'. Total requested: {$totalQty}, but only {$currentStock} available."],
+                            'error_code' => 'out_of_stock',
                         ]);
                     }
+                    $product->decrementStock($totalQty);
+                }
 
-                    if (! app()->environment('testing')) {
-                        // Disallow any fake or simulated tokens in production
-                        if (
-                            ! str_starts_with($stripePaymentId, 'pi_') ||
-                            str_starts_with($stripePaymentId, 'pi_demo_') ||
-                            str_starts_with($stripePaymentId, 'pi_apple_pay_') ||
-                            str_starts_with($stripePaymentId, 'pi_google_wallet_') ||
-                            str_starts_with($stripePaymentId, 'pi_test_')
-                        ) {
+                $storeInfo = StoreSetting::current();
+
+                // Check Minimum Order Amount
+                if (($storeInfo->min_order_amount ?? 0) > 0 && $subtotal < $storeInfo->min_order_amount) {
+                    $minFormatted = number_format($storeInfo->min_order_amount, 2);
+                    throw ValidationException::withMessages([
+                        'total' => "Minimum order amount is \${$minFormatted}. Please add more items to your cart.",
+                        'error_code' => 'min_order_not_met',
+                    ]);
+                }
+
+                $fulfillmentType = $validated['fulfillment_type'] ?? 'Store Pickup';
+                $pickupSlot = $this->pickupSlot($validated, $storeInfo, $fulfillmentType);
+                $deliveryFee = 0.00;
+                if ($fulfillmentType === 'Home Delivery') {
+                    if ($subtotal < ($storeInfo->free_delivery_threshold ?? 50.00)) {
+                        $deliveryFee = (float) ($storeInfo->delivery_fee ?? 4.99);
+                    }
+                }
+
+                $discount = 0.00;
+                $total = max(0, round($subtotal - $discount + $deliveryFee, 2));
+
+                // Validate expected total if provided from client
+                if (isset($validated['expected_total'])) {
+                    $expectedTotal = round((float) $validated['expected_total'], 2);
+                    if (abs($total - $expectedTotal) > 0.05) {
+                        throw ValidationException::withMessages([
+                            'total' => "Order total has changed. Expected \${$expectedTotal}, but current total is \${$total}. Please review and confirm your order.",
+                            'error_code' => 'price_changed',
+                        ]);
+                    }
+                }
+
+                $pointsEarned = (int) floor($subtotal);
+
+                // Generate clean, collision-free, chronological order number (e.g. #MM-20261004-1001)
+                $orderNumber = Order::generateOrderNumber();
+
+                $deliveryAddress = $validated['delivery_address'] ?? null;
+                $defaultLocation = $fulfillmentType === 'Home Delivery'
+                    ? ($deliveryAddress ?: 'Delivery Address')
+                    : ($storeInfo->address.' · '.$storeInfo->name);
+
+                $stripePaymentId = $validated['stripe_payment_id'] ?? null;
+
+                // Concurrency check: if a webhook or parallel request finished creating the order just now
+                if (! empty($stripePaymentId)) {
+                    $alreadyUsed = Order::where('stripe_payment_id', $stripePaymentId)->first();
+                    if ($alreadyUsed) {
+                        return $alreadyUsed;
+                    }
+                }
+
+                // Strict Payment Verification: All online orders must have verified Stripe payment
+                $paymentMethod = $validated['payment_method'] ?? 'card';
+                $stripeSecret = config('services.stripe.secret');
+
+                if (! app()->environment('testing')) {
+                    if (! empty($stripeSecret) || app()->environment('production')) {
+                        if (empty($stripePaymentId)) {
                             throw ValidationException::withMessages([
-                                'stripe_payment_id' => 'Invalid or simulated payment reference is not permitted.',
+                                'stripe_payment_id' => 'Payment reference is required to complete this order.',
                             ]);
                         }
 
-                        try {
-                            Stripe::setApiKey($stripeSecret);
-                            $intent = PaymentIntent::retrieve($stripePaymentId);
-
-                            if ($intent->status !== 'succeeded') {
+                        if (! app()->environment('testing')) {
+                            // Disallow any fake or simulated tokens in production
+                            if (
+                                ! str_starts_with($stripePaymentId, 'pi_') ||
+                                str_starts_with($stripePaymentId, 'pi_demo_') ||
+                                str_starts_with($stripePaymentId, 'pi_apple_pay_') ||
+                                str_starts_with($stripePaymentId, 'pi_google_wallet_') ||
+                                str_starts_with($stripePaymentId, 'pi_test_')
+                            ) {
                                 throw ValidationException::withMessages([
-                                    'stripe_payment_id' => "Payment is not completed. Current Stripe status: {$intent->status}.",
+                                    'stripe_payment_id' => 'Invalid or simulated payment reference is not permitted.',
                                 ]);
                             }
 
-                            $expectedCents = (int) round($total * 100);
-                            $receivedCents = (int) ($intent->amount_received ?? 0);
-                            if ($receivedCents !== $expectedCents) {
-                                $receivedDollars = number_format($receivedCents / 100, 2);
-                                $totalDollars = number_format($total, 2);
-                                throw ValidationException::withMessages([
-                                    'stripe_payment_id' => "Paid amount (\${$receivedDollars}) does not match order total (\${$totalDollars}).",
-                                ]);
-                            }
+                            try {
+                                Stripe::setApiKey($stripeSecret);
+                                $intent = PaymentIntent::retrieve($stripePaymentId);
 
-                            $storeCurrency = strtolower(config('services.stripe.currency', 'cad'));
-                            if (strtolower($intent->currency) !== $storeCurrency) {
-                                throw ValidationException::withMessages([
-                                    'stripe_payment_id' => "Payment currency ({$intent->currency}) does not match store currency ({$storeCurrency}).",
-                                ]);
-                            }
+                                if ($intent->status !== 'succeeded') {
+                                    throw ValidationException::withMessages([
+                                        'stripe_payment_id' => "Payment is not completed. Current Stripe status: {$intent->status}.",
+                                    ]);
+                                }
 
-                            // Verify customer/session ownership binding if set
-                            $intentSessionId = $intent->metadata->session_id ?? null;
-                            if ($intentSessionId && $intentSessionId !== $request->session()->getId()) {
+                                $expectedCents = (int) round($total * 100);
+                                $receivedCents = (int) ($intent->amount_received ?? 0);
+                                if ($receivedCents !== $expectedCents) {
+                                    $receivedDollars = number_format($receivedCents / 100, 2);
+                                    $totalDollars = number_format($total, 2);
+                                    throw ValidationException::withMessages([
+                                        'stripe_payment_id' => "Paid amount (\${$receivedDollars}) does not match order total (\${$totalDollars}).",
+                                    ]);
+                                }
+
+                                $storeCurrency = strtolower(config('services.stripe.currency', 'cad'));
+                                if (strtolower($intent->currency) !== $storeCurrency) {
+                                    throw ValidationException::withMessages([
+                                        'stripe_payment_id' => "Payment currency ({$intent->currency}) does not match store currency ({$storeCurrency}).",
+                                    ]);
+                                }
+
+                                // Verify customer/session ownership binding if set
+                                $intentSessionId = $intent->metadata->session_id ?? null;
+                                if ($intentSessionId && $intentSessionId !== $request->session()->getId()) {
+                                    throw ValidationException::withMessages([
+                                        'stripe_payment_id' => 'Payment intent does not match your active checkout session.',
+                                    ]);
+                                }
+                            } catch (ApiErrorException $e) {
+                                Log::error('Stripe payment verification failed: '.$e->getMessage());
                                 throw ValidationException::withMessages([
-                                    'stripe_payment_id' => 'Payment intent does not match your active checkout session.',
+                                    'stripe_payment_id' => 'Unable to verify payment with Stripe: '.$e->getMessage(),
                                 ]);
                             }
-                        } catch (ApiErrorException $e) {
-                            Log::error('Stripe payment verification failed: '.$e->getMessage());
-                            throw ValidationException::withMessages([
-                                'stripe_payment_id' => 'Unable to verify payment with Stripe: '.$e->getMessage(),
-                            ]);
                         }
+                    }
+                }
+
+                $order = Order::create([
+                    'order_number' => $orderNumber,
+                    'user_id' => $user?->id,
+                    'customer_name' => $customerName,
+                    'customer_email' => $customerEmail,
+                    'customer_phone' => $customerPhone,
+                    'subtotal' => $subtotal,
+                    'discount' => $discount,
+                    'delivery_fee' => $deliveryFee,
+                    'total' => $total,
+                    'points_earned' => $pointsEarned,
+                    'payment_method' => $validated['payment_method'] ?? 'card',
+                    'stripe_payment_id' => $stripePaymentId,
+                    'fulfillment_type' => $fulfillmentType,
+                    'pickup_slot' => $pickupSlot,
+                    'pickup_location' => $validated['pickup_location'] ?? $defaultLocation,
+                    'delivery_address' => $deliveryAddress,
+                    'status' => 'confirmed',
+                    'notes' => $validated['notes'] ?? null,
+                    'idempotency_key' => $idempotencyKey,
+                ]);
+
+                foreach ($resolvedItems as $item) {
+                    $catalogItem = $item['catalog_item'];
+                    $quantity = (int) $item['quantity'];
+                    $productId = $catalogItem instanceof Product ? $catalogItem->id : null;
+
+                    $order->items()->create([
+                        'product_id' => $productId,
+                        'name' => $item['name'],
+                        'size' => $item['size'] ?? ($item['weight'] ?? null),
+                        'unit_price' => $item['price'],
+                        'quantity' => $quantity,
+                        'total_price' => round($item['price'] * $quantity, 2),
+                        'is_subscribed' => ! empty($item['is_subscribed']),
+                        'image' => $item['image'] ?? null,
+                    ]);
+                }
+
+                return $order;
+            });
+        } catch (\Throwable $e) {
+            // First check if concurrent creation succeeded (QueryException / unique key collision)
+            if (! empty($stripePaymentId)) {
+                $existingOrder = Order::where('stripe_payment_id', $stripePaymentId)->first();
+                if ($existingOrder) {
+                    $existingOrder->load(['items', 'user']);
+                    $request->session()->push('placed_order_numbers', $existingOrder->order_number);
+                    if ($request->wantsJson()) {
+                        return response()->json([
+                            'success' => true,
+                            'order' => $existingOrder,
+                        ], 200);
+                    }
+
+                    return redirect()->route('account')->with('success', "Order {$existingOrder->order_number} confirmed!");
+                }
+            }
+
+            // CRITICAL REFUND PATH: If order creation failed and customer was already charged via Stripe:
+            // Issue immediate refund so the customer is NEVER charged without an order!
+            if (! empty($stripePaymentId) && ! app()->environment('testing')) {
+                $stripeSecret = config('services.stripe.secret');
+                if (! empty($stripeSecret)) {
+                    try {
+                        Stripe::setApiKey($stripeSecret);
+                        Refund::create([
+                            'payment_intent' => $stripePaymentId,
+                            'reason' => 'fraudulent',
+                            'metadata' => [
+                                'reason' => 'Automated server-side refund: order creation failed in database',
+                                'error' => substr($e->getMessage(), 0, 500),
+                            ],
+                        ]);
+                        Log::warning("Automated refund successfully issued for {$stripePaymentId} because order creation failed: {$e->getMessage()}");
+                    } catch (\Throwable $refundEx) {
+                        Log::error("CRITICAL: Failed to issue automated refund for payment {$stripePaymentId}: {$refundEx->getMessage()}");
                     }
                 }
             }
 
-            $order = Order::create([
-                'order_number' => $orderNumber,
-                'user_id' => $user?->id,
-                'customer_name' => $customerName,
-                'customer_email' => $customerEmail,
-                'customer_phone' => $customerPhone,
-                'subtotal' => $subtotal,
-                'discount' => $discount,
-                'delivery_fee' => $deliveryFee,
-                'total' => $total,
-                'points_earned' => $pointsEarned,
-                'payment_method' => $validated['payment_method'] ?? 'card',
-                'stripe_payment_id' => $stripePaymentId,
-                'fulfillment_type' => $fulfillmentType,
-                'pickup_slot' => $pickupSlot,
-                'pickup_location' => $validated['pickup_location'] ?? $defaultLocation,
-                'delivery_address' => $deliveryAddress,
-                'status' => 'confirmed',
-                'notes' => $validated['notes'] ?? null,
-                'idempotency_key' => $idempotencyKey,
-            ]);
-
-            foreach ($resolvedItems as $item) {
-                $catalogItem = $item['catalog_item'];
-                $quantity = (int) $item['quantity'];
-                $productId = $catalogItem instanceof Product ? $catalogItem->id : null;
-
-                $order->items()->create([
-                    'product_id' => $productId,
-                    'name' => $item['name'],
-                    'size' => $item['size'] ?? ($item['weight'] ?? null),
-                    'unit_price' => $item['price'],
-                    'quantity' => $quantity,
-                    'total_price' => round($item['price'] * $quantity, 2),
-                    'is_subscribed' => ! empty($item['is_subscribed']),
-                    'image' => $item['image'] ?? null,
-                ]);
-            }
-
-            return $order;
-        });
+            throw $e;
+        }
 
         $order->load(['items', 'user']);
 
@@ -343,6 +388,145 @@ class OrderController extends Controller
         }
 
         return redirect()->route('account')->with('success', "Order {$order->order_number} confirmed!");
+    }
+
+    /**
+     * Pre-payment validation endpoint: validates stock, prices, store open status,
+     * slot availability, and order rules BEFORE the customer's card is charged.
+     */
+    public function validateOrder(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'items' => ['required', 'array', 'min:1'],
+            'items.*.id' => ['required'],
+            'items.*.quantity' => ['required', 'integer', 'min:1'],
+            'items.*.price' => ['required', 'numeric', 'min:0'],
+            'items.*.is_subscribed' => ['nullable', 'boolean'],
+            'items.*.type' => ['nullable', 'string', 'in:product,recipe-kit'],
+            'fulfillment_type' => ['required', 'string', 'in:Store Pickup,Home Delivery'],
+            'delivery_address' => ['nullable', 'string', 'max:500'],
+            'pickup_slot' => ['nullable', 'string', 'max:255'],
+            'pickup_timing_mode' => ['nullable', 'string', 'in:asap,scheduled'],
+            'pickup_timing_type' => ['nullable', 'string', 'in:slot,custom'],
+            'pickup_date' => ['nullable', 'string', 'max:50'],
+            'pickup_time' => ['nullable', 'string', 'max:50'],
+        ]);
+
+        $storeInfo = StoreSetting::current();
+        $result = $this->validateOrderRequirements($validated, $storeInfo);
+
+        return response()->json([
+            'valid' => true,
+            'subtotal' => $result['subtotal'],
+            'delivery_fee' => $result['delivery_fee'],
+            'total' => $result['total'],
+            'pickup_slot' => $result['pickup_slot'],
+        ]);
+    }
+
+    /**
+     * Core validation for cart items, inventory, pricing, slot capacity, and store limits.
+     *
+     * @param  array<string, mixed>  $validated
+     * @return array<string, mixed>
+     */
+    protected function validateOrderRequirements(array $validated, StoreSetting $storeInfo): array
+    {
+        $subtotal = 0;
+        $resolvedItems = [];
+        $requiredProductQuantities = [];
+
+        foreach ($validated['items'] as $index => $item) {
+            $model = ($item['type'] ?? 'product') === 'recipe-kit' ? RecipeKit::class : Product::class;
+            $catalogItem = $model::query()
+                ->where(is_numeric($item['id']) ? 'id' : 'slug', $item['id'])->first();
+
+            if (! $catalogItem && ! isset($item['type'])) {
+                $catalogItem = RecipeKit::query()
+                    ->where(is_numeric($item['id']) ? 'id' : 'slug', $item['id'])->first();
+            }
+
+            if (! $catalogItem || ($catalogItem instanceof RecipeKit && ! $catalogItem->is_active)) {
+                throw ValidationException::withMessages(["items.{$index}.id" => 'This item is no longer available. Please update your cart.']);
+            }
+
+            $isSubscribed = ! empty($item['is_subscribed']);
+            if ($isSubscribed && ! ($catalogItem instanceof Product && $catalogItem->has_subscription)) {
+                throw ValidationException::withMessages(["items.{$index}.is_subscribed" => 'This item is not eligible for subscription pricing.']);
+            }
+
+            $unitPrice = round($catalogItem->price * ($isSubscribed ? 0.95 : 1), 2);
+            $quantity = (int) $item['quantity'];
+
+            if ($catalogItem instanceof Product) {
+                $requiredProductQuantities[$catalogItem->id] = ($requiredProductQuantities[$catalogItem->id] ?? 0) + $quantity;
+            } else {
+                $catalogItem->load('products');
+                foreach ($catalogItem->products as $kitProduct) {
+                    $needed = ($kitProduct->pivot->quantity ?? 1) * $quantity;
+                    $requiredProductQuantities[$kitProduct->id] = ($requiredProductQuantities[$kitProduct->id] ?? 0) + $needed;
+                }
+            }
+
+            $item['price'] = $unitPrice;
+            $item['name'] = $catalogItem->name;
+            $item['image'] = $catalogItem->image;
+            $item['size'] = $catalogItem instanceof Product ? $catalogItem->size_main : null;
+            $item['catalog_item'] = $catalogItem;
+            $resolvedItems[] = $item;
+            $subtotal += round($unitPrice * $quantity, 2);
+        }
+        $subtotal = round($subtotal, 2);
+
+        // Pre-check stock sufficiency against existing inventory
+        $products = Product::query()
+            ->whereIn('id', array_keys($requiredProductQuantities))
+            ->get()
+            ->keyBy('id');
+
+        foreach ($requiredProductQuantities as $productId => $totalQty) {
+            $product = $products->get($productId);
+            if (! $product) {
+                throw ValidationException::withMessages(['items' => ['One or more products could not be located for inventory check.']]);
+            }
+            $currentStock = (int) ($product->stock ?? 0);
+            if ($currentStock < $totalQty) {
+                throw ValidationException::withMessages([
+                    'items' => ["Insufficient stock for '{$product->name}'. Total requested: {$totalQty}, but only {$currentStock} available."],
+                    'error_code' => 'out_of_stock',
+                ]);
+            }
+        }
+
+        // Check Minimum Order Amount
+        if (($storeInfo->min_order_amount ?? 0) > 0 && $subtotal < $storeInfo->min_order_amount) {
+            $minFormatted = number_format($storeInfo->min_order_amount, 2);
+            throw ValidationException::withMessages([
+                'total' => "Minimum order amount is \${$minFormatted}. Please add more items to your cart.",
+                'error_code' => 'min_order_not_met',
+            ]);
+        }
+
+        $fulfillmentType = $validated['fulfillment_type'] ?? 'Store Pickup';
+        $pickupSlot = $this->pickupSlot($validated, $storeInfo, $fulfillmentType);
+        $deliveryFee = 0.00;
+        if ($fulfillmentType === 'Home Delivery') {
+            if ($subtotal < ($storeInfo->free_delivery_threshold ?? 50.00)) {
+                $deliveryFee = (float) ($storeInfo->delivery_fee ?? 4.99);
+            }
+        }
+
+        $total = max(0, round($subtotal + $deliveryFee, 2));
+
+        return [
+            'subtotal' => $subtotal,
+            'delivery_fee' => $deliveryFee,
+            'total' => $total,
+            'fulfillment_type' => $fulfillmentType,
+            'pickup_slot' => $pickupSlot,
+            'resolvedItems' => $resolvedItems,
+            'requiredProductQuantities' => $requiredProductQuantities,
+        ];
     }
 
     /**

@@ -463,13 +463,36 @@ onMounted(() => {
   }
 });
 
-watch(() => checkoutTotal.value, (newTotal) => {
-  if (Number(newTotal) >= 0.5 && !isStripeMounted.value && !isStripeLoading.value && isStripeConfigured.value) {
-    initStripe();
-  } else if (isStripeMounted.value && activePaymentIntentId.value) {
-    syncPaymentIntentAmount(newTotal);
-  }
-});
+let syncTimeout = null;
+function debounceSyncPaymentIntent() {
+  if (!isStripeConfigured.value || !activePaymentIntentId.value) return;
+  clearTimeout(syncTimeout);
+  syncTimeout = setTimeout(() => {
+    syncPaymentIntentAmount(checkoutTotal.value);
+  }, 400);
+}
+
+watch(
+  [
+    () => store.cartItems,
+    () => fulfillmentMode.value,
+    () => deliveryAddress.value,
+    () => deliveryApt.value,
+    () => effectiveFulfillmentSlotLabel.value,
+    () => customerName.value,
+    () => customerEmail.value,
+    () => customerPhone.value,
+    () => checkoutTotal.value,
+  ],
+  () => {
+    if (Number(checkoutTotal.value) >= 0.5 && !isStripeMounted.value && !isStripeLoading.value && isStripeConfigured.value) {
+      initStripe();
+    } else if (isStripeMounted.value && activePaymentIntentId.value) {
+      debounceSyncPaymentIntent();
+    }
+  },
+  { deep: true }
+);
 
 async function completeOrder() {
   if (isProcessing.value || store.cartItems.length === 0) {
@@ -523,6 +546,30 @@ async function completeOrder() {
     : null;
   const storePickupLocation = `${storeInfo.value.name || 'Masala Mart'} · ${storeInfo.value.address || '456 Curry Road, Flavor Town'}`;
   const effectivePickupSlot = isDelivery ? null : (schedule.pickup_slot || effectiveFulfillmentSlotLabel.value);
+
+  // Server-side pre-payment validation: verify stock, slot availability, store status, and pricing BEFORE charging the card!
+  try {
+    await axios.post('/checkout/validate', {
+      items: store.cartItems.map(item => ({
+        id: item.id,
+        price: Number(item.price),
+        quantity: Number(item.quantity || 1),
+        is_subscribed: Boolean(item.isSubscribed),
+      })),
+      fulfillment_type: isDelivery ? 'Home Delivery' : 'Store Pickup',
+      delivery_address: formattedDeliveryAddress,
+      pickup_slot: effectivePickupSlot,
+      ...schedule,
+    });
+  } catch (valErr) {
+    console.error('Pre-payment validation failed:', valErr);
+    const errors = valErr.response?.data?.errors;
+    const msg = valErr.response?.data?.message || (errors ? Object.values(errors).flat()[0] : null) || 'Some items in your cart are no longer available or the selected time slot is full.';
+    errorMessage.value = msg;
+    generalError.value = msg;
+    isProcessing.value = false;
+    return;
+  }
 
   let stripePaymentId = null;
   if (isStripeConfigured.value) {
