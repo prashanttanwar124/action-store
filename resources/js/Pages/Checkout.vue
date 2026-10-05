@@ -32,8 +32,6 @@ import {
   ChevronRight,
   X
 } from 'lucide-vue-next';
-import IconApplePay from '../Components/Icons/IconApplePay.vue';
-import IconGooglePay from '../Components/Icons/IconGooglePay.vue';
 import { Input } from '@/Components/ui/input';
 import { Label } from '@/Components/ui/label';
 import { Button } from '@/Components/ui/button';
@@ -157,14 +155,8 @@ async function initStripe() {
   }
 }
 
-watch(paymentMethod, (newVal) => {
-  if (newVal === 'stripe' && isStripeConfigured.value && !isStripeMounted.value) {
-    initStripe();
-  }
-});
-
 onMounted(() => {
-  if (paymentMethod.value === 'stripe' && isStripeConfigured.value) {
+  if (isStripeConfigured.value) {
     initStripe();
   }
 });
@@ -880,157 +872,32 @@ async function completeOrder() {
             <div class="flex items-center justify-between">
               <div class="text-xs font-bold text-stone-900 uppercase tracking-wider flex items-center gap-2">
                 <Lock class="w-4 h-4 text-[#a47a3c]" />
-                <span>02 · PAYMENT METHOD</span>
+                <span>02 · PAYMENT</span>
               </div>
-              <span class="text-[11px] font-semibold text-stone-500 uppercase tracking-wider hidden sm:inline">
-                256-Bit Encrypted
-              </span>
-            </div>
-
-            <!-- Apple Pay / Google Pay / Stripe 3-Pills Selector -->
-            <div class="grid grid-cols-3 gap-2 sm:gap-2.5">
-              <button
-                type="button"
-                @click="paymentMethod = 'apple-pay'"
-                :class="[
-                  'h-11 sm:h-12 bg-black hover:bg-neutral-900 text-white font-semibold rounded-2xl flex items-center justify-center transition-all cursor-pointer active:scale-[0.99] border',
-                  paymentMethod === 'apple-pay' ? 'border-[#a47a3c]' : 'border-transparent'
-                ]"
-                aria-label="Pay with Apple Pay"
-              >
-                <IconApplePay :width="50" :height="22" class="text-white" />
-              </button>
-
-              <button
-                type="button"
-                @click="paymentMethod = 'google-pay'"
-                :class="[
-                  'h-11 sm:h-12 bg-black hover:bg-neutral-900 text-white font-semibold rounded-2xl flex items-center justify-center transition-all cursor-pointer active:scale-[0.99] border',
-                  paymentMethod === 'google-pay' ? 'border-[#a47a3c]' : 'border-transparent'
-                ]"
-                aria-label="Pay with Google Pay"
-              >
-                <IconGooglePay :width="52" :height="22" class="text-white" />
-              </button>
-
-              <button
-                type="button"
-                @click="paymentMethod = 'stripe'"
-                :class="[
-                  'h-11 sm:h-12 bg-[#635BFF] hover:bg-[#5349e4] text-white font-semibold rounded-2xl flex items-center justify-center transition-all cursor-pointer active:scale-[0.99] border shadow-xs',
-                  paymentMethod === 'stripe' ? 'border-[#a47a3c]' : 'border-transparent'
-                ]"
-                aria-label="Pay with Stripe"
-              >
-                <IconStripe :width="50" :height="22" class="text-white" />
-              </button>
-            </div>
-
-            <!-- STRIPE ACTIVE VIEW -->
-            <div v-if="paymentMethod === 'stripe'" class="space-y-3 pt-1 animate-in fade-in duration-200">
-              <div v-if="isStripeConfigured" class="space-y-3">
-                <div class="flex items-center justify-between text-xs text-stone-600 font-medium pb-1 border-b border-[#e0d9cc]/60">
-                  <div class="flex items-center gap-1.5 text-stone-900 font-bold">
-                    <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
-                    <span>Stripe Secure Elements</span>
-                  </div>
-                  <span class="text-[11px] text-stone-500 font-mono">End-to-End Encrypted</span>
-                </div>
-
-                <!-- Stripe Element Mount Target -->
-                <div id="stripe-payment-element-mount" class="min-h-[160px] p-3 sm:p-4 bg-[#fbf9f5] rounded-2xl border border-[#e0d9cc]">
-                  <div v-if="isStripeLoading" class="flex flex-col items-center justify-center py-8 space-y-2">
-                    <Loader2 class="w-6 h-6 animate-spin text-[#a47a3c]" />
-                    <span class="text-xs text-stone-500 font-semibold">Loading Stripe payment fields...</span>
-                  </div>
-                </div>
-
-                <div v-if="stripeError" class="p-3 bg-rose-50 border border-rose-200 text-rose-900 text-xs rounded-xl flex items-center gap-2">
-                  <AlertCircle class="w-4 h-4 text-rose-600 shrink-0" />
-                  <span>{{ stripeError }}</span>
-                </div>
-              </div>
-
-              <!-- Stripe Demo & Test Sandbox Card (When live keys not yet in .env) -->
-              <div v-else class="p-4 sm:p-5 bg-[#fbf9f5] rounded-2xl border border-[#e0d9cc] space-y-3.5">
-                <div class="flex items-center justify-between">
-                  <div class="flex items-center gap-2">
-                    <div class="w-7 h-7 rounded-xl bg-[#635BFF] flex items-center justify-center text-white">
-                      <IconStripe :width="38" :height="16" />
-                    </div>
-                    <div>
-                      <div class="text-xs font-bold text-stone-900">Stripe Payment Gateway</div>
-                      <div class="text-[11px] text-stone-500">Ready for instant card & 1-click checkout</div>
-                    </div>
-                  </div>
-                  <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300">
-                    Integration Active
-                  </span>
-                </div>
-
-                <div class="p-3 bg-white rounded-xl border border-[#e0d9cc]/80 space-y-2">
-                  <div class="flex items-center justify-between text-xs text-stone-500">
-                    <span class="font-semibold text-stone-700">Test Card (Pre-filled):</span>
-                    <span class="font-mono font-bold text-stone-900">4242 •••• •••• 4242</span>
-                  </div>
-                  <div class="flex items-center justify-between text-[11px] text-stone-500">
-                    <span>Expiry: 12/28</span>
-                    <span>CVC: 123</span>
-                    <span>ZIP: 10001</span>
-                  </div>
-                </div>
-
-                <div class="text-[11px] text-stone-500 leading-relaxed">
-                  Stripe SDK is installed. To connect your live or test Stripe account, add <code class="px-1.5 py-0.5 bg-stone-200/80 rounded text-stone-800 font-mono text-[10px]">STRIPE_KEY</code> and <code class="px-1.5 py-0.5 bg-stone-200/80 rounded text-stone-800 font-mono text-[10px]">STRIPE_SECRET</code> to your <code class="text-stone-800 font-mono text-[10px]">.env</code> file.
-                </div>
+              <div class="flex items-center gap-1.5 text-stone-500 text-[11px] font-semibold">
+                <IconStripe :width="40" :height="17" class="text-[#635BFF]" />
+                <span class="text-stone-300">·</span>
+                <span>256-Bit Encrypted</span>
               </div>
             </div>
 
-            <!-- APPLE PAY ACTIVE VIEW -->
-            <div v-else-if="paymentMethod === 'apple-pay'" class="p-4 bg-[#fbf9f5] rounded-2xl border border-[#e0d9cc] flex items-center justify-between animate-in fade-in duration-150">
-              <div class="flex items-center gap-2.5">
-                <div class="w-8 h-8 rounded-xl bg-black flex items-center justify-center text-white">
-                  <IconApplePay :width="36" :height="16" />
-                </div>
-                <div>
-                  <div class="text-xs font-bold text-stone-900">Apple Pay Selected</div>
-                  <div class="text-[11px] text-stone-500">One-touch biometric authorization at checkout</div>
+            <!-- Stripe Live Elements (when STRIPE_KEY is set in .env) -->
+            <div v-if="isStripeConfigured" class="space-y-3">
+              <div id="stripe-payment-element-mount" class="min-h-[140px] p-3.5 sm:p-4 bg-[#fbf9f5] rounded-2xl border border-[#e0d9cc]">
+                <div v-if="isStripeLoading" class="flex flex-col items-center justify-center py-8 space-y-2">
+                  <Loader2 class="w-6 h-6 animate-spin text-[#a47a3c]" />
+                  <span class="text-xs text-stone-500 font-semibold">Loading Stripe payment fields...</span>
                 </div>
               </div>
-              <CheckCircle2 class="w-4 h-4 text-emerald-600 shrink-0" />
-            </div>
 
-            <!-- GOOGLE PAY ACTIVE VIEW -->
-            <div v-else-if="paymentMethod === 'google-pay'" class="p-4 bg-[#fbf9f5] rounded-2xl border border-[#e0d9cc] flex items-center justify-between animate-in fade-in duration-150">
-              <div class="flex items-center gap-2.5">
-                <div class="w-8 h-8 rounded-xl bg-black flex items-center justify-center text-white">
-                  <IconGooglePay :width="38" :height="16" />
-                </div>
-                <div>
-                  <div class="text-xs font-bold text-stone-900">Google Pay Selected</div>
-                  <div class="text-[11px] text-stone-500">Fast, simple checkout with your Google account</div>
-                </div>
+              <div v-if="stripeError" class="p-3 bg-rose-50 border border-rose-200 text-rose-900 text-xs rounded-xl flex items-center gap-2">
+                <AlertCircle class="w-4 h-4 text-rose-600 shrink-0" />
+                <span>{{ stripeError }}</span>
               </div>
-              <CheckCircle2 class="w-4 h-4 text-emerald-600 shrink-0" />
             </div>
 
-            <!-- "or pay with card" divider -->
-            <div class="relative flex items-center justify-center my-1.5">
-              <Separator class="w-full bg-[#e0d9cc]" />
-              <button
-                type="button"
-                @click="paymentMethod = 'card'"
-                class="bg-white px-3 text-xs font-bold text-stone-600 hover:text-stone-900 uppercase tracking-wider absolute cursor-pointer transition-colors"
-              >
-                or direct card
-              </button>
-            </div>
-
-            <!-- Card Inputs (Seamless Direct Form Fields) -->
-            <div
-              class="space-y-3 pt-0.5 rounded-2xl p-3 sm:p-4 border transition-all"
-              :class="paymentMethod === 'card' ? 'bg-[#fbf9f5] border-[#a47a3c]' : 'bg-transparent border-transparent'"
-            >
+            <!-- Stripe Direct Card Fields (Clean minimal fields processed via Stripe) -->
+            <div v-else class="space-y-3">
               <div>
                 <Label class="block text-xs font-bold text-stone-800 uppercase tracking-wider mb-1">
                   Card number
@@ -1040,8 +907,7 @@ async function completeOrder() {
                     type="text"
                     placeholder="1234 1234 1234 1234"
                     value="1234 1234 1234 1234"
-                    @focus="paymentMethod = 'card'"
-                    class="w-full px-4 h-11 bg-white hover:bg-white focus:bg-white border border-[#e0d9cc] focus:border-[#1a1a1a] rounded-xl text-sm font-semibold text-stone-950 placeholder-stone-400 shadow-xs transition-all"
+                    class="w-full px-4 h-11 bg-[#fbf9f5] hover:bg-white focus:bg-white border border-[#e0d9cc] focus:border-[#1a1a1a] rounded-xl text-sm font-semibold text-stone-950 placeholder-stone-400 shadow-xs transition-all"
                   />
                   <div class="absolute right-3 flex items-center gap-1.5">
                     <Badge variant="outline" class="text-[10px] font-bold font-mono px-2 py-0.5 bg-[#f4efe6] border-[#dfd6c8] text-stone-800 rounded-md">VISA</Badge>
@@ -1060,8 +926,7 @@ async function completeOrder() {
                     type="text"
                     placeholder="12/28"
                     value="12/28"
-                    @focus="paymentMethod = 'card'"
-                    class="w-full px-4 h-11 bg-white hover:bg-white focus:bg-white border border-[#e0d9cc] focus:border-[#1a1a1a] rounded-xl text-sm font-semibold text-stone-950 placeholder-stone-400 shadow-xs transition-all"
+                    class="w-full px-4 h-11 bg-[#fbf9f5] hover:bg-white focus:bg-white border border-[#e0d9cc] focus:border-[#1a1a1a] rounded-xl text-sm font-semibold text-stone-950 placeholder-stone-400 shadow-xs transition-all"
                   />
                 </div>
                 <div>
@@ -1072,8 +937,7 @@ async function completeOrder() {
                     type="password"
                     placeholder="•••"
                     value="123"
-                    @focus="paymentMethod = 'card'"
-                    class="w-full px-4 h-11 bg-white hover:bg-white focus:bg-white border border-[#e0d9cc] focus:border-[#1a1a1a] rounded-xl text-sm font-semibold text-stone-950 placeholder-stone-400 shadow-xs font-mono transition-all"
+                    class="w-full px-4 h-11 bg-[#fbf9f5] hover:bg-white focus:bg-white border border-[#e0d9cc] focus:border-[#1a1a1a] rounded-xl text-sm font-semibold text-stone-950 placeholder-stone-400 shadow-xs font-mono transition-all"
                   />
                 </div>
               </div>
