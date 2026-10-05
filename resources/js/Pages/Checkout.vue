@@ -140,7 +140,13 @@ async function initStripe() {
       },
     });
 
-    paymentElement.value = elements.value.create('payment');
+    paymentElement.value = elements.value.create('payment', {
+      layout: 'tabs',
+      wallets: {
+        applePay: 'never',
+        googlePay: 'never',
+      },
+    });
     await nextTick();
     const container = document.getElementById('stripe-payment-element-mount');
     if (container) {
