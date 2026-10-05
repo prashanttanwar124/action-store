@@ -169,6 +169,8 @@ const stripeError = ref('');
 const stripePublishableKey = computed(() => page.props.stripeKey || import.meta.env.VITE_STRIPE_KEY || '');
 const isStripeConfigured = computed(() => Boolean(stripePublishableKey.value));
 
+const activePaymentIntentId = ref('');
+
 async function initStripe() {
   if (!isStripeConfigured.value) return;
   const total = Number(checkoutTotal.value);
@@ -189,11 +191,15 @@ async function initStripe() {
     const { data } = await axios.post('/checkout/create-payment-intent', {
       amount: total,
       currency: 'cad',
+      payment_intent_id: activePaymentIntentId.value || undefined,
+      idempotency_key: checkoutIdempotencyKey.value,
     });
 
     if (data.error) {
       throw new Error(data.error);
     }
+
+    activePaymentIntentId.value = data.paymentIntentId || '';
 
     const clientSecret = data.clientSecret;
     if (!clientSecret) {
@@ -254,6 +260,20 @@ async function initStripe() {
     stripeError.value = err.response?.data?.error || err.message || 'Stripe initialization failed.';
   } finally {
     isStripeLoading.value = false;
+  }
+}
+
+async function syncPaymentIntentAmount(newTotal) {
+  if (!isStripeConfigured.value || !activePaymentIntentId.value || !newTotal || Number(newTotal) < 0.5) return;
+  try {
+    await axios.post('/checkout/create-payment-intent', {
+      amount: Number(newTotal),
+      currency: 'cad',
+      payment_intent_id: activePaymentIntentId.value,
+      idempotency_key: `${checkoutIdempotencyKey.value}_amt_${Math.round(Number(newTotal) * 100)}`,
+    });
+  } catch (err) {
+    console.warn('Failed to sync PaymentIntent amount with Stripe:', err);
   }
 }
 
@@ -387,6 +407,8 @@ onMounted(() => {
 watch(() => checkoutTotal.value, (newTotal) => {
   if (Number(newTotal) >= 0.5 && !isStripeMounted.value && !isStripeLoading.value && isStripeConfigured.value) {
     initStripe();
+  } else if (isStripeMounted.value && activePaymentIntentId.value) {
+    syncPaymentIntentAmount(newTotal);
   }
 });
 
@@ -426,7 +448,14 @@ async function completeOrder() {
   }
 
   let stripePaymentId = null;
-  if ((paymentMethod.value === 'card' || paymentMethod.value === 'stripe') && isStripeConfigured.value && stripe.value && elements.value) {
+  if ((paymentMethod.value === 'card' || paymentMethod.value === 'stripe') && isStripeConfigured.value) {
+    if (!stripe.value || !elements.value) {
+      paymentError.value = 'Stripe payment element is still loading. Please wait a moment and try again.';
+      errorMessage.value = paymentError.value;
+      isProcessing.value = false;
+      return;
+    }
+
     try {
       const { error: stripeErr, paymentIntent } = await stripe.value.confirmPayment({
         elements: elements.value,
@@ -440,8 +469,13 @@ async function completeOrder() {
         return;
       }
 
-      if (paymentIntent && (paymentIntent.status === 'succeeded' || paymentIntent.status === 'processing')) {
+      if (paymentIntent && paymentIntent.status === 'succeeded') {
         stripePaymentId = paymentIntent.id;
+      } else {
+        paymentError.value = 'Payment was not confirmed. Current status: ' + (paymentIntent?.status || 'incomplete');
+        errorMessage.value = paymentError.value;
+        isProcessing.value = false;
+        return;
       }
     } catch (err) {
       console.error('Stripe confirmation error:', err);
@@ -462,6 +496,11 @@ async function completeOrder() {
     stripePaymentId = 'pi_demo_' + Date.now();
   }
 
+  const formattedDeliveryAddress = isDelivery
+    ? (deliveryApt.value.trim() ? `${deliveryAddress.value.trim()}, Apt ${deliveryApt.value.trim()}` : deliveryAddress.value.trim())
+    : null;
+  const storePickupLocation = `${storeInfo.value.name || 'Masala Mart'} · ${storeInfo.value.address || '456 Curry Road, Flavor Town'}`;
+
   const payload = {
     items: store.cartItems.map(item => ({
       id: item.id,
@@ -479,8 +518,8 @@ async function completeOrder() {
     ...schedule,
     expected_total: Number(checkoutTotal.value),
     idempotency_key: checkoutIdempotencyKey.value,
-    delivery_address: isDelivery ? pickupLoc : null,
-    pickup_location: pickupLoc,
+    delivery_address: formattedDeliveryAddress,
+    pickup_location: isDelivery ? (formattedDeliveryAddress || 'Delivery Address') : storePickupLocation,
     notes: isDelivery ? deliveryNotes.value : (storeInfo.value.curbside_instructions || null),
   };
 

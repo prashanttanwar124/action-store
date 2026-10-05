@@ -16,6 +16,7 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
+use Stripe\Exception\ApiErrorException;
 use Stripe\PaymentIntent;
 use Stripe\Stripe;
 
@@ -196,6 +197,54 @@ class OrderController extends Controller
                 ? ($deliveryAddress ?: 'Delivery Address')
                 : ($storeInfo->address.' · '.$storeInfo->name);
 
+            $stripePaymentId = $validated['stripe_payment_id'] ?? null;
+
+            // Prevent replay attacks: ensure this payment ID has not already been used
+            if (! empty($stripePaymentId)) {
+                $alreadyUsed = Order::where('stripe_payment_id', $stripePaymentId)->exists();
+                if ($alreadyUsed) {
+                    throw ValidationException::withMessages([
+                        'stripe_payment_id' => 'This payment reference has already been applied to an existing order.',
+                    ]);
+                }
+            }
+
+            // Server-side verification with Stripe in live/configured environments
+            $stripeSecret = config('services.stripe.secret');
+            if (
+                ! empty($stripePaymentId) &&
+                ! empty($stripeSecret) &&
+                ! app()->environment('testing') &&
+                str_starts_with($stripePaymentId, 'pi_') &&
+                ! str_starts_with($stripePaymentId, 'pi_demo_') &&
+                ! str_starts_with($stripePaymentId, 'pi_apple_pay_') &&
+                ! str_starts_with($stripePaymentId, 'pi_google_wallet_') &&
+                ! str_starts_with($stripePaymentId, 'pi_test_')
+            ) {
+                try {
+                    Stripe::setApiKey($stripeSecret);
+                    $intent = PaymentIntent::retrieve($stripePaymentId);
+
+                    if ($intent->status !== 'succeeded') {
+                        throw ValidationException::withMessages([
+                            'stripe_payment_id' => "Payment is not completed. Current Stripe status: {$intent->status}.",
+                        ]);
+                    }
+
+                    $receivedInDollars = round($intent->amount_received / 100, 2);
+                    if (abs($receivedInDollars - $total) > 0.05) {
+                        throw ValidationException::withMessages([
+                            'stripe_payment_id' => "Paid amount (\${$receivedInDollars}) does not match order total (\${$total}).",
+                        ]);
+                    }
+                } catch (ApiErrorException $e) {
+                    Log::error('Stripe payment verification failed: '.$e->getMessage());
+                    throw ValidationException::withMessages([
+                        'stripe_payment_id' => 'Unable to verify payment with Stripe: '.$e->getMessage(),
+                    ]);
+                }
+            }
+
             $order = Order::create([
                 'order_number' => $orderNumber,
                 'user_id' => $user?->id,
@@ -208,7 +257,7 @@ class OrderController extends Controller
                 'total' => $total,
                 'points_earned' => $pointsEarned,
                 'payment_method' => $validated['payment_method'] ?? 'card',
-                'stripe_payment_id' => $validated['stripe_payment_id'] ?? null,
+                'stripe_payment_id' => $stripePaymentId,
                 'fulfillment_type' => $fulfillmentType,
                 'pickup_slot' => $pickupSlot,
                 'pickup_location' => $validated['pickup_location'] ?? $defaultLocation,
@@ -451,6 +500,8 @@ class OrderController extends Controller
         $validated = $request->validate([
             'amount' => ['required', 'numeric', 'min:0.50'],
             'currency' => ['nullable', 'string', 'size:3'],
+            'payment_intent_id' => ['nullable', 'string'],
+            'idempotency_key' => ['nullable', 'string'],
         ]);
 
         $stripeSecret = config('services.stripe.secret');
@@ -467,6 +518,29 @@ class OrderController extends Controller
             $amountInCents = (int) round($validated['amount'] * 100);
             $currency = strtolower($validated['currency'] ?? 'cad');
 
+            // If intent already exists (e.g. cart updated or delivery added), update amount rather than creating duplicates
+            if (! empty($validated['payment_intent_id'])) {
+                try {
+                    $intent = PaymentIntent::update($validated['payment_intent_id'], [
+                        'amount' => $amountInCents,
+                        'currency' => $currency,
+                    ]);
+
+                    return response()->json([
+                        'clientSecret' => $intent->client_secret,
+                        'paymentIntentId' => $intent->id,
+                        'configured' => true,
+                    ]);
+                } catch (\Exception $e) {
+                    Log::warning('PaymentIntent update failed, falling back to new intent: '.$e->getMessage());
+                }
+            }
+
+            $options = [];
+            if (! empty($validated['idempotency_key'])) {
+                $options['idempotency_key'] = $validated['idempotency_key'];
+            }
+
             $intent = PaymentIntent::create([
                 'amount' => $amountInCents,
                 'currency' => $currency,
@@ -474,7 +548,7 @@ class OrderController extends Controller
                     'enabled' => true,
                     'allow_redirects' => 'never',
                 ],
-            ]);
+            ], $options);
 
             return response()->json([
                 'clientSecret' => $intent->client_secret,
