@@ -311,7 +311,7 @@ watch([() => props.products?.current_page, () => props.recipeKits?.current_page]
   <Head title="Search Catalogue — Masala Mart" />
 
   <StoreLayout :showHeader="true" :showFooter="true" :showBottomNav="true" :showCartBar="true" headerMode="search">
-    <div class="space-y-4 sm:space-y-6 max-w-7xl mx-auto pb-24 pt-1 sm:pt-3 px-2 sm:px-0">
+    <div class="space-y-4 sm:space-y-6 pb-24 pt-1 sm:pt-3">
       
       <!-- ========================================== -->
       <!-- UNIFIED COMMAND CENTER: SEARCH & AISLES    -->

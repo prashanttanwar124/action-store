@@ -472,6 +472,7 @@ class OrderController extends Controller
                 'currency' => $currency,
                 'automatic_payment_methods' => [
                     'enabled' => true,
+                    'allow_redirects' => 'never',
                 ],
             ]);
 

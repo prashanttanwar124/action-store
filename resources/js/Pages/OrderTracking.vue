@@ -100,7 +100,7 @@ onUnmounted(() => {
   <Head :title="`Order ${order.order_number} Tracking — Masala Mart`" />
 
   <StoreLayout :showHeader="true" :showFooter="true" :showBottomNav="true" headerMode="simple" :headerTitle="'Order ' + order.order_number">
-    <div class="max-w-3xl mx-auto px-4 sm:px-6 py-6 space-y-6 pb-28">
+    <div class="max-w-3xl mx-auto py-6 space-y-6 pb-28">
 
       <!-- HERO STATUS BANNER -->
       <div class="p-6 sm:p-8 rounded-3xl bg-[#f3efe7] border border-[#e0d9cc] text-center space-y-3 relative overflow-hidden shadow-xs">

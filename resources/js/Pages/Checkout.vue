@@ -136,21 +136,41 @@ async function initStripe() {
         theme: 'stripe',
         variables: {
           colorPrimary: '#a47a3c',
-          colorBackground: '#fbf9f5',
-          colorText: '#1d1d1f',
+          colorBackground: '#ffffff',
+          colorText: '#1a1a1a',
           colorDanger: '#e11d48',
           fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
           borderRadius: '12px',
           spacingUnit: '4px',
         },
+        rules: {
+          '.Tab': {
+            display: 'none',
+          },
+          '.TabList': {
+            display: 'none',
+          },
+          '.Tab--selected': {
+            display: 'none',
+          },
+          '.Input': {
+            backgroundColor: '#ffffff',
+            borderColor: '#e0d9cc',
+            boxShadow: 'none',
+          },
+          '.Input:focus': {
+            borderColor: '#1a1a1a',
+            boxShadow: '0 0 0 1px #1a1a1a',
+          },
+        },
       },
     });
 
     paymentElement.value = elements.value.create('payment', {
-      layout: 'tabs',
+      layout: 'accordion',
       wallets: {
-        applePay: 'auto',
-        googlePay: 'auto',
+        applePay: 'never',
+        googlePay: 'never',
       },
     });
     await nextTick();
@@ -954,7 +974,7 @@ async function completeOrder() {
             <div v-show="paymentMethod === 'card'" class="space-y-3">
               <!-- Stripe Live Elements (when STRIPE_KEY is set in .env) -->
               <div v-if="isStripeConfigured" class="space-y-3">
-                <div id="stripe-payment-element-mount" class="min-h-[140px] p-3.5 sm:p-4 bg-[#fbf9f5] rounded-2xl border border-[#e0d9cc]">
+                <div id="stripe-payment-element-mount" class="min-h-[120px] pt-1">
                   <div v-if="isStripeLoading" class="flex flex-col items-center justify-center py-8 space-y-2">
                     <Loader2 class="w-6 h-6 animate-spin text-[#a47a3c]" />
                     <span class="text-xs text-stone-500 font-semibold">Loading Stripe payment fields...</span>
