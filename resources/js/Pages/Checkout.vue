@@ -187,18 +187,6 @@ async function initStripe() {
   }
 }
 
-onMounted(() => {
-  if (isStripeConfigured.value && Number(checkoutTotal.value) >= 0.5) {
-    initStripe();
-  }
-});
-
-watch(() => checkoutTotal.value, (newTotal) => {
-  if (Number(newTotal) >= 0.5 && !isStripeMounted.value && !isStripeLoading.value && isStripeConfigured.value) {
-    initStripe();
-  }
-});
-
 const isProcessing = ref(false);
 const isMobileSummaryOpen = ref(false);
 const isScheduleModalOpen = ref(false);
@@ -317,6 +305,18 @@ const effectiveFulfillmentSlotLabel = computed(() => {
     return `${dayText} at ${formattedCustomTime.value}`;
   }
   return `${dayText} · ${selectedScheduledTime.value}`;
+});
+
+onMounted(() => {
+  if (isStripeConfigured.value && Number(checkoutTotal.value) >= 0.5) {
+    initStripe();
+  }
+});
+
+watch(() => checkoutTotal.value, (newTotal) => {
+  if (Number(newTotal) >= 0.5 && !isStripeMounted.value && !isStripeLoading.value && isStripeConfigured.value) {
+    initStripe();
+  }
 });
 
 async function completeOrder() {
