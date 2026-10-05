@@ -186,11 +186,8 @@ class OrderController extends Controller
 
             $pointsEarned = (int) floor($subtotal);
 
-            // Generate unique order number (e.g. #MM-48291)
-            $orderNumber = '#MM-'.mt_rand(10000, 99999);
-            while (Order::where('order_number', $orderNumber)->exists()) {
-                $orderNumber = '#MM-'.mt_rand(10000, 99999);
-            }
+            // Generate clean, collision-free, chronological order number (e.g. #MM-20261004-1001)
+            $orderNumber = Order::generateOrderNumber();
 
             $deliveryAddress = $validated['delivery_address'] ?? null;
             $defaultLocation = $fulfillmentType === 'Home Delivery'

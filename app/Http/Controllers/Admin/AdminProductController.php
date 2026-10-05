@@ -136,10 +136,18 @@ class AdminProductController extends Controller
             : Str::slug($validated['name']);
 
         $originalSlug = $slug;
-        $counter = 1;
-        while (Product::where('slug', $slug)->exists()) {
+        $existingSlugs = Product::where('slug', $slug)
+            ->orWhere('slug', 'like', "{$originalSlug}-%")
+            ->pluck('slug')
+            ->flip()
+            ->all();
+
+        if (isset($existingSlugs[$slug])) {
+            $counter = 1;
+            while (isset($existingSlugs["{$originalSlug}-{$counter}"])) {
+                $counter++;
+            }
             $slug = "{$originalSlug}-{$counter}";
-            $counter++;
         }
         $validated['slug'] = $slug;
 

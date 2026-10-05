@@ -95,10 +95,7 @@ class StripeWebhookController extends Controller
                     return;
                 }
 
-                $orderNumber = '#MM-'.mt_rand(10000, 99999);
-                while (Order::where('order_number', $orderNumber)->exists()) {
-                    $orderNumber = '#MM-'.mt_rand(10000, 99999);
-                }
+                $orderNumber = Order::generateOrderNumber();
 
                 $subtotal = 0.00;
                 $resolvedItems = [];

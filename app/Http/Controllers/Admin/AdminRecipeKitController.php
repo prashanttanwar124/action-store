@@ -104,10 +104,18 @@ class AdminRecipeKitController extends Controller
             : Str::slug($validated['name']);
 
         $originalSlug = $slug;
-        $counter = 1;
-        while (RecipeKit::where('slug', $slug)->exists()) {
+        $existingSlugs = RecipeKit::where('slug', $slug)
+            ->orWhere('slug', 'like', "{$originalSlug}-%")
+            ->pluck('slug')
+            ->flip()
+            ->all();
+
+        if (isset($existingSlugs[$slug])) {
+            $counter = 1;
+            while (isset($existingSlugs["{$originalSlug}-{$counter}"])) {
+                $counter++;
+            }
             $slug = "{$originalSlug}-{$counter}";
-            $counter++;
         }
         $validated['slug'] = $slug;
 

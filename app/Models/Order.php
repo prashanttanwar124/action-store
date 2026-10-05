@@ -56,6 +56,48 @@ class Order extends Model
     }
 
     /**
+     * The "booted" method of the model.
+     */
+    protected static function booted(): void
+    {
+        static::creating(function (Order $order) {
+            if (empty($order->order_number)) {
+                $order->order_number = static::generateOrderNumber();
+            }
+        });
+    }
+
+    /**
+     * Generate an enterprise, collision-free, chronological order number.
+     * Format: #MM-YYYYMMDD-XXXX (e.g. #MM-20261004-1001)
+     */
+    public static function generateOrderNumber(): string
+    {
+        $datePrefix = date('Ymd');
+        $prefix = "#MM-{$datePrefix}-";
+
+        // Query the latest order number created today
+        $latestOrderNumber = static::where('order_number', 'like', "{$prefix}%")
+            ->orderByDesc('id')
+            ->value('order_number');
+
+        if ($latestOrderNumber && preg_match('/#MM-\d{8}-(\d+)/', $latestOrderNumber, $matches)) {
+            $nextSequence = (int) $matches[1] + 1;
+        } else {
+            $nextSequence = 1001;
+        }
+
+        $candidate = "{$prefix}{$nextSequence}";
+
+        if (static::where('order_number', $candidate)->exists()) {
+            $entropy = strtoupper(substr(bin2hex(random_bytes(2)), 0, 4));
+            $candidate = "{$prefix}{$nextSequence}-{$entropy}";
+        }
+
+        return $candidate;
+    }
+
+    /**
      * @return BelongsTo<User, $this>
      */
     public function user(): BelongsTo

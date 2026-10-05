@@ -23,7 +23,7 @@ class OrderFactory extends Factory
         $subtotal = fake()->randomFloat(2, 10, 150);
 
         return [
-            'order_number' => '#MM-'.fake()->unique()->numberBetween(10000, 99999),
+            'order_number' => Order::generateOrderNumber(),
             'user_id' => User::factory(),
             'customer_name' => fake()->name(),
             'customer_email' => fake()->safeEmail(),
