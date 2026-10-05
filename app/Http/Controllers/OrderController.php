@@ -469,9 +469,9 @@ class OrderController extends Controller
 
             $intent = PaymentIntent::create([
                 'amount' => $amountInCents,
-                'currency' => $currency,
-                'payment_method_types' => ['card'],
-                'description' => 'Masala Mart Checkout Order',
+                'automatic_payment_methods' => [
+                    'enabled' => true,
+                ],
             ]);
 
             return response()->json([

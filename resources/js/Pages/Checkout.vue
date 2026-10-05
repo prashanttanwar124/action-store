@@ -8,6 +8,8 @@ import axios from 'axios';
 import StoreLayout from '../Layouts/StoreLayout.vue';
 import { useStore } from '../stores/cart';
 import { loadStripe } from '@stripe/stripe-js';
+import IconApplePay from '../Components/Icons/IconApplePay.vue';
+import IconGooglePay from '../Components/Icons/IconGooglePay.vue';
 import {
   ChevronLeft,
   MapPin,
@@ -29,6 +31,7 @@ import {
   Flame,
   ChevronDown,
   ChevronRight,
+  CreditCard,
   X
 } from 'lucide-vue-next';
 import { Input } from '@/Components/ui/input';
@@ -83,7 +86,7 @@ const deliveryAddress = ref('');
 const deliveryApt = ref('');
 const deliveryNotes = ref('');
 
-const paymentMethod = ref('stripe'); // 'stripe' | 'apple-pay' | 'google-pay' | 'card'
+const paymentMethod = ref('card'); // 'card' | 'apple-pay' | 'google-pay'
 
 // Stripe SDK & Elements State
 const stripe = ref(null);
@@ -142,8 +145,8 @@ async function initStripe() {
     paymentElement.value = elements.value.create('payment', {
       layout: 'tabs',
       wallets: {
-        applePay: 'never',
-        googlePay: 'never',
+        applePay: 'auto',
+        googlePay: 'auto',
       },
     });
     await nextTick();
@@ -322,7 +325,7 @@ async function completeOrder() {
   }
 
   let stripePaymentId = null;
-  if (paymentMethod.value === 'stripe' && isStripeConfigured.value && stripe.value && elements.value) {
+  if ((paymentMethod.value === 'card' || paymentMethod.value === 'stripe') && isStripeConfigured.value && stripe.value && elements.value) {
     try {
       const { error: stripeErr, paymentIntent } = await stripe.value.confirmPayment({
         elements: elements.value,
@@ -346,7 +349,15 @@ async function completeOrder() {
       isProcessing.value = false;
       return;
     }
-  } else if (paymentMethod.value === 'stripe') {
+  } else if (paymentMethod.value === 'apple-pay') {
+    // Biometric authorization simulation delay
+    await new Promise(resolve => setTimeout(resolve, 600));
+    stripePaymentId = 'pi_apple_pay_' + Date.now();
+  } else if (paymentMethod.value === 'google-pay') {
+    // Google Wallet authorization simulation delay
+    await new Promise(resolve => setTimeout(resolve, 600));
+    stripePaymentId = 'pi_google_wallet_' + Date.now();
+  } else {
     stripePaymentId = 'pi_demo_' + Date.now();
   }
 
@@ -884,66 +895,168 @@ async function completeOrder() {
               </span>
             </div>
 
-            <!-- Stripe Live Elements (when STRIPE_KEY is set in .env) -->
-            <div v-if="isStripeConfigured" class="space-y-3">
-              <div id="stripe-payment-element-mount" class="min-h-[140px] p-3.5 sm:p-4 bg-[#fbf9f5] rounded-2xl border border-[#e0d9cc]">
-                <div v-if="isStripeLoading" class="flex flex-col items-center justify-center py-8 space-y-2">
-                  <Loader2 class="w-6 h-6 animate-spin text-[#a47a3c]" />
-                  <span class="text-xs text-stone-500 font-semibold">Loading Stripe payment fields...</span>
+            <!-- Payment Method Selector Tabs -->
+            <div class="grid grid-cols-3 gap-2">
+              <button
+                type="button"
+                @click="paymentMethod = 'card'"
+                :class="[
+                  'h-11 sm:h-12 px-2.5 rounded-2xl flex items-center justify-center gap-1.5 transition-all cursor-pointer font-bold text-xs active:scale-[0.98] border',
+                  paymentMethod === 'card'
+                    ? 'bg-[#1a1a1a] text-white border-[#1a1a1a] shadow-xs'
+                    : 'bg-[#fbf9f5] hover:bg-stone-100 text-stone-700 border-[#e0d9cc]'
+                ]"
+              >
+                <CreditCard class="w-4 h-4 text-[#e4b97a]" />
+                <span class="truncate">Card</span>
+              </button>
+
+              <button
+                type="button"
+                @click="paymentMethod = 'apple-pay'"
+                :class="[
+                  'h-11 sm:h-12 px-2.5 rounded-2xl flex items-center justify-center transition-all cursor-pointer active:scale-[0.98] border',
+                  paymentMethod === 'apple-pay'
+                    ? 'bg-black text-white border-black shadow-xs ring-2 ring-[#a47a3c]/30'
+                    : 'bg-[#1a1a1a] hover:bg-black text-white border-[#333]'
+                ]"
+                aria-label="Apple Pay"
+              >
+                <IconApplePay :width="46" :height="20" class="text-white" />
+              </button>
+
+              <button
+                type="button"
+                @click="paymentMethod = 'google-pay'"
+                :class="[
+                  'h-11 sm:h-12 px-2.5 rounded-2xl flex items-center justify-center transition-all cursor-pointer active:scale-[0.98] border',
+                  paymentMethod === 'google-pay'
+                    ? 'bg-white text-stone-900 border-[#a47a3c] shadow-xs ring-2 ring-[#a47a3c]/30'
+                    : 'bg-[#fbf9f5] hover:bg-white text-stone-800 border-[#e0d9cc]'
+                ]"
+                aria-label="Google Wallet"
+              >
+                <IconGooglePay :width="48" :height="20" />
+              </button>
+            </div>
+
+            <!-- TAB 1: CARD -->
+            <div v-if="paymentMethod === 'card'" class="space-y-3">
+              <!-- Stripe Live Elements (when STRIPE_KEY is set in .env) -->
+              <div v-if="isStripeConfigured" class="space-y-3">
+                <div id="stripe-payment-element-mount" class="min-h-[140px] p-3.5 sm:p-4 bg-[#fbf9f5] rounded-2xl border border-[#e0d9cc]">
+                  <div v-if="isStripeLoading" class="flex flex-col items-center justify-center py-8 space-y-2">
+                    <Loader2 class="w-6 h-6 animate-spin text-[#a47a3c]" />
+                    <span class="text-xs text-stone-500 font-semibold">Loading Stripe payment fields...</span>
+                  </div>
+                </div>
+
+                <div v-if="stripeError" class="p-3 bg-rose-50 border border-rose-200 text-rose-900 text-xs rounded-xl flex items-center gap-2">
+                  <AlertCircle class="w-4 h-4 text-rose-600 shrink-0" />
+                  <span>{{ stripeError }}</span>
                 </div>
               </div>
 
-              <div v-if="stripeError" class="p-3 bg-rose-50 border border-rose-200 text-rose-900 text-xs rounded-xl flex items-center gap-2">
-                <AlertCircle class="w-4 h-4 text-rose-600 shrink-0" />
-                <span>{{ stripeError }}</span>
+              <!-- Stripe Direct Card Fields (Clean minimal fields) -->
+              <div v-else class="space-y-3">
+                <div>
+                  <Label class="block text-xs font-bold text-stone-800 uppercase tracking-wider mb-1">
+                    Card number
+                  </Label>
+                  <div class="relative flex items-center">
+                    <Input
+                      type="text"
+                      placeholder="1234 1234 1234 1234"
+                      value="1234 1234 1234 1234"
+                      class="w-full px-4 h-11 bg-[#fbf9f5] hover:bg-white focus:bg-white border border-[#e0d9cc] focus:border-[#1a1a1a] rounded-xl text-sm font-semibold text-stone-950 placeholder-stone-400 shadow-xs transition-all"
+                    />
+                    <div class="absolute right-3 flex items-center gap-1.5">
+                      <Badge variant="outline" class="text-[10px] font-bold font-mono px-2 py-0.5 bg-[#f4efe6] border-[#dfd6c8] text-stone-800 rounded-md">VISA</Badge>
+                      <Badge variant="outline" class="text-[10px] font-bold font-mono px-2 py-0.5 bg-[#f4efe6] border-[#dfd6c8] text-stone-800 rounded-md">MC</Badge>
+                      <Badge variant="outline" class="text-[10px] font-bold font-mono px-2 py-0.5 bg-[#f4efe6] border-[#dfd6c8] text-stone-800 rounded-md">AMEX</Badge>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-2.5">
+                  <div>
+                    <Label class="block text-xs font-bold text-stone-800 uppercase tracking-wider mb-1">
+                      Expires (MM/YY)
+                    </Label>
+                    <Input
+                      type="text"
+                      placeholder="12/28"
+                      value="12/28"
+                      class="w-full px-4 h-11 bg-[#fbf9f5] hover:bg-white focus:bg-white border border-[#e0d9cc] focus:border-[#1a1a1a] rounded-xl text-sm font-semibold text-stone-950 placeholder-stone-400 shadow-xs transition-all"
+                    />
+                  </div>
+                  <div>
+                    <Label class="block text-xs font-bold text-stone-800 uppercase tracking-wider mb-1">
+                      CVV
+                    </Label>
+                    <Input
+                      type="password"
+                      placeholder="•••"
+                      value="123"
+                      class="w-full px-4 h-11 bg-[#fbf9f5] hover:bg-white focus:bg-white border border-[#e0d9cc] focus:border-[#1a1a1a] rounded-xl text-sm font-semibold text-stone-950 placeholder-stone-400 shadow-xs font-mono transition-all"
+                    />
+                  </div>
+                </div>
               </div>
             </div>
 
-            <!-- Stripe Direct Card Fields (Clean minimal fields processed via Stripe) -->
-            <div v-else class="space-y-3">
-              <div>
-                <Label class="block text-xs font-bold text-stone-800 uppercase tracking-wider mb-1">
-                  Card number
-                </Label>
-                <div class="relative flex items-center">
-                  <Input
-                    type="text"
-                    placeholder="1234 1234 1234 1234"
-                    value="1234 1234 1234 1234"
-                    class="w-full px-4 h-11 bg-[#fbf9f5] hover:bg-white focus:bg-white border border-[#e0d9cc] focus:border-[#1a1a1a] rounded-xl text-sm font-semibold text-stone-950 placeholder-stone-400 shadow-xs transition-all"
-                  />
-                  <div class="absolute right-3 flex items-center gap-1.5">
-                    <Badge variant="outline" class="text-[10px] font-bold font-mono px-2 py-0.5 bg-[#f4efe6] border-[#dfd6c8] text-stone-800 rounded-md">VISA</Badge>
-                    <Badge variant="outline" class="text-[10px] font-bold font-mono px-2 py-0.5 bg-[#f4efe6] border-[#dfd6c8] text-stone-800 rounded-md">MC</Badge>
-                    <Badge variant="outline" class="text-[10px] font-bold font-mono px-2 py-0.5 bg-[#f4efe6] border-[#dfd6c8] text-stone-800 rounded-md">AMEX</Badge>
+            <!-- TAB 2: APPLE PAY (Apple Wallet) -->
+            <div v-else-if="paymentMethod === 'apple-pay'" class="p-4 sm:p-5 bg-gradient-to-b from-[#1a1a1a] to-black rounded-2xl text-white space-y-3.5 shadow-sm animate-in fade-in duration-150">
+              <div class="flex items-center justify-between">
+                <div class="flex items-center gap-2.5">
+                  <div class="w-9 h-9 rounded-xl bg-white/10 flex items-center justify-center">
+                    <IconApplePay :width="40" :height="17" class="text-white" />
+                  </div>
+                  <div>
+                    <div class="text-xs font-bold text-white flex items-center gap-1.5">
+                      <span>Apple Pay · Apple Wallet</span>
+                      <span class="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">Ready</span>
+                    </div>
+                    <div class="text-[11px] text-stone-400">Touch ID / Face ID Biometric Authorization</div>
                   </div>
                 </div>
               </div>
 
-              <div class="grid grid-cols-2 gap-2.5">
-                <div>
-                  <Label class="block text-xs font-bold text-stone-800 uppercase tracking-wider mb-1">
-                    Expires (MM/YY)
-                  </Label>
-                  <Input
-                    type="text"
-                    placeholder="12/28"
-                    value="12/28"
-                    class="w-full px-4 h-11 bg-[#fbf9f5] hover:bg-white focus:bg-white border border-[#e0d9cc] focus:border-[#1a1a1a] rounded-xl text-sm font-semibold text-stone-950 placeholder-stone-400 shadow-xs transition-all"
-                  />
-                </div>
-                <div>
-                  <Label class="block text-xs font-bold text-stone-800 uppercase tracking-wider mb-1">
-                    CVV
-                  </Label>
-                  <Input
-                    type="password"
-                    placeholder="•••"
-                    value="123"
-                    class="w-full px-4 h-11 bg-[#fbf9f5] hover:bg-white focus:bg-white border border-[#e0d9cc] focus:border-[#1a1a1a] rounded-xl text-sm font-semibold text-stone-950 placeholder-stone-400 shadow-xs font-mono transition-all"
-                  />
+              <div class="p-3 bg-white/5 rounded-xl border border-white/10 text-xs text-stone-300 flex items-center justify-between">
+                <span class="text-stone-400">Apple Wallet Card:</span>
+                <span class="font-mono text-white font-bold">•••• 8824 (Apple Card)</span>
+              </div>
+
+              <p class="text-[11px] text-stone-400">
+                Click below to authorize <strong>${{ checkoutTotal }}</strong> securely via Apple Pay.
+              </p>
+            </div>
+
+            <!-- TAB 3: GOOGLE WALLET (Google Pay) -->
+            <div v-else-if="paymentMethod === 'google-pay'" class="p-4 sm:p-5 bg-[#fbf9f5] rounded-2xl border border-[#e0d9cc] space-y-3.5 shadow-2xs animate-in fade-in duration-150">
+              <div class="flex items-center justify-between">
+                <div class="flex items-center gap-2.5">
+                  <div class="w-9 h-9 rounded-xl bg-white border border-[#e0d9cc] flex items-center justify-center">
+                    <IconGooglePay :width="38" :height="16" />
+                  </div>
+                  <div>
+                    <div class="text-xs font-bold text-stone-900 flex items-center gap-1.5">
+                      <span>Google Wallet · Google Pay</span>
+                      <span class="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300">Ready</span>
+                    </div>
+                    <div class="text-[11px] text-stone-500">Google Account Linked · 1-Tap Checkout</div>
+                  </div>
                 </div>
               </div>
+
+              <div class="p-3 bg-white rounded-xl border border-[#e0d9cc]/80 text-xs text-stone-600 flex items-center justify-between">
+                <span class="text-stone-500">Selected Google Wallet Card:</span>
+                <span class="font-mono text-stone-900 font-bold">•••• 4012 (Google Pay)</span>
+              </div>
+
+              <p class="text-[11px] text-stone-500">
+                Click below to authorize <strong>${{ checkoutTotal }}</strong> instantly using your Google Wallet.
+              </p>
             </div>
 
             <!-- Minimum Order Amount Warning -->
@@ -972,7 +1085,15 @@ async function completeOrder() {
                 <div class="flex items-center gap-2">
                   <Loader2 v-if="isProcessing" class="w-4 h-4 animate-spin" />
                   <Lock v-else class="w-4 h-4 stroke-[2.2] text-[#e4b97a]" />
-                  <span>{{ isProcessing ? 'Authorizing Payment...' : `Complete Order · ${effectiveFulfillmentSlotLabel}` }}</span>
+                  <span v-if="paymentMethod === 'apple-pay'">
+                    {{ isProcessing ? 'Authorizing Apple Pay...' : `Pay with Apple Pay · ${effectiveFulfillmentSlotLabel}` }}
+                  </span>
+                  <span v-else-if="paymentMethod === 'google-pay'">
+                    {{ isProcessing ? 'Authorizing Google Wallet...' : `Pay with Google Wallet · ${effectiveFulfillmentSlotLabel}` }}
+                  </span>
+                  <span v-else>
+                    {{ isProcessing ? 'Authorizing Payment...' : `Complete Order · ${effectiveFulfillmentSlotLabel}` }}
+                  </span>
                 </div>
                 <span class="font-serif font-bold text-base text-[#e4b97a]">${{ checkoutTotal }}</span>
               </Button>
@@ -1007,8 +1128,15 @@ async function completeOrder() {
           <div class="flex items-center gap-2">
             <Loader2 v-if="isProcessing" class="w-4 h-4 animate-spin" />
             <Lock v-else class="w-4 h-4 stroke-[2.2] text-[#e4b97a]" />
-            <span v-if="isProcessing">Authorizing Payment...</span>
-            <span v-else>Pay · ${{ checkoutTotal }}</span>
+            <span v-if="paymentMethod === 'apple-pay'">
+              {{ isProcessing ? 'Authorizing Apple Pay...' : `Apple Pay · $${checkoutTotal}` }}
+            </span>
+            <span v-else-if="paymentMethod === 'google-pay'">
+              {{ isProcessing ? 'Authorizing Google Wallet...' : `Google Wallet · $${checkoutTotal}` }}
+            </span>
+            <span v-else>
+              {{ isProcessing ? 'Authorizing Payment...' : `Pay · $${checkoutTotal}` }}
+            </span>
           </div>
           <span class="text-xs text-[#e4b97a] font-semibold truncate max-w-[140px]">
             {{ effectiveFulfillmentSlotLabel }}
