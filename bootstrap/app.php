@@ -29,6 +29,10 @@ return Application::configure(basePath: dirname(__DIR__))
             guests: fn (Request $request) => $request->is('admin*') ? route('admin.login') : route('login'),
         );
 
+        $middleware->validateCsrfTokens(except: [
+            'stripe/webhook',
+        ]);
+
         $middleware->alias([
             'role' => RoleMiddleware::class,
             'permission' => PermissionMiddleware::class,

@@ -209,39 +209,73 @@ class OrderController extends Controller
                 }
             }
 
-            // Server-side verification with Stripe in live/configured environments
+            // Strict Payment Verification: Prevent bypass of unverified/missing/simulated IDs
+            $paymentMethod = $validated['payment_method'] ?? 'card';
             $stripeSecret = config('services.stripe.secret');
-            if (
-                ! empty($stripePaymentId) &&
-                ! empty($stripeSecret) &&
-                ! app()->environment('testing') &&
-                str_starts_with($stripePaymentId, 'pi_') &&
-                ! str_starts_with($stripePaymentId, 'pi_demo_') &&
-                ! str_starts_with($stripePaymentId, 'pi_apple_pay_') &&
-                ! str_starts_with($stripePaymentId, 'pi_google_wallet_') &&
-                ! str_starts_with($stripePaymentId, 'pi_test_')
-            ) {
-                try {
-                    Stripe::setApiKey($stripeSecret);
-                    $intent = PaymentIntent::retrieve($stripePaymentId);
 
-                    if ($intent->status !== 'succeeded') {
+            if (in_array($paymentMethod, ['card', 'stripe', 'apple-pay', 'google-pay'], true) && ! app()->environment('testing')) {
+                if (! empty($stripeSecret) || app()->environment('production')) {
+                    if (empty($stripePaymentId)) {
                         throw ValidationException::withMessages([
-                            'stripe_payment_id' => "Payment is not completed. Current Stripe status: {$intent->status}.",
+                            'stripe_payment_id' => 'Payment reference is required to complete this order.',
                         ]);
                     }
 
-                    $receivedInDollars = round($intent->amount_received / 100, 2);
-                    if (abs($receivedInDollars - $total) > 0.05) {
-                        throw ValidationException::withMessages([
-                            'stripe_payment_id' => "Paid amount (\${$receivedInDollars}) does not match order total (\${$total}).",
-                        ]);
+                    if (! app()->environment('testing')) {
+                        // Disallow any fake or simulated tokens in production
+                        if (
+                            ! str_starts_with($stripePaymentId, 'pi_') ||
+                            str_starts_with($stripePaymentId, 'pi_demo_') ||
+                            str_starts_with($stripePaymentId, 'pi_apple_pay_') ||
+                            str_starts_with($stripePaymentId, 'pi_google_wallet_') ||
+                            str_starts_with($stripePaymentId, 'pi_test_')
+                        ) {
+                            throw ValidationException::withMessages([
+                                'stripe_payment_id' => 'Invalid or simulated payment reference is not permitted.',
+                            ]);
+                        }
+
+                        try {
+                            Stripe::setApiKey($stripeSecret);
+                            $intent = PaymentIntent::retrieve($stripePaymentId);
+
+                            if ($intent->status !== 'succeeded') {
+                                throw ValidationException::withMessages([
+                                    'stripe_payment_id' => "Payment is not completed. Current Stripe status: {$intent->status}.",
+                                ]);
+                            }
+
+                            $expectedCents = (int) round($total * 100);
+                            $receivedCents = (int) ($intent->amount_received ?? 0);
+                            if ($receivedCents !== $expectedCents) {
+                                $receivedDollars = number_format($receivedCents / 100, 2);
+                                $totalDollars = number_format($total, 2);
+                                throw ValidationException::withMessages([
+                                    'stripe_payment_id' => "Paid amount (\${$receivedDollars}) does not match order total (\${$totalDollars}).",
+                                ]);
+                            }
+
+                            $storeCurrency = strtolower(config('services.stripe.currency', 'cad'));
+                            if (strtolower($intent->currency) !== $storeCurrency) {
+                                throw ValidationException::withMessages([
+                                    'stripe_payment_id' => "Payment currency ({$intent->currency}) does not match store currency ({$storeCurrency}).",
+                                ]);
+                            }
+
+                            // Verify customer/session ownership binding if set
+                            $intentSessionId = $intent->metadata->session_id ?? null;
+                            if ($intentSessionId && $intentSessionId !== $request->session()->getId()) {
+                                throw ValidationException::withMessages([
+                                    'stripe_payment_id' => 'Payment intent does not match your active checkout session.',
+                                ]);
+                            }
+                        } catch (ApiErrorException $e) {
+                            Log::error('Stripe payment verification failed: '.$e->getMessage());
+                            throw ValidationException::withMessages([
+                                'stripe_payment_id' => 'Unable to verify payment with Stripe: '.$e->getMessage(),
+                            ]);
+                        }
                     }
-                } catch (ApiErrorException $e) {
-                    Log::error('Stripe payment verification failed: '.$e->getMessage());
-                    throw ValidationException::withMessages([
-                        'stripe_payment_id' => 'Unable to verify payment with Stripe: '.$e->getMessage(),
-                    ]);
                 }
             }
 
@@ -493,13 +527,59 @@ class OrderController extends Controller
     }
 
     /**
+     * Compute authoritative server-side totals from catalog items and fulfillment type.
+     */
+    public function computeOrderTotals(array $items, string $fulfillmentType = 'Store Pickup'): array
+    {
+        $subtotal = 0.00;
+        foreach ($items as $item) {
+            $model = ($item['type'] ?? 'product') === 'recipe-kit' ? RecipeKit::class : Product::class;
+            $catalogItem = $model::query()
+                ->where(is_numeric($item['id']) ? 'id' : 'slug', $item['id'])->first();
+
+            if (! $catalogItem && ! isset($item['type'])) {
+                $catalogItem = RecipeKit::query()
+                    ->where(is_numeric($item['id']) ? 'id' : 'slug', $item['id'])->first();
+            }
+
+            if (! $catalogItem) {
+                continue;
+            }
+
+            $isSubscribed = ! empty($item['is_subscribed']);
+            $unitPrice = round($catalogItem->price * ($isSubscribed ? 0.95 : 1), 2);
+            $quantity = max(1, (int) ($item['quantity'] ?? 1));
+            $subtotal += round($unitPrice * $quantity, 2);
+        }
+
+        $subtotal = round($subtotal, 2);
+        $storeInfo = StoreSetting::current();
+        $deliveryFee = 0.00;
+        if ($fulfillmentType === 'Home Delivery') {
+            if ($subtotal < ($storeInfo->free_delivery_threshold ?? 50.00)) {
+                $deliveryFee = (float) ($storeInfo->delivery_fee ?? 4.99);
+            }
+        }
+
+        $total = max(0, round($subtotal + $deliveryFee, 2));
+
+        return [
+            'subtotal' => $subtotal,
+            'delivery_fee' => $deliveryFee,
+            'total' => $total,
+        ];
+    }
+
+    /**
      * Create a Stripe PaymentIntent for checkout.
      */
     public function createPaymentIntent(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'amount' => ['required', 'numeric', 'min:0.50'],
+            'amount' => ['nullable', 'numeric', 'min:0.50'],
             'currency' => ['nullable', 'string', 'size:3'],
+            'items' => ['nullable', 'array'],
+            'fulfillment_type' => ['nullable', 'string'],
             'payment_intent_id' => ['nullable', 'string'],
             'idempotency_key' => ['nullable', 'string'],
         ]);
@@ -512,19 +592,56 @@ class OrderController extends Controller
             ], 503);
         }
 
+        // Ownership Check: ensure payment_intent_id belongs to the caller's session
+        $requestedIntentId = $validated['payment_intent_id'] ?? null;
+        $activeSessionIntentId = $request->session()->get('active_payment_intent_id');
+        if (! empty($requestedIntentId) && ! empty($activeSessionIntentId) && $requestedIntentId !== $activeSessionIntentId) {
+            return response()->json([
+                'error' => 'Payment intent does not belong to your active checkout session.',
+            ], 403);
+        }
+
+        // Calculate authoritative amount on the server if items provided, preventing client-side price tampering
+        $amountInDollars = $validated['amount'] ?? null;
+        if (! empty($validated['items'])) {
+            $computed = $this->computeOrderTotals($validated['items'], $validated['fulfillment_type'] ?? 'Store Pickup');
+            if ($computed['total'] >= 0.50) {
+                $amountInDollars = $computed['total'];
+            }
+        }
+
+        if (! $amountInDollars || $amountInDollars < 0.50) {
+            return response()->json([
+                'error' => 'Order total must be at least $0.50 to create a payment.',
+            ], 422);
+        }
+
         try {
             Stripe::setApiKey($stripeSecret);
 
-            $amountInCents = (int) round($validated['amount'] * 100);
-            $currency = strtolower($validated['currency'] ?? 'cad');
+            $amountInCents = (int) round($amountInDollars * 100);
+            $currency = strtolower($validated['currency'] ?? config('services.stripe.currency', 'cad'));
 
-            // If intent already exists (e.g. cart updated or delivery added), update amount rather than creating duplicates
-            if (! empty($validated['payment_intent_id'])) {
+            $metadata = [
+                'session_id' => $request->session()->getId(),
+                'user_id' => (string) (Auth::id() ?? 'guest'),
+                'fulfillment_type' => $validated['fulfillment_type'] ?? 'Store Pickup',
+            ];
+            if (! empty($validated['items'])) {
+                $metadata['items_json'] = json_encode(array_slice($validated['items'], 0, 30));
+            }
+
+            // If intent already exists in this session, update amount and metadata rather than creating duplicates
+            $targetIntentId = $requestedIntentId ?: $activeSessionIntentId;
+            if (! empty($targetIntentId)) {
                 try {
-                    $intent = PaymentIntent::update($validated['payment_intent_id'], [
+                    $intent = PaymentIntent::update($targetIntentId, [
                         'amount' => $amountInCents,
                         'currency' => $currency,
+                        'metadata' => $metadata,
                     ]);
+
+                    $request->session()->put('active_payment_intent_id', $intent->id);
 
                     return response()->json([
                         'clientSecret' => $intent->client_secret,
@@ -544,11 +661,14 @@ class OrderController extends Controller
             $intent = PaymentIntent::create([
                 'amount' => $amountInCents,
                 'currency' => $currency,
+                'metadata' => $metadata,
                 'automatic_payment_methods' => [
                     'enabled' => true,
                     'allow_redirects' => 'never',
                 ],
             ], $options);
+
+            $request->session()->put('active_payment_intent_id', $intent->id);
 
             return response()->json([
                 'clientSecret' => $intent->client_secret,

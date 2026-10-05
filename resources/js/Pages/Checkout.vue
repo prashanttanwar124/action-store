@@ -243,10 +243,10 @@ async function initStripe() {
     });
 
     paymentElement.value = elements.value.create('payment', {
-      layout: 'accordion',
+      layout: 'tabs',
       wallets: {
-        applePay: 'never',
-        googlePay: 'never',
+        applePay: 'auto',
+        googlePay: 'auto',
       },
     });
     await nextTick();
@@ -263,18 +263,49 @@ async function initStripe() {
   }
 }
 
+const isSyncingPaymentIntent = ref(false);
+let pendingSyncPromise = null;
+const syncError = ref('');
+
 async function syncPaymentIntentAmount(newTotal) {
   if (!isStripeConfigured.value || !activePaymentIntentId.value || !newTotal || Number(newTotal) < 0.5) return;
-  try {
-    await axios.post('/checkout/create-payment-intent', {
-      amount: Number(newTotal),
-      currency: 'cad',
-      payment_intent_id: activePaymentIntentId.value,
-      idempotency_key: `${checkoutIdempotencyKey.value}_amt_${Math.round(Number(newTotal) * 100)}`,
-    });
-  } catch (err) {
-    console.warn('Failed to sync PaymentIntent amount with Stripe:', err);
-  }
+  isSyncingPaymentIntent.value = true;
+  syncError.value = '';
+
+  const promise = (async () => {
+    try {
+      const { data } = await axios.post('/checkout/create-payment-intent', {
+        amount: Number(newTotal),
+        currency: 'cad',
+        items: store.cartItems.map(i => ({
+          id: i.id,
+          price: Number(i.price),
+          quantity: Number(i.quantity || 1),
+          is_subscribed: Boolean(i.isSubscribed),
+        })),
+        fulfillment_type: fulfillmentMode.value === 'delivery' ? 'Home Delivery' : 'Store Pickup',
+        payment_intent_id: activePaymentIntentId.value,
+        idempotency_key: `${checkoutIdempotencyKey.value}_amt_${Math.round(Number(newTotal) * 100)}`,
+      });
+
+      if (data.error) {
+        throw new Error(data.error);
+      }
+
+      if (data.paymentIntentId) {
+        activePaymentIntentId.value = data.paymentIntentId;
+      }
+    } catch (err) {
+      console.error('Failed to sync PaymentIntent amount with Stripe:', err);
+      syncError.value = 'Failed to update payment amount with Stripe. Please refresh.';
+      throw err;
+    } finally {
+      isSyncingPaymentIntent.value = false;
+    }
+  })();
+
+  pendingSyncPromise = promise;
+  return promise;
 }
 
 const isProcessing = ref(false);
@@ -447,8 +478,20 @@ async function completeOrder() {
     return;
   }
 
+  // If payment amount is currently syncing with Stripe (e.g. delivery fee or cart total changed), wait for completion
+  if (isSyncingPaymentIntent.value && pendingSyncPromise) {
+    try {
+      await pendingSyncPromise;
+    } catch (e) {
+      paymentError.value = 'Failed to synchronize payment amount with Stripe. Please refresh and try again.';
+      errorMessage.value = paymentError.value;
+      isProcessing.value = false;
+      return;
+    }
+  }
+
   let stripePaymentId = null;
-  if ((paymentMethod.value === 'card' || paymentMethod.value === 'stripe') && isStripeConfigured.value) {
+  if (isStripeConfigured.value) {
     if (!stripe.value || !elements.value) {
       paymentError.value = 'Stripe payment element is still loading. Please wait a moment and try again.';
       errorMessage.value = paymentError.value;
@@ -484,15 +527,8 @@ async function completeOrder() {
       isProcessing.value = false;
       return;
     }
-  } else if (paymentMethod.value === 'apple-pay') {
-    // Biometric authorization simulation delay
-    await new Promise(resolve => setTimeout(resolve, 600));
-    stripePaymentId = 'pi_apple_pay_' + Date.now();
-  } else if (paymentMethod.value === 'google-pay') {
-    // Google Wallet authorization simulation delay
-    await new Promise(resolve => setTimeout(resolve, 600));
-    stripePaymentId = 'pi_google_wallet_' + Date.now();
   } else {
+    // Only in local development without Stripe configured in .env
     stripePaymentId = 'pi_demo_' + Date.now();
   }
 

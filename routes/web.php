@@ -7,6 +7,7 @@ use App\Http\Controllers\OrderController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\RecipeKitController;
+use App\Http\Controllers\StripeWebhookController;
 use Illuminate\Support\Facades\Route;
 
 // 1a: Home / Storefront
@@ -26,6 +27,7 @@ Route::get('/cart', [CartController::class, 'index'])->name('cart');
 Route::get('/checkout', [CartController::class, 'checkout'])->name('checkout');
 Route::post('/checkout/create-payment-intent', [OrderController::class, 'createPaymentIntent'])->name('checkout.payment-intent');
 Route::post('/checkout', [OrderController::class, 'store'])->name('checkout.store');
+Route::post('/stripe/webhook', [StripeWebhookController::class, 'handle'])->name('stripe.webhook');
 Route::get('/orders/{order_number}', [OrderController::class, 'show'])->name('orders.track');
 
 // 1f: Customer Dashboard & Account
