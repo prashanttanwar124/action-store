@@ -8,7 +8,6 @@ import axios from 'axios';
 import StoreLayout from '../Layouts/StoreLayout.vue';
 import { useStore } from '../stores/cart';
 import { loadStripe } from '@stripe/stripe-js';
-import IconStripe from '../Components/Icons/IconStripe.vue';
 import {
   ChevronLeft,
   MapPin,
@@ -880,11 +879,9 @@ async function completeOrder() {
                 <Lock class="w-4 h-4 text-[#a47a3c]" />
                 <span>02 · PAYMENT</span>
               </div>
-              <div class="flex items-center gap-1.5 text-stone-500 text-[11px] font-semibold">
-                <IconStripe :width="40" :height="17" class="text-[#635BFF]" />
-                <span class="text-stone-300">·</span>
-                <span>256-Bit Encrypted</span>
-              </div>
+              <span class="text-[11px] font-semibold text-stone-500 uppercase tracking-wider">
+                256-Bit Encrypted
+              </span>
             </div>
 
             <!-- Stripe Live Elements (when STRIPE_KEY is set in .env) -->
