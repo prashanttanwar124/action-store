@@ -5,12 +5,21 @@ namespace Tests\Feature;
 use App\Models\Product;
 use App\Models\RecipeKit;
 use App\Models\StoreSetting;
+use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
 class CheckoutValidationTest extends TestCase
 {
     use RefreshDatabase;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        $user = User::factory()->create();
+        $this->actingAs($user);
+    }
 
     public function test_catalog_price_overrides_tampered_price_and_name(): void
     {

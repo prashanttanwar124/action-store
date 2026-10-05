@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\User;
 use Database\Seeders\ProductSeeder;
 use Database\Seeders\RecipeKitSeeder;
 use Database\Seeders\SliderSeeder;
@@ -122,7 +123,8 @@ class ProductTest extends TestCase
     public function test_cart_and_checkout_pages_render(): void
     {
         $this->get('/cart')->assertStatus(200)->assertInertia(fn (Assert $page) => $page->component('Cart'));
-        $this->get('/checkout')->assertStatus(200)->assertInertia(fn (Assert $page) => $page->component('Checkout'));
+        $user = User::factory()->create();
+        $this->actingAs($user)->get('/checkout')->assertStatus(200)->assertInertia(fn (Assert $page) => $page->component('Checkout'));
     }
 
     public function test_account_and_reorder_pages_render(): void

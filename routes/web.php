@@ -22,12 +22,18 @@ Route::get('/recipe-kits/{slug}', [RecipeKitController::class, 'show'])->name('r
 // 1b & 1c: Product detail pages (e.g. /products/paneer, /products/rice, /products/atta)
 Route::get('/products/{slug}', [ProductController::class, 'show'])->name('products.show');
 
-// 1d: Smart Cart & Checkout
+// 1d: Smart Cart & Checkout (Requires Authentication - No Guest Orders)
 Route::get('/cart', [CartController::class, 'index'])->name('cart');
-Route::get('/checkout', [CartController::class, 'checkout'])->name('checkout');
-Route::post('/checkout/create-payment-intent', [OrderController::class, 'createPaymentIntent'])->name('checkout.payment-intent');
-Route::post('/checkout/validate', [OrderController::class, 'validateOrder'])->name('checkout.validate');
-Route::post('/checkout', [OrderController::class, 'store'])->name('checkout.store');
+
+Route::middleware('auth')->group(function () {
+    Route::get('/checkout', [CartController::class, 'checkout'])->name('checkout');
+    Route::post('/checkout/create-payment-intent', [OrderController::class, 'createPaymentIntent'])->middleware('throttle:30,1')->name('checkout.payment-intent');
+    Route::post('/checkout/validate', [OrderController::class, 'validateOrder'])->middleware('throttle:30,1')->name('checkout.validate');
+    Route::post('/checkout', [OrderController::class, 'store'])->middleware('throttle:20,1')->name('checkout.store');
+    Route::post('/checkout/confirm-payment', [OrderController::class, 'confirmPayment'])->middleware('throttle:30,1')->name('checkout.confirm-payment');
+    Route::post('/checkout/cancel-pending', [OrderController::class, 'cancelPending'])->middleware('throttle:30,1')->name('checkout.cancel-pending');
+});
+
 Route::post('/stripe/webhook', [StripeWebhookController::class, 'handle'])->name('stripe.webhook');
 Route::get('/orders/{order_number}', [OrderController::class, 'show'])->name('orders.track');
 

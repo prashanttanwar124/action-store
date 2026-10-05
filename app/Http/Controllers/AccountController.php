@@ -41,6 +41,7 @@ class AccountController extends Controller
 
         return Order::with('items')
             ->where('user_id', Auth::id())
+            ->where('status', '!=', 'pending_payment')
             ->latest()
             ->get()
             ->map(fn (Order $order) => [

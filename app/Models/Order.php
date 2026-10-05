@@ -6,6 +6,8 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class Order extends Model
 {
@@ -87,14 +89,53 @@ class Order extends Model
             $nextSequence = 1001;
         }
 
-        $candidate = "{$prefix}{$nextSequence}";
+        $entropy = strtoupper(substr(bin2hex(random_bytes(2)), 0, 4));
 
-        if (static::where('order_number', $candidate)->exists()) {
-            $entropy = strtoupper(substr(bin2hex(random_bytes(2)), 0, 4));
-            $candidate = "{$prefix}{$nextSequence}-{$entropy}";
+        return "{$prefix}{$nextSequence}-{$entropy}";
+    }
+
+    /**
+     * Cancel this order and restore product inventory.
+     */
+    public function cancelAndRestock(?string $reason = null): void
+    {
+        DB::transaction(function () use ($reason) {
+            $this->loadMissing('items.product');
+
+            foreach ($this->items as $item) {
+                if ($item->product_id && $item->product) {
+                    $item->product->increment('stock', (int) $item->quantity);
+                }
+            }
+
+            $noteSuffix = $reason ? " [Cancelled: {$reason}]" : ' [Cancelled]';
+            $this->update([
+                'status' => 'cancelled',
+                'notes' => trim(($this->notes ?? '').$noteSuffix),
+            ]);
+        });
+    }
+
+    /**
+     * Cancel all abandoned orders that have been in pending_payment for more than the specified minutes.
+     */
+    public static function cancelExpiredPendingOrders(int $minutes = 15): int
+    {
+        $expiredOrders = static::where('status', 'pending_payment')
+            ->where('created_at', '<', now()->subMinutes($minutes))
+            ->get();
+
+        $count = 0;
+        foreach ($expiredOrders as $order) {
+            try {
+                $order->cancelAndRestock("Payment timeout exceeded ({$minutes} mins)");
+                $count++;
+            } catch (\Throwable $e) {
+                Log::error("Failed to cancel expired pending order #{$order->order_number}: {$e->getMessage()}");
+            }
         }
 
-        return $candidate;
+        return $count;
     }
 
     /**

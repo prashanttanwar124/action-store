@@ -13,73 +13,54 @@ class CheckoutTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_checkout_page_can_be_rendered(): void
+    protected User $user;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+        $this->user = User::factory()->create([
+            'name' => 'Aarav Patel',
+            'email' => 'aarav@example.com',
+        ]);
+    }
+
+    public function test_unauthenticated_user_is_redirected_from_checkout_page(): void
     {
         $response = $this->get('/checkout');
+
+        $response->assertRedirect('/login');
+    }
+
+    public function test_unauthenticated_user_cannot_place_order(): void
+    {
+        $product = Product::factory()->create(['price' => 10.00]);
+
+        $response = $this->postJson('/checkout', [
+            'items' => [['id' => $product->id, 'name' => $product->name, 'price' => 10.00, 'quantity' => 1]],
+        ]);
+
+        $response->assertUnauthorized();
+    }
+
+    public function test_unauthenticated_user_cannot_create_payment_intent(): void
+    {
+        $response = $this->postJson('/checkout/create-payment-intent', [
+            'amount' => 20.00,
+        ]);
+
+        $response->assertUnauthorized();
+    }
+
+    public function test_checkout_page_can_be_rendered(): void
+    {
+        $response = $this->actingAs($this->user)->get('/checkout');
 
         $response->assertOk();
         $response->assertInertia(fn (Assert $page) => $page->component('Checkout'));
     }
 
-    public function test_guest_can_place_an_order(): void
-    {
-        $product = Product::factory()->create([
-            'name' => 'Aashirvaad Shudh Chakki Atta',
-            'price' => 12.99,
-        ]);
-
-        $payload = [
-            'items' => [
-                [
-                    'id' => $product->id,
-                    'name' => $product->name,
-                    'price' => 12.99,
-                    'quantity' => 2,
-                    'size' => '10 lb',
-                    'image' => '/images/products/atta.jpg',
-                    'is_subscribed' => false,
-                ],
-            ],
-            'payment_method' => 'card',
-            'fulfillment_type' => 'Store Pickup',
-            'pickup_slot' => 'Today 4–5 pm',
-            'pickup_location' => 'Milpitas Hub (1200 S Main St)',
-            'customer_name' => 'Guest Shopper',
-            'customer_email' => 'shopper@example.com',
-        ];
-
-        $response = $this->postJson('/checkout', $payload);
-
-        $response->assertStatus(201);
-        $response->assertJson([
-            'success' => true,
-        ]);
-
-        $this->assertDatabaseHas('orders', [
-            'customer_name' => 'Guest Shopper',
-            'customer_email' => 'shopper@example.com',
-            'subtotal' => 25.98,
-            'total' => 25.98,
-            'points_earned' => 25,
-            'status' => 'confirmed',
-        ]);
-
-        $this->assertDatabaseHas('order_items', [
-            'product_id' => $product->id,
-            'name' => 'Aashirvaad Shudh Chakki Atta',
-            'quantity' => 2,
-            'unit_price' => 12.99,
-            'total_price' => 25.98,
-        ]);
-    }
-
     public function test_authenticated_user_places_order_linked_to_account(): void
     {
-        $user = User::factory()->create([
-            'name' => 'Aarav Patel',
-            'email' => 'aarav@example.com',
-        ]);
-
         $product = Product::factory()->create([
             'name' => 'Paneer Fresh Block',
             'price' => 4.99,
@@ -100,12 +81,12 @@ class CheckoutTest extends TestCase
             'pickup_slot' => 'Today 6–7 pm',
         ];
 
-        $response = $this->actingAs($user)->postJson('/checkout', $payload);
+        $response = $this->actingAs($this->user)->postJson('/checkout', $payload);
 
         $response->assertStatus(201);
 
         $this->assertDatabaseHas('orders', [
-            'user_id' => $user->id,
+            'user_id' => $this->user->id,
             'customer_name' => 'Aarav Patel',
             'customer_email' => 'aarav@example.com',
             'subtotal' => 14.97,
@@ -114,7 +95,7 @@ class CheckoutTest extends TestCase
         ]);
 
         // Verify orders appear in user's account page
-        $accountResponse = $this->actingAs($user)->get('/account');
+        $accountResponse = $this->actingAs($this->user)->get('/account');
         $accountResponse->assertOk();
         $accountResponse->assertInertia(fn (Assert $page) => $page
             ->component('Account')
@@ -126,7 +107,7 @@ class CheckoutTest extends TestCase
 
     public function test_checkout_requires_items(): void
     {
-        $response = $this->postJson('/checkout', [
+        $response = $this->actingAs($this->user)->postJson('/checkout', [
             'items' => [],
         ]);
 
@@ -155,11 +136,9 @@ class CheckoutTest extends TestCase
                 ],
             ],
             'payment_method' => 'card',
-            'customer_name' => 'Test Buyer',
-            'customer_email' => 'buyer@example.com',
         ];
 
-        $response = $this->postJson('/checkout', $payload);
+        $response = $this->actingAs($this->user)->postJson('/checkout', $payload);
 
         $response->assertStatus(201);
 
@@ -189,7 +168,7 @@ class CheckoutTest extends TestCase
             'payment_method' => 'card',
         ];
 
-        $response = $this->postJson('/checkout', $payload);
+        $response = $this->actingAs($this->user)->postJson('/checkout', $payload);
 
         $response->assertStatus(201);
 
@@ -227,10 +206,11 @@ class CheckoutTest extends TestCase
             'delivery_zip' => '08820',
         ];
 
-        $response = $this->postJson('/checkout', $payload);
+        $response = $this->actingAs($this->user)->postJson('/checkout', $payload);
 
         $response->assertStatus(201);
         $this->assertDatabaseHas('orders', [
+            'user_id' => $this->user->id,
             'fulfillment_type' => 'Home Delivery',
             'subtotal' => 15.00,
             'delivery_fee' => 4.99,
@@ -267,10 +247,11 @@ class CheckoutTest extends TestCase
             'delivery_zip' => '08820',
         ];
 
-        $response = $this->postJson('/checkout', $payload);
+        $response = $this->actingAs($this->user)->postJson('/checkout', $payload);
 
         $response->assertStatus(201);
         $this->assertDatabaseHas('orders', [
+            'user_id' => $this->user->id,
             'fulfillment_type' => 'Home Delivery',
             'subtotal' => 60.00,
             'delivery_fee' => 0.00,
@@ -284,7 +265,7 @@ class CheckoutTest extends TestCase
 
         $product = Product::factory()->create(['stock' => 10]);
 
-        $response = $this->postJson('/checkout', [
+        $response = $this->actingAs($this->user)->postJson('/checkout', [
             'items' => [
                 ['id' => $product->id, 'name' => $product->name, 'price' => $product->price, 'quantity' => 1],
             ],
@@ -300,7 +281,7 @@ class CheckoutTest extends TestCase
     {
         $product = Product::factory()->create(['stock' => 2]);
 
-        $response = $this->postJson('/checkout', [
+        $response = $this->actingAs($this->user)->postJson('/checkout', [
             'items' => [
                 ['id' => $product->id, 'name' => $product->name, 'price' => $product->price, 'quantity' => 10],
             ],
@@ -320,7 +301,7 @@ class CheckoutTest extends TestCase
             'has_subscription' => true,
         ]);
 
-        $response = $this->postJson('/checkout', [
+        $response = $this->actingAs($this->user)->postJson('/checkout', [
             'items' => [
                 ['id' => $product->id, 'name' => $product->name, 'price' => 10.00, 'quantity' => 2, 'is_subscribed' => false],
                 ['id' => $product->id, 'name' => $product->name, 'price' => 9.50, 'quantity' => 2, 'is_subscribed' => true],
@@ -351,15 +332,14 @@ class CheckoutTest extends TestCase
             'payment_method' => 'stripe',
             'stripe_payment_id' => 'pi_test_1234567890',
             'fulfillment_type' => 'Store Pickup',
-            'customer_name' => 'Stripe Shopper',
-            'customer_email' => 'stripe@example.com',
         ];
 
-        $response = $this->postJson('/checkout', $payload);
+        $response = $this->actingAs($this->user)->postJson('/checkout', $payload);
 
         $response->assertStatus(201);
         $this->assertDatabaseHas('orders', [
-            'customer_email' => 'stripe@example.com',
+            'user_id' => $this->user->id,
+            'customer_email' => 'aarav@example.com',
             'payment_method' => 'stripe',
             'stripe_payment_id' => 'pi_test_1234567890',
         ]);
@@ -367,7 +347,7 @@ class CheckoutTest extends TestCase
 
     public function test_create_payment_intent_validates_amount(): void
     {
-        $response = $this->postJson('/checkout/create-payment-intent', [
+        $response = $this->actingAs($this->user)->postJson('/checkout/create-payment-intent', [
             'amount' => 0.10, // less than minimum 0.50
         ]);
 
@@ -379,7 +359,7 @@ class CheckoutTest extends TestCase
     {
         config(['services.stripe.secret' => null]);
 
-        $response = $this->postJson('/checkout/create-payment-intent', [
+        $response = $this->actingAs($this->user)->postJson('/checkout/create-payment-intent', [
             'amount' => 25.00,
             'currency' => 'cad',
         ]);
@@ -388,5 +368,44 @@ class CheckoutTest extends TestCase
             ->assertJson([
                 'configured' => false,
             ]);
+    }
+
+    public function test_authenticated_checkout_records_phone_and_cleans_session(): void
+    {
+        $product = Product::factory()->create([
+            'stock' => 10,
+            'price' => 15.00,
+        ]);
+
+        $response = $this->actingAs($this->user)->withSession([
+            'active_payment_intent_id' => 'pi_auth_test_999',
+            'checkout_token' => 'token_123',
+        ])->postJson('/checkout', [
+            'customer_phone' => '416-555-0199',
+            'payment_method' => 'card',
+            'stripe_payment_id' => 'pi_auth_test_999',
+            'fulfillment_type' => 'Store Pickup',
+            'items' => [
+                [
+                    'id' => $product->id,
+                    'name' => $product->name,
+                    'price' => 15.00,
+                    'quantity' => 1,
+                ],
+            ],
+        ]);
+
+        $response->assertStatus(201);
+        $this->assertDatabaseHas('orders', [
+            'user_id' => $this->user->id,
+            'customer_name' => 'Aarav Patel',
+            'customer_email' => 'aarav@example.com',
+            'customer_phone' => '416-555-0199',
+            'stripe_payment_id' => 'pi_auth_test_999',
+        ]);
+
+        // Asserts session cleanup: active_payment_intent_id & checkout_token should be forgotten
+        $response->assertSessionMissing('active_payment_intent_id');
+        $response->assertSessionMissing('checkout_token');
     }
 }

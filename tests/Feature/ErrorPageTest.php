@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Inertia\Testing\AssertableInertia as Assert;
 use Tests\TestCase;
@@ -44,7 +45,8 @@ class ErrorPageTest extends TestCase
 
     public function test_checkout_page_renders_with_store_pickup(): void
     {
-        $response = $this->get(route('checkout'));
+        $user = User::factory()->create();
+        $response = $this->actingAs($user)->get(route('checkout'));
 
         $response->assertStatus(200);
         $response->assertInertia(fn (Assert $page) => $page->component('Checkout'));

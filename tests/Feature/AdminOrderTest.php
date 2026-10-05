@@ -7,6 +7,7 @@ use App\Events\OrderStatusUpdated;
 use App\Models\Admin;
 use App\Models\Order;
 use App\Models\Product;
+use App\Models\User;
 use Database\Seeders\AdminSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Event;
@@ -121,7 +122,8 @@ class AdminOrderTest extends TestCase
             'customer_phone' => '+1 (555) 789-0123',
         ];
 
-        $response = $this->postJson('/checkout', $payload);
+        $user = User::factory()->create(['name' => 'Kavita Sharma', 'email' => 'kavita@example.com']);
+        $response = $this->actingAs($user)->postJson('/checkout', $payload);
 
         $response->assertStatus(201);
         $this->assertDatabaseHas('orders', [
@@ -167,5 +169,30 @@ class AdminOrderTest extends TestCase
         $response = $this->get('/orders/'.urlencode('#MM-99999'));
 
         $response->assertStatus(403);
+    }
+
+    public function test_admin_cancelling_order_restocks_inventory(): void
+    {
+        $admin = Admin::where('email', 'admin@masalamart.com')->first();
+        $product = Product::factory()->create(['stock' => 5]);
+
+        $order = Order::factory()->create([
+            'status' => 'confirmed',
+        ]);
+        $order->items()->create([
+            'product_id' => $product->id,
+            'name' => $product->name,
+            'unit_price' => 10,
+            'quantity' => 2,
+            'total_price' => 20,
+        ]);
+
+        $response = $this->actingAs($admin, 'admin')->patchJson("/admin/orders/{$order->id}/status", [
+            'status' => 'cancelled',
+        ]);
+
+        $response->assertStatus(200);
+        $this->assertEquals('cancelled', $order->fresh()->status);
+        $this->assertEquals(7, $product->fresh()->stock);
     }
 }

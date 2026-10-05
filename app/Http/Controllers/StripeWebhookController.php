@@ -3,14 +3,9 @@
 namespace App\Http\Controllers;
 
 use App\Events\OrderPlaced;
-use App\Jobs\RecoverStripeOrderJob;
 use App\Models\Order;
-use App\Models\Product;
-use App\Models\RecipeKit;
-use App\Models\StoreSetting;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Stripe\Exception\SignatureVerificationException;
 use Stripe\Webhook;
@@ -47,10 +42,10 @@ class StripeWebhookController extends Controller
 
                 return response()->json(['error' => 'Invalid payload'], 400);
             }
-        } elseif (app()->environment('production')) {
-            Log::error('Stripe webhook received in production without configured webhook secret.');
+        } elseif (! app()->environment('testing', 'local')) {
+            Log::error('Stripe webhook received outside testing/local without configured webhook secret.');
 
-            return response()->json(['error' => 'Webhook secret is not configured'], 500);
+            return response()->json(['error' => 'Webhook secret is not configured'], 400);
         } else {
             // Local dev / test environment fallback when no secret is configured
             $data = json_decode($payload, true);
@@ -65,208 +60,46 @@ class StripeWebhookController extends Controller
 
         if ($event->type === 'payment_intent.succeeded') {
             $paymentIntent = $event->data->object;
-            try {
-                $this->handlePaymentIntentSucceeded($paymentIntent);
-            } catch (\Throwable $e) {
-                Log::error('Stripe webhook recovery failed: '.$e->getMessage(), [
-                    'intent_id' => $paymentIntent->id ?? 'unknown',
-                    'trace' => $e->getTraceAsString(),
-                ]);
-
-                // Signal Stripe to retry with HTTP 500
-                return response()->json(['error' => 'Order recovery failed: '.$e->getMessage()], 500);
-            }
+            $this->handlePaymentIntentSucceeded($paymentIntent);
+        } elseif ($event->type === 'payment_intent.payment_failed' || $event->type === 'payment_intent.canceled') {
+            $paymentIntent = $event->data->object;
+            $this->handlePaymentIntentFailed($paymentIntent);
+        } elseif ($event->type === 'charge.refunded') {
+            $charge = $event->data->object;
+            $this->handleChargeRefunded($charge);
+        } elseif ($event->type === 'charge.dispute.created') {
+            $dispute = $event->data->object;
+            $this->handleDisputeCreated($dispute);
         }
 
         return response()->json(['received' => true]);
     }
 
     /**
-     * Reconcile or automatically recover a successful Stripe payment into an order.
+     * Mark pending order as confirmed upon successful payment.
      */
     protected function handlePaymentIntentSucceeded(object $intent): void
     {
         $stripePaymentId = $intent->id ?? null;
-        if (empty($stripePaymentId)) {
-            return;
+        $orderId = $intent->metadata->order_id ?? null;
+
+        if (is_array($intent->metadata ?? null)) {
+            $orderId = $intent->metadata['order_id'] ?? null;
         }
 
-        // Check if an order already exists for this payment intent
-        $existingOrder = Order::where('stripe_payment_id', $stripePaymentId)->first();
-        if ($existingOrder) {
-            Log::info("Stripe webhook: Order {$existingOrder->order_number} already exists for {$stripePaymentId}.");
-
-            return;
+        $order = null;
+        if ($orderId) {
+            $order = Order::find($orderId);
+        }
+        if (! $order && $stripePaymentId) {
+            $order = Order::where('stripe_payment_id', $stripePaymentId)->first();
         }
 
-        // In testing, run recovery synchronously to allow deterministic test assertions.
-        // In production/local, schedule a delayed job so customer's browser POST /checkout has
-        // a 90-second window to create the authentic order without being preempted.
-        if (app()->environment('testing')) {
-            static::processRecovery($intent);
-        } else {
-            $intentArray = json_decode(json_encode($intent), true) ?: [];
-            RecoverStripeOrderJob::dispatch($intentArray)->delay(now()->addSeconds(90));
-            Log::info("Stripe webhook: Scheduled delayed recovery job for payment {$stripePaymentId} (90s grace window).");
-        }
-    }
-
-    /**
-     * Perform the actual order recovery from PaymentIntent metadata.
-     */
-    public static function processRecovery(object|array $intent): ?Order
-    {
-        if (is_array($intent)) {
-            $intent = json_decode(json_encode($intent));
-        }
-
-        $stripePaymentId = $intent->id ?? null;
-        if (empty($stripePaymentId)) {
-            return null;
-        }
-
-        if (Order::where('stripe_payment_id', $stripePaymentId)->exists()) {
-            return Order::where('stripe_payment_id', $stripePaymentId)->first();
-        }
-
-        // Robust metadata extraction supporting Stripe\StripeObject, stdClass, and array
-        $metadata = [];
-        if (isset($intent->metadata)) {
-            if (is_object($intent->metadata)) {
-                if (method_exists($intent->metadata, 'toArray')) {
-                    $metadata = $intent->metadata->toArray();
-                } else {
-                    $metadata = json_decode(json_encode($intent->metadata), true) ?: [];
-                }
-            } elseif (is_array($intent->metadata)) {
-                $metadata = $intent->metadata;
-            }
-        }
-
-        $itemsJson = $metadata['items_json'] ?? null;
-        $items = $itemsJson ? json_decode($itemsJson, true) : [];
-
-        if (empty($items)) {
-            Log::warning("Stripe webhook: Received payment {$stripePaymentId} without cart metadata. Manual reconciliation needed.");
-
-            return null;
-        }
-
-        // Validate Currency
-        $storeCurrency = strtolower(config('services.stripe.currency', 'cad'));
-        $intentCurrency = strtolower($intent->currency ?? '');
-        if ($intentCurrency !== $storeCurrency) {
-            throw new \RuntimeException("Payment currency ({$intentCurrency}) does not match store currency ({$storeCurrency}).");
-        }
-
-        return DB::transaction(function () use ($stripePaymentId, $metadata, $items, $intent) {
-            // Guard against concurrent execution
-            $existing = Order::where('stripe_payment_id', $stripePaymentId)->first();
-            if ($existing) {
-                return $existing;
-            }
-
-            $subtotal = 0.00;
-            $resolvedItems = [];
-            $requiredProductQuantities = [];
-
-            foreach ($items as $item) {
-                $model = ($item['type'] ?? 'product') === 'recipe-kit' ? RecipeKit::class : Product::class;
-                $catalogItem = $model::query()
-                    ->where(is_numeric($item['id']) ? 'id' : 'slug', $item['id'])->first();
-
-                if (! $catalogItem) {
-                    throw new \RuntimeException("Catalog item ID '{$item['id']}' no longer exists during recovery.");
-                }
-
-                $isSubscribed = ! empty($item['is_subscribed']);
-                $unitPrice = round($catalogItem->price * ($isSubscribed ? 0.95 : 1), 2);
-                $quantity = max(1, (int) ($item['quantity'] ?? 1));
-                $subtotal += round($unitPrice * $quantity, 2);
-
-                if ($catalogItem instanceof Product) {
-                    $requiredProductQuantities[$catalogItem->id] = ($requiredProductQuantities[$catalogItem->id] ?? 0) + $quantity;
-                } else {
-                    $catalogItem->load('products');
-                    foreach ($catalogItem->products as $kitProduct) {
-                        $needed = ($kitProduct->pivot->quantity ?? 1) * $quantity;
-                        $requiredProductQuantities[$kitProduct->id] = ($requiredProductQuantities[$kitProduct->id] ?? 0) + $needed;
-                    }
-                }
-
-                $resolvedItems[] = [
-                    'product_id' => $catalogItem instanceof Product ? $catalogItem->id : null,
-                    'name' => $catalogItem->name,
-                    'size' => $catalogItem instanceof Product ? $catalogItem->size_main : null,
-                    'unit_price' => $unitPrice,
-                    'quantity' => $quantity,
-                    'total_price' => round($unitPrice * $quantity, 2),
-                    'is_subscribed' => $isSubscribed,
-                    'image' => $catalogItem->image,
-                ];
-            }
-
-            // Verify Stock Sufficiency with atomic lockForUpdate
-            $lockedProducts = Product::query()
-                ->whereIn('id', array_keys($requiredProductQuantities))
-                ->lockForUpdate()
-                ->get()
-                ->keyBy('id');
-
-            foreach ($requiredProductQuantities as $productId => $totalQty) {
-                $product = $lockedProducts->get($productId);
-                if (! $product) {
-                    throw new \RuntimeException("Product ID {$productId} not found during stock lock.");
-                }
-                if ((int) ($product->stock ?? 0) < $totalQty) {
-                    throw new \RuntimeException("Insufficient stock for product '{$product->name}' during recovery (Requested: {$totalQty}, Available: {$product->stock}).");
-                }
-                $product->decrementStock($totalQty);
-            }
-
-            $storeInfo = StoreSetting::current();
-            $fulfillmentType = $metadata['fulfillment_type'] ?? 'Store Pickup';
-            $deliveryFee = 0.00;
-            if ($fulfillmentType === 'Home Delivery') {
-                if ($subtotal < ($storeInfo->free_delivery_threshold ?? 50.00)) {
-                    $deliveryFee = (float) ($storeInfo->delivery_fee ?? 4.99);
-                }
-            }
-
-            $total = max(0, round($subtotal + $deliveryFee, 2));
-            $expectedCents = (int) round($total * 100);
-            $amountReceivedCents = (int) ($intent->amount_received ?? 0);
-
-            // Exact cents matching: paid total must match calculated order total
-            if ($amountReceivedCents !== $expectedCents) {
-                throw new \RuntimeException("Paid amount ({$amountReceivedCents}¢) does not match required order total ({$expectedCents}¢).");
-            }
-
-            $order = Order::create([
-                'order_number' => Order::generateOrderNumber(),
-                'user_id' => ! empty($metadata['user_id']) && is_numeric($metadata['user_id']) ? (int) $metadata['user_id'] : null,
-                'customer_name' => $metadata['customer_name'] ?? 'Online Customer',
-                'customer_email' => $metadata['customer_email'] ?? 'customer@example.com',
-                'customer_phone' => $metadata['customer_phone'] ?? null,
-                'subtotal' => $subtotal,
-                'discount' => 0.00,
-                'delivery_fee' => $deliveryFee,
-                'total' => $total,
-                'points_earned' => (int) floor($subtotal),
-                'payment_method' => $metadata['payment_method'] ?? 'card',
-                'stripe_payment_id' => $stripePaymentId,
-                'fulfillment_type' => $fulfillmentType,
-                'pickup_slot' => $metadata['pickup_slot'] ?? 'As Soon As Possible',
-                'pickup_location' => $metadata['pickup_location'] ?? ($storeInfo->address.' · '.$storeInfo->name),
-                'delivery_address' => $metadata['delivery_address'] ?? null,
+        if ($order && $order->status === 'pending_payment') {
+            $order->update([
                 'status' => 'confirmed',
-                'notes' => 'Recovered automatically via Stripe Webhook',
-                'idempotency_key' => $metadata['idempotency_key'] ?? null,
+                'stripe_payment_id' => $stripePaymentId,
             ]);
-
-            foreach ($resolvedItems as $orderItem) {
-                $order->items()->create($orderItem);
-            }
 
             try {
                 OrderPlaced::dispatch($order);
@@ -274,9 +107,70 @@ class StripeWebhookController extends Controller
                 Log::warning('Stripe webhook OrderPlaced broadcast failed: '.$e->getMessage());
             }
 
-            Log::info("Stripe webhook: Successfully recovered and created order {$order->order_number} for payment {$stripePaymentId}.");
+            Log::info("Stripe webhook: Confirmed order {$order->order_number} for payment {$stripePaymentId}");
+        }
+    }
 
-            return $order;
-        });
+    /**
+     * Cancel pending order and restock inventory when payment fails or is cancelled.
+     */
+    protected function handlePaymentIntentFailed(object $intent): void
+    {
+        $stripePaymentId = $intent->id ?? null;
+        $orderId = $intent->metadata->order_id ?? null;
+
+        if (is_array($intent->metadata ?? null)) {
+            $orderId = $intent->metadata['order_id'] ?? null;
+        }
+
+        $order = null;
+        if ($orderId) {
+            $order = Order::find($orderId);
+        }
+        if (! $order && $stripePaymentId) {
+            $order = Order::where('stripe_payment_id', $stripePaymentId)->first();
+        }
+
+        if ($order && $order->status === 'pending_payment') {
+            $order->cancelAndRestock('Payment failed or cancelled on Stripe');
+            Log::info("Stripe webhook: Cancelled pending order {$order->order_number} after payment failure.");
+        }
+    }
+
+    /**
+     * Cancel order and restock inventory when a charge is refunded via Stripe.
+     */
+    protected function handleChargeRefunded(object $charge): void
+    {
+        $paymentIntentId = $charge->payment_intent ?? null;
+        if (! $paymentIntentId) {
+            return;
+        }
+
+        $order = Order::where('stripe_payment_id', $paymentIntentId)->first();
+        if ($order && $order->status !== 'cancelled') {
+            $order->cancelAndRestock('Refunded via Stripe');
+            Log::info("Stripe webhook: Cancelled and restocked order {$order->order_number} following Stripe refund.");
+        }
+    }
+
+    /**
+     * Flag order when a customer files a dispute.
+     */
+    protected function handleDisputeCreated(object $dispute): void
+    {
+        $paymentIntentId = $dispute->payment_intent ?? null;
+        $reason = $dispute->reason ?? 'unknown';
+
+        Log::critical("Stripe dispute created: payment_intent {$paymentIntentId}, reason: {$reason}");
+
+        if ($paymentIntentId) {
+            $order = Order::where('stripe_payment_id', $paymentIntentId)->first();
+            if ($order) {
+                $order->update([
+                    'notes' => trim(($order->notes ?? '')." [DISPUTE FILED ON STRIPE: {$reason}]"),
+                ]);
+            }
+        }
     }
 }

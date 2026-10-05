@@ -169,8 +169,6 @@ const stripeError = ref('');
 const stripePublishableKey = computed(() => page.props.stripeKey || import.meta.env.VITE_STRIPE_KEY || '');
 const isStripeConfigured = computed(() => Boolean(stripePublishableKey.value));
 
-const activePaymentIntentId = ref('');
-
 async function initStripe() {
   if (!isStripeConfigured.value) return;
   const total = Number(checkoutTotal.value);
@@ -188,38 +186,10 @@ async function initStripe() {
       throw new Error('Failed to load Stripe SDK');
     }
 
-    const { data } = await axios.post('/checkout/create-payment-intent', {
-      amount: total,
-      currency: 'cad',
-      items: store.cartItems.map(item => ({
-        id: item.id,
-        price: Number(item.price),
-        quantity: Number(item.quantity || 1),
-        is_subscribed: Boolean(item.isSubscribed),
-      })),
-      fulfillment_type: fulfillmentMode.value === 'delivery' ? 'Home Delivery' : 'Store Pickup',
-      delivery_address: fulfillmentMode.value === 'delivery' ? deliveryAddress.value : null,
-      pickup_slot: fulfillmentMode.value === 'pickup' ? effectiveFulfillmentSlotLabel.value : null,
-      customer_name: customerName.value || page.props.auth?.user?.name || 'Guest Customer',
-      customer_email: customerEmail.value || page.props.auth?.user?.email || 'guest@example.com',
-      customer_phone: customerPhone.value || null,
-      payment_intent_id: activePaymentIntentId.value || undefined,
-      idempotency_key: checkoutIdempotencyKey.value,
-    });
-
-    if (data.error) {
-      throw new Error(data.error);
-    }
-
-    activePaymentIntentId.value = data.paymentIntentId || '';
-
-    const clientSecret = data.clientSecret;
-    if (!clientSecret) {
-      throw new Error('No client secret returned from Stripe server');
-    }
-
     elements.value = stripe.value.elements({
-      clientSecret,
+      mode: 'payment',
+      amount: Math.max(50, Math.round(total * 100)),
+      currency: 'cad',
       appearance: {
         theme: 'stripe',
         variables: {
@@ -277,6 +247,7 @@ async function initStripe() {
     if (container) {
       paymentElement.value.mount('#stripe-payment-element-mount');
       isStripeMounted.value = true;
+      detectDeviceWallets();
     }
   } catch (err) {
     console.error('Stripe initialization failed:', err);
@@ -286,55 +257,19 @@ async function initStripe() {
   }
 }
 
-const isSyncingPaymentIntent = ref(false);
-let pendingSyncPromise = null;
-const syncError = ref('');
-
-async function syncPaymentIntentAmount(newTotal) {
-  if (!isStripeConfigured.value || !activePaymentIntentId.value || !newTotal || Number(newTotal) < 0.5) return;
-  isSyncingPaymentIntent.value = true;
-  syncError.value = '';
-
-  const promise = (async () => {
+// Update Stripe Elements amount whenever cart total changes (zero backend sync calls!)
+watch(checkoutTotal, (newTotal) => {
+  const total = Number(newTotal);
+  if (elements.value && isStripeMounted.value && total >= 0.5) {
     try {
-      const { data } = await axios.post('/checkout/create-payment-intent', {
-        amount: Number(newTotal),
-        currency: 'cad',
-        items: store.cartItems.map(i => ({
-          id: i.id,
-          price: Number(i.price),
-          quantity: Number(i.quantity || 1),
-          is_subscribed: Boolean(i.isSubscribed),
-        })),
-        fulfillment_type: fulfillmentMode.value === 'delivery' ? 'Home Delivery' : 'Store Pickup',
-        delivery_address: fulfillmentMode.value === 'delivery' ? deliveryAddress.value : null,
-        pickup_slot: fulfillmentMode.value === 'pickup' ? effectiveFulfillmentSlotLabel.value : null,
-        customer_name: customerName.value || page.props.auth?.user?.name || 'Guest Customer',
-        customer_email: customerEmail.value || page.props.auth?.user?.email || 'guest@example.com',
-        customer_phone: customerPhone.value || null,
-        payment_intent_id: activePaymentIntentId.value,
-        idempotency_key: `${checkoutIdempotencyKey.value}_amt_${Math.round(Number(newTotal) * 100)}`,
+      elements.value.update({
+        amount: Math.round(total * 100),
       });
-
-      if (data.error) {
-        throw new Error(data.error);
-      }
-
-      if (data.paymentIntentId) {
-        activePaymentIntentId.value = data.paymentIntentId;
-      }
-    } catch (err) {
-      console.error('Failed to sync PaymentIntent amount with Stripe:', err);
-      syncError.value = 'Failed to update payment amount with Stripe. Please refresh.';
-      throw err;
-    } finally {
-      isSyncingPaymentIntent.value = false;
+    } catch (e) {
+      console.warn('elements.update warning:', e);
     }
-  })();
-
-  pendingSyncPromise = promise;
-  return promise;
-}
+  }
+});
 
 const isProcessing = ref(false);
 const isMobileSummaryOpen = ref(false);
@@ -463,15 +398,6 @@ onMounted(() => {
   }
 });
 
-let syncTimeout = null;
-function debounceSyncPaymentIntent() {
-  if (!isStripeConfigured.value || !activePaymentIntentId.value) return;
-  clearTimeout(syncTimeout);
-  syncTimeout = setTimeout(() => {
-    syncPaymentIntentAmount(checkoutTotal.value);
-  }, 400);
-}
-
 watch(
   [
     () => store.cartItems,
@@ -479,16 +405,11 @@ watch(
     () => deliveryAddress.value,
     () => deliveryApt.value,
     () => effectiveFulfillmentSlotLabel.value,
-    () => customerName.value,
-    () => customerEmail.value,
-    () => customerPhone.value,
     () => checkoutTotal.value,
   ],
   () => {
     if (Number(checkoutTotal.value) >= 0.5 && !isStripeMounted.value && !isStripeLoading.value && isStripeConfigured.value) {
       initStripe();
-    } else if (isStripeMounted.value && activePaymentIntentId.value) {
-      debounceSyncPaymentIntent();
     }
   },
   { deep: true }
@@ -529,49 +450,13 @@ async function completeOrder() {
     return;
   }
 
-  // If payment amount is currently syncing with Stripe (e.g. delivery fee or cart total changed), wait for completion
-  if (isSyncingPaymentIntent.value && pendingSyncPromise) {
-    try {
-      await pendingSyncPromise;
-    } catch (e) {
-      paymentError.value = 'Failed to synchronize payment amount with Stripe. Please refresh and try again.';
-      errorMessage.value = paymentError.value;
-      isProcessing.value = false;
-      return;
-    }
-  }
-
   const formattedDeliveryAddress = isDelivery
     ? (deliveryApt.value.trim() ? `${deliveryAddress.value.trim()}, Apt ${deliveryApt.value.trim()}` : deliveryAddress.value.trim())
     : null;
   const storePickupLocation = `${storeInfo.value.name || 'Masala Mart'} · ${storeInfo.value.address || '456 Curry Road, Flavor Town'}`;
   const effectivePickupSlot = isDelivery ? null : (schedule.pickup_slot || effectiveFulfillmentSlotLabel.value);
 
-  // Server-side pre-payment validation: verify stock, slot availability, store status, and pricing BEFORE charging the card!
-  try {
-    await axios.post('/checkout/validate', {
-      items: store.cartItems.map(item => ({
-        id: item.id,
-        price: Number(item.price),
-        quantity: Number(item.quantity || 1),
-        is_subscribed: Boolean(item.isSubscribed),
-      })),
-      fulfillment_type: isDelivery ? 'Home Delivery' : 'Store Pickup',
-      delivery_address: formattedDeliveryAddress,
-      pickup_slot: effectivePickupSlot,
-      ...schedule,
-    });
-  } catch (valErr) {
-    console.error('Pre-payment validation failed:', valErr);
-    const errors = valErr.response?.data?.errors;
-    const msg = valErr.response?.data?.message || (errors ? Object.values(errors).flat()[0] : null) || 'Some items in your cart are no longer available or the selected time slot is full.';
-    errorMessage.value = msg;
-    generalError.value = msg;
-    isProcessing.value = false;
-    return;
-  }
-
-  let stripePaymentId = null;
+  // 1. If Stripe is configured, validate the card form locally with Elements.submit() first!
   if (isStripeConfigured.value) {
     if (!stripe.value || !elements.value) {
       paymentError.value = 'Stripe payment element is still loading. Please wait a moment and try again.';
@@ -580,68 +465,16 @@ async function completeOrder() {
       return;
     }
 
-    try {
-      if (activePaymentIntentId.value) {
-        await axios.post('/checkout/create-payment-intent', {
-          amount: Number(checkoutTotal.value),
-          currency: 'cad',
-          items: store.cartItems.map(i => ({
-            id: i.id,
-            price: Number(i.price),
-            quantity: Number(i.quantity || 1),
-            is_subscribed: Boolean(i.isSubscribed),
-          })),
-          fulfillment_type: isDelivery ? 'Home Delivery' : 'Store Pickup',
-          delivery_address: formattedDeliveryAddress,
-          pickup_slot: effectivePickupSlot,
-          pickup_location: isDelivery ? (formattedDeliveryAddress || 'Delivery Address') : storePickupLocation,
-          customer_name: customerName.value || page.props.auth?.user?.name || 'Guest Customer',
-          customer_email: customerEmail.value || page.props.auth?.user?.email || 'guest@example.com',
-          customer_phone: customerPhone.value || null,
-          payment_intent_id: activePaymentIntentId.value,
-          idempotency_key: checkoutIdempotencyKey.value,
-        });
-      }
-    } catch (syncErr) {
-      console.warn('Metadata sync before confirmation warning:', syncErr);
-    }
-
-    try {
-      const { error: stripeErr, paymentIntent } = await stripe.value.confirmPayment({
-        elements: elements.value,
-        confirmParams: {
-          return_url: window.location.origin + '/checkout',
-        },
-        redirect: 'if_required',
-      });
-
-      if (stripeErr) {
-        paymentError.value = stripeErr.message || 'Payment processing failed.';
-        errorMessage.value = paymentError.value;
-        isProcessing.value = false;
-        return;
-      }
-
-      if (paymentIntent && paymentIntent.status === 'succeeded') {
-        stripePaymentId = paymentIntent.id;
-      } else {
-        paymentError.value = 'Payment was not confirmed. Current status: ' + (paymentIntent?.status || 'incomplete');
-        errorMessage.value = paymentError.value;
-        isProcessing.value = false;
-        return;
-      }
-    } catch (err) {
-      console.error('Stripe confirmation error:', err);
-      paymentError.value = err.message || 'Payment processing error.';
+    const { error: submitError } = await elements.value.submit();
+    if (submitError) {
+      paymentError.value = submitError.message || 'Please check your payment information.';
       errorMessage.value = paymentError.value;
       isProcessing.value = false;
       return;
     }
-  } else {
-    // Only in local development without Stripe configured in .env
-    stripePaymentId = 'pi_demo_' + Date.now();
   }
 
+  // 2. Order First: Send cart and fulfillment details to server to create pending order and reserve inventory!
   const payload = {
     items: store.cartItems.map(item => ({
       id: item.id,
@@ -653,8 +486,10 @@ async function completeOrder() {
       image: item.image || '',
       is_subscribed: Boolean(item.isSubscribed),
     })),
+    customer_name: page.props.auth?.user?.name || null,
+    customer_email: page.props.auth?.user?.email || null,
+    customer_phone: customerPhone.value?.trim() || page.props.auth?.user?.phone || null,
     payment_method: paymentMethod.value,
-    stripe_payment_id: stripePaymentId,
     fulfillment_type: isDelivery ? 'Home Delivery' : 'Store Pickup',
     ...schedule,
     expected_total: Number(checkoutTotal.value),
@@ -664,46 +499,9 @@ async function completeOrder() {
     notes: isDelivery ? deliveryNotes.value : (storeInfo.value.curbside_instructions || null),
   };
 
+  let response;
   try {
-    const response = await axios.post('/checkout', payload);
-    const order = confirmedOrder(response.data);
-    const orderNumber = order.order_number;
-    const totalPaid = Number(order.total);
-    const pointsEarned = Number(order.points_earned);
-    const slotLabel = order.pickup_slot;
-
-    orderPlaced.value = true;
-    confirmedOrderNumber.value = orderNumber;
-    confirmedTotalPaid.value = totalPaid.toFixed(2);
-    confirmedPointsEarned.value = pointsEarned;
-    confirmedSlotLabel.value = slotLabel;
-
-    store.masalaPoints += pointsEarned;
-
-    const orderItems = (order?.items && order.items.length > 0)
-      ? order.items.map(i => ({
-          id: i.product_id || i.id,
-          name: i.name,
-          price: Number(i.unit_price),
-          quantity: i.quantity,
-          size: i.size,
-          image: i.image,
-        }))
-      : store.cartItems.map(i => ({ ...i }));
-
-    store.pastOrders.unshift({
-      id: orderNumber,
-      date: 'Today',
-      type: order?.fulfillment_type || (isDelivery ? 'Home Delivery' : 'Store Pickup'),
-      total: totalPaid,
-      itemCount: orderItems.reduce((acc, i) => acc + (i.quantity || 1), 0),
-      summary: orderItems.map(i => i.name).join(', '),
-      items: orderItems,
-    });
-
-    store.clearCart();
-    // Refresh idempotency key for next checkout
-    checkoutIdempotencyKey.value = 'chk_' + Date.now() + '_' + Math.random().toString(36).slice(2, 9);
+    response = await axios.post('/checkout', payload);
   } catch (error) {
     console.error('Checkout error:', error);
     const errors = error.response?.data?.errors;
@@ -725,6 +523,7 @@ async function completeOrder() {
       }
 
       document.getElementById('fulfillment-section')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      isProcessing.value = false;
       return;
     }
 
@@ -734,6 +533,7 @@ async function completeOrder() {
       deliveryError.value = msg;
       errorMessage.value = msg;
       document.getElementById('delivery-section')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      isProcessing.value = false;
       return;
     }
 
@@ -743,6 +543,7 @@ async function completeOrder() {
       paymentError.value = msg;
       errorMessage.value = msg;
       document.getElementById('payment-section')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      isProcessing.value = false;
       return;
     }
 
@@ -757,9 +558,100 @@ async function completeOrder() {
     const fallbackMsg = errorDetails || error.response?.data?.message || error.message || 'Something went wrong while processing your order. Please try again.';
     generalError.value = fallbackMsg;
     errorMessage.value = fallbackMsg;
-  } finally {
     isProcessing.value = false;
+    return;
   }
+
+  const resData = response.data;
+  const createdOrderId = resData.order_id;
+  const order = confirmedOrder(resData.order || resData);
+
+  // 3. Confirm Stripe Payment if online payment is required
+  if (resData.requires_payment && resData.clientSecret) {
+    try {
+      const { error: stripeErr, paymentIntent } = await stripe.value.confirmPayment({
+        elements: elements.value,
+        clientSecret: resData.clientSecret,
+        confirmParams: {
+          return_url: window.location.origin + '/checkout',
+        },
+        redirect: 'if_required',
+      });
+
+      if (stripeErr) {
+        paymentError.value = stripeErr.message || 'Payment processing failed.';
+        errorMessage.value = paymentError.value;
+        // Cancel the pending order immediately to release the reserved stock!
+        try {
+          await axios.post('/checkout/cancel-pending', { order_id: createdOrderId });
+        } catch (cancelErr) {
+          // ignore
+        }
+        isProcessing.value = false;
+        return;
+      }
+
+      if (paymentIntent && paymentIntent.status === 'succeeded') {
+        try {
+          await axios.post('/checkout/confirm-payment', {
+            order_id: createdOrderId,
+            payment_intent_id: paymentIntent.id,
+          });
+        } catch (confErr) {
+          console.warn('confirm-payment notice warning:', confErr);
+        }
+      } else {
+        paymentError.value = 'Payment was not confirmed. Current status: ' + (paymentIntent?.status || 'incomplete');
+        errorMessage.value = paymentError.value;
+        isProcessing.value = false;
+        return;
+      }
+    } catch (err) {
+      console.error('Stripe confirmation error:', err);
+      paymentError.value = err.message || 'Payment processing error.';
+      errorMessage.value = paymentError.value;
+      isProcessing.value = false;
+      return;
+    }
+  }
+
+  const orderNumber = order.order_number;
+  const totalPaid = Number(order.total);
+  const pointsEarned = Number(order.points_earned);
+  const slotLabel = order.pickup_slot;
+
+  orderPlaced.value = true;
+  confirmedOrderNumber.value = orderNumber;
+  confirmedTotalPaid.value = totalPaid.toFixed(2);
+  confirmedPointsEarned.value = pointsEarned;
+  confirmedSlotLabel.value = slotLabel;
+
+  store.masalaPoints += pointsEarned;
+
+  const orderItems = (order?.items && order.items.length > 0)
+    ? order.items.map(i => ({
+        id: i.product_id || i.id,
+        name: i.name,
+        price: Number(i.unit_price),
+        quantity: i.quantity,
+        size: i.size,
+        image: i.image,
+      }))
+    : store.cartItems.map(i => ({ ...i }));
+
+  store.pastOrders.unshift({
+    id: orderNumber,
+    date: 'Today',
+    type: order?.fulfillment_type || (isDelivery ? 'Home Delivery' : 'Store Pickup'),
+    total: totalPaid,
+    itemCount: orderItems.reduce((acc, i) => acc + (i.quantity || 1), 0),
+    summary: orderItems.map(i => i.name).join(', '),
+    items: orderItems,
+  });
+
+  store.clearCart();
+  checkoutIdempotencyKey.value = 'chk_' + Date.now() + '_' + Math.random().toString(36).slice(2, 9);
+  isProcessing.value = false;
 }
 </script>
 

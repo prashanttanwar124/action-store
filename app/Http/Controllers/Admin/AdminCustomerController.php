@@ -57,7 +57,9 @@ class AdminCustomerController extends Controller
 
         // Eager load recent 5 orders for fast preview drawer
         $query->with(['orders' => function ($q) {
-            $q->latest()->select('id', 'order_number', 'user_id', 'total', 'status', 'pickup_slot', 'created_at');
+            $q->where('status', '!=', 'pending_payment')
+                ->latest()
+                ->select('id', 'order_number', 'user_id', 'total', 'status', 'pickup_slot', 'created_at');
         }]);
 
         $customers = $query->paginate(15)->withQueryString()->through(function (User $user) {
@@ -86,8 +88,8 @@ class AdminCustomerController extends Controller
 
         // Store customer metrics
         $totalCustomers = User::count();
-        $totalOrders = Order::count();
-        $totalRevenue = (float) Order::sum('total');
+        $totalOrders = Order::where('status', '!=', 'pending_payment')->count();
+        $totalRevenue = (float) Order::whereNotIn('status', ['pending_payment', 'cancelled'])->sum('total');
 
         $metrics = [
             'total_customers' => $totalCustomers,
