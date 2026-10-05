@@ -249,6 +249,17 @@ async function initStripe() {
       },
     });
 
+    if (paymentElement.value) {
+      try {
+        paymentElement.value.unmount();
+        paymentElement.value.destroy();
+      } catch (e) {
+        // ignore
+      }
+      paymentElement.value = null;
+      isStripeMounted.value = false;
+    }
+
     paymentElement.value = elements.value.create('payment', {
       layout: 'tabs',
       wallets: {
@@ -509,6 +520,9 @@ async function completeOrder() {
     try {
       const { error: stripeErr, paymentIntent } = await stripe.value.confirmPayment({
         elements: elements.value,
+        confirmParams: {
+          return_url: window.location.origin + '/checkout',
+        },
         redirect: 'if_required',
       });
 
@@ -1158,12 +1172,18 @@ async function completeOrder() {
             <div v-show="paymentMethod === 'card'" class="space-y-3">
               <!-- Stripe Live Elements (when STRIPE_KEY is set in .env) -->
               <div v-if="isStripeConfigured" class="space-y-3">
-                <div id="stripe-payment-element-mount" class="min-h-[120px] pt-1">
-                  <div v-if="isStripeLoading" class="flex flex-col items-center justify-center py-8 space-y-2">
-                    <Loader2 class="w-6 h-6 animate-spin text-[#a47a3c]" />
-                    <span class="text-xs text-stone-500 font-semibold">Loading Stripe payment fields...</span>
-                  </div>
+                <!-- Loading State (Sibling, never mounted inside Stripe target) -->
+                <div v-if="isStripeLoading" class="flex flex-col items-center justify-center py-8 space-y-2 min-h-[120px]">
+                  <Loader2 class="w-6 h-6 animate-spin text-[#a47a3c]" />
+                  <span class="text-xs text-stone-500 font-semibold">Loading Stripe payment fields...</span>
                 </div>
+
+                <!-- Pure Stripe Container: Always kept completely clean of Vue template children -->
+                <div
+                  id="stripe-payment-element-mount"
+                  class="min-h-[120px] pt-1"
+                  :class="{ hidden: isStripeLoading }"
+                ></div>
 
                 <div v-if="stripeError" class="p-3 bg-rose-50 border border-rose-200 text-rose-900 text-xs rounded-xl flex items-center justify-between gap-2">
                   <div class="flex items-center gap-2">
@@ -1320,8 +1340,8 @@ async function completeOrder() {
                 class="w-full h-13 bg-[#1a1a1a] hover:bg-black text-white font-bold text-sm rounded-full transition-all cursor-pointer flex items-center justify-between px-6 shadow-md active:scale-[0.99] disabled:opacity-60"
               >
                 <div class="flex items-center gap-2">
-                  <Loader2 v-if="isProcessing" class="w-4 h-4 animate-spin" />
-                  <Lock v-else class="w-4 h-4 stroke-[2.2] text-[#e4b97a]" />
+                  <Loader2 v-if="isProcessing" key="desktop-loading-spinner" class="w-4 h-4 animate-spin" />
+                  <Lock v-else key="desktop-lock-icon" class="w-4 h-4 stroke-[2.2] text-[#e4b97a]" />
                   <span v-if="paymentMethod === 'apple-pay'">
                     {{ isProcessing ? 'Authorizing Apple Pay...' : `Pay with Apple Pay · ${effectiveFulfillmentSlotLabel}` }}
                   </span>
@@ -1363,8 +1383,8 @@ async function completeOrder() {
           class="w-full h-13 py-3.5 bg-[#1a1a1a] active:bg-black text-white font-semibold text-sm rounded-full cursor-pointer flex items-center justify-between px-6 shadow-md disabled:opacity-60"
         >
           <div class="flex items-center gap-2">
-            <Loader2 v-if="isProcessing" class="w-4 h-4 animate-spin" />
-            <Lock v-else class="w-4 h-4 stroke-[2.2] text-[#e4b97a]" />
+            <Loader2 v-if="isProcessing" key="mobile-loading-spinner" class="w-4 h-4 animate-spin" />
+            <Lock v-else key="mobile-lock-icon" class="w-4 h-4 stroke-[2.2] text-[#e4b97a]" />
             <span v-if="paymentMethod === 'apple-pay'">
               {{ isProcessing ? 'Authorizing Apple Pay...' : `Apple Pay · $${checkoutTotal}` }}
             </span>
@@ -1402,9 +1422,8 @@ async function completeOrder() {
       </div>
 
       <!-- SCHEDULE MODAL (Uber Eats / Instacart Pop-up Sheet) -->
-      <Teleport to="body">
+      <Teleport to="body" v-if="isScheduleModalOpen">
         <div
-          v-if="isScheduleModalOpen"
           class="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200"
           @click.self="isScheduleModalOpen = false"
         >
