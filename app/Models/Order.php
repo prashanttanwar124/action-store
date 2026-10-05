@@ -26,6 +26,7 @@ class Order extends Model
         'total',
         'points_earned',
         'payment_method',
+        'stripe_payment_id',
         'fulfillment_type',
         'pickup_slot',
         'pickup_location',

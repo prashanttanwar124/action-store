@@ -331,4 +331,62 @@ class CheckoutTest extends TestCase
         $response->assertStatus(201);
         $this->assertEquals(6, $product->fresh()->stock);
     }
+
+    public function test_checkout_supports_stripe_payment_method_and_stores_stripe_payment_id(): void
+    {
+        $product = Product::factory()->create([
+            'stock' => 10,
+            'price' => 25.00,
+        ]);
+
+        $payload = [
+            'items' => [
+                [
+                    'id' => $product->id,
+                    'name' => $product->name,
+                    'price' => 25.00,
+                    'quantity' => 1,
+                ],
+            ],
+            'payment_method' => 'stripe',
+            'stripe_payment_id' => 'pi_test_1234567890',
+            'fulfillment_type' => 'Store Pickup',
+            'customer_name' => 'Stripe Shopper',
+            'customer_email' => 'stripe@example.com',
+        ];
+
+        $response = $this->postJson('/checkout', $payload);
+
+        $response->assertStatus(201);
+        $this->assertDatabaseHas('orders', [
+            'customer_email' => 'stripe@example.com',
+            'payment_method' => 'stripe',
+            'stripe_payment_id' => 'pi_test_1234567890',
+        ]);
+    }
+
+    public function test_create_payment_intent_validates_amount(): void
+    {
+        $response = $this->postJson('/checkout/create-payment-intent', [
+            'amount' => 0.10, // less than minimum 0.50
+        ]);
+
+        $response->assertStatus(422)
+            ->assertJsonValidationErrors(['amount']);
+    }
+
+    public function test_create_payment_intent_returns_503_when_stripe_is_not_configured(): void
+    {
+        config(['services.stripe.secret' => null]);
+
+        $response = $this->postJson('/checkout/create-payment-intent', [
+            'amount' => 25.00,
+            'currency' => 'cad',
+        ]);
+
+        $response->assertStatus(503)
+            ->assertJson([
+                'configured' => false,
+            ]);
+    }
 }

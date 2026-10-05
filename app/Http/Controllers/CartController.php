@@ -61,6 +61,8 @@ class CartController extends Controller
             'maxOrdersPerSlot' => $maxCapacity,
             'minOrderAmount' => (float) ($storeInfo->min_order_amount ?? 0),
             'pickupDays' => $storeInfo->pickup_days ?? ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'],
+            'stripeKey' => config('services.stripe.key') ?? '',
+            'stripeConfigured' => ! empty(config('services.stripe.key')),
         ]);
     }
 }

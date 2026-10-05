@@ -16,6 +16,8 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
+use Stripe\PaymentIntent;
+use Stripe\Stripe;
 
 class OrderController extends Controller
 {
@@ -38,6 +40,7 @@ class OrderController extends Controller
             'expected_total' => ['nullable', 'numeric', 'min:0'],
             'idempotency_key' => ['nullable', 'string', 'max:64'],
             'payment_method' => ['nullable', 'string', 'max:50'],
+            'stripe_payment_id' => ['nullable', 'string', 'max:255'],
             'fulfillment_type' => ['nullable', 'in:Store Pickup,Home Delivery'],
             'pickup_timing_mode' => ['sometimes', 'in:asap,scheduled'],
             'pickup_timing_type' => ['required_if:pickup_timing_mode,scheduled', 'in:slot,custom'],
@@ -205,6 +208,7 @@ class OrderController extends Controller
                 'total' => $total,
                 'points_earned' => $pointsEarned,
                 'payment_method' => $validated['payment_method'] ?? 'card',
+                'stripe_payment_id' => $validated['stripe_payment_id'] ?? null,
                 'fulfillment_type' => $fulfillmentType,
                 'pickup_slot' => $pickupSlot,
                 'pickup_location' => $validated['pickup_location'] ?? $defaultLocation,
@@ -415,6 +419,7 @@ class OrderController extends Controller
                 'total' => (float) $order->total,
                 'points_earned' => $order->points_earned,
                 'payment_method' => $order->payment_method,
+                'stripe_payment_id' => $order->stripe_payment_id,
                 'fulfillment_type' => $order->fulfillment_type,
                 'pickup_slot' => $order->pickup_slot,
                 'pickup_location' => $order->pickup_location,
@@ -436,5 +441,53 @@ class OrderController extends Controller
                 }),
             ],
         ]);
+    }
+
+    /**
+     * Create a Stripe PaymentIntent for checkout.
+     */
+    public function createPaymentIntent(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'amount' => ['required', 'numeric', 'min:0.50'],
+            'currency' => ['nullable', 'string', 'size:3'],
+        ]);
+
+        $stripeSecret = config('services.stripe.secret');
+        if (empty($stripeSecret)) {
+            return response()->json([
+                'error' => 'Stripe secret key is not configured. Please set STRIPE_SECRET in your .env file.',
+                'configured' => false,
+            ], 503);
+        }
+
+        try {
+            Stripe::setApiKey($stripeSecret);
+
+            $amountInCents = (int) round($validated['amount'] * 100);
+            $currency = strtolower($validated['currency'] ?? 'cad');
+
+            $intent = PaymentIntent::create([
+                'amount' => $amountInCents,
+                'currency' => $currency,
+                'automatic_payment_methods' => [
+                    'enabled' => true,
+                ],
+                'description' => 'Masala Mart Checkout Order',
+            ]);
+
+            return response()->json([
+                'clientSecret' => $intent->client_secret,
+                'paymentIntentId' => $intent->id,
+                'configured' => true,
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Stripe PaymentIntent creation failed: '.$e->getMessage());
+
+            return response()->json([
+                'error' => $e->getMessage(),
+                'configured' => true,
+            ], 422);
+        }
     }
 }
