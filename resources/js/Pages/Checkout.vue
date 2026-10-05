@@ -191,6 +191,13 @@ async function initStripe() {
     const { data } = await axios.post('/checkout/create-payment-intent', {
       amount: total,
       currency: 'cad',
+      items: store.cartItems.map(item => ({
+        id: item.id,
+        price: Number(item.price),
+        quantity: Number(item.quantity || 1),
+        is_subscribed: Boolean(item.isSubscribed),
+      })),
+      fulfillment_type: fulfillmentMode.value === 'delivery' ? 'Home Delivery' : 'Store Pickup',
       payment_intent_id: activePaymentIntentId.value || undefined,
       idempotency_key: checkoutIdempotencyKey.value,
     });

@@ -40,7 +40,7 @@ class OrderController extends Controller
             'items.*.is_subscribed' => ['nullable', 'boolean'],
             'expected_total' => ['nullable', 'numeric', 'min:0'],
             'idempotency_key' => ['nullable', 'string', 'max:64'],
-            'payment_method' => ['nullable', 'string', 'max:50'],
+            'payment_method' => ['nullable', 'string', 'in:card,stripe,apple-pay,google-pay'],
             'stripe_payment_id' => ['nullable', 'string', 'max:255'],
             'fulfillment_type' => ['nullable', 'in:Store Pickup,Home Delivery'],
             'pickup_timing_mode' => ['sometimes', 'in:asap,scheduled'],
@@ -80,7 +80,7 @@ class OrderController extends Controller
         $customerEmail = $user?->email ?? $validated['customer_email'] ?? 'guest@example.com';
         $customerPhone = $validated['customer_phone'] ?? null;
 
-        $order = DB::transaction(function () use ($validated, $user, $customerName, $customerEmail, $customerPhone, $idempotencyKey) {
+        $order = DB::transaction(function () use ($request, $validated, $user, $customerName, $customerEmail, $customerPhone, $idempotencyKey) {
             $subtotal = 0;
             $resolvedItems = [];
             $requiredProductQuantities = [];
@@ -206,11 +206,11 @@ class OrderController extends Controller
                 }
             }
 
-            // Strict Payment Verification: Prevent bypass of unverified/missing/simulated IDs
+            // Strict Payment Verification: All online orders must have verified Stripe payment
             $paymentMethod = $validated['payment_method'] ?? 'card';
             $stripeSecret = config('services.stripe.secret');
 
-            if (in_array($paymentMethod, ['card', 'stripe', 'apple-pay', 'google-pay'], true) && ! app()->environment('testing')) {
+            if (! app()->environment('testing')) {
                 if (! empty($stripeSecret) || app()->environment('production')) {
                     if (empty($stripePaymentId)) {
                         throw ValidationException::withMessages([
@@ -589,13 +589,16 @@ class OrderController extends Controller
             ], 503);
         }
 
-        // Ownership Check: ensure payment_intent_id belongs to the caller's session
+        // Strict Ownership Check: only allow updating an intent that belongs to this active session
         $requestedIntentId = $validated['payment_intent_id'] ?? null;
         $activeSessionIntentId = $request->session()->get('active_payment_intent_id');
-        if (! empty($requestedIntentId) && ! empty($activeSessionIntentId) && $requestedIntentId !== $activeSessionIntentId) {
-            return response()->json([
-                'error' => 'Payment intent does not belong to your active checkout session.',
-            ], 403);
+
+        if (! empty($requestedIntentId)) {
+            if (empty($activeSessionIntentId) || $requestedIntentId !== $activeSessionIntentId) {
+                return response()->json([
+                    'error' => 'Payment intent does not belong to your active checkout session.',
+                ], 403);
+            }
         }
 
         // Calculate authoritative amount on the server if items provided, preventing client-side price tampering
@@ -629,7 +632,7 @@ class OrderController extends Controller
             }
 
             // If intent already exists in this session, update amount and metadata rather than creating duplicates
-            $targetIntentId = $requestedIntentId ?: $activeSessionIntentId;
+            $targetIntentId = $activeSessionIntentId;
             if (! empty($targetIntentId)) {
                 try {
                     $intent = PaymentIntent::update($targetIntentId, [
