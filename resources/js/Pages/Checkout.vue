@@ -88,6 +88,76 @@ const deliveryNotes = ref('');
 
 const paymentMethod = ref('card'); // 'card' | 'apple-pay' | 'google-pay'
 
+// Dynamic Device & Browser Wallet Detection
+const isApplePayAvailable = ref(false);
+const isGooglePayAvailable = ref(false);
+const showAllPaymentMethodsForTesting = ref(false);
+
+async function detectDeviceWallets() {
+  if (typeof window === 'undefined') return;
+
+  try {
+    if (window.ApplePaySession && typeof window.ApplePaySession.canMakePayments === 'function') {
+      isApplePayAvailable.value = window.ApplePaySession.canMakePayments();
+    } else {
+      const isApple = /Macintosh|iPhone|iPad|iPod/.test(navigator.userAgent);
+      const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+      isApplePayAvailable.value = Boolean(isApple && isSafari && window.ApplePaySession);
+    }
+  } catch (e) {
+    isApplePayAvailable.value = false;
+  }
+
+  try {
+    const isChromeOrAndroid = /Chrome|Android/i.test(navigator.userAgent) && !/Edg|OPR/i.test(navigator.userAgent);
+    if (isChromeOrAndroid && (window.PaymentRequest || window.google)) {
+      isGooglePayAvailable.value = true;
+    }
+  } catch (e) {
+    isGooglePayAvailable.value = false;
+  }
+
+  if (stripe.value) {
+    try {
+      const pr = stripe.value.paymentRequest({
+        country: 'CA',
+        currency: 'cad',
+        total: {
+          label: 'Masala Mart',
+          amount: Math.max(50, Math.round(Number(checkoutTotal.value || 10) * 100)),
+        },
+      });
+      const result = await pr.canMakePayment();
+      if (result) {
+        if (result.applePay) isApplePayAvailable.value = true;
+        if (result.googlePay) isGooglePayAvailable.value = true;
+      }
+    } catch (e) {
+      // Ignore
+    }
+  }
+}
+
+const availablePaymentMethods = computed(() => {
+  if (showAllPaymentMethodsForTesting.value) {
+    return ['card', 'apple-pay', 'google-pay'];
+  }
+  const methods = ['card'];
+  if (isApplePayAvailable.value) {
+    methods.push('apple-pay');
+  }
+  if (isGooglePayAvailable.value) {
+    methods.push('google-pay');
+  }
+  return methods;
+});
+
+watch(availablePaymentMethods, (methods) => {
+  if (!methods.includes(paymentMethod.value)) {
+    paymentMethod.value = 'card';
+  }
+});
+
 // Stripe SDK & Elements State
 const stripe = ref(null);
 const elements = ref(null);
@@ -308,6 +378,7 @@ const effectiveFulfillmentSlotLabel = computed(() => {
 });
 
 onMounted(() => {
+  detectDeviceWallets();
   if (isStripeConfigured.value && Number(checkoutTotal.value) >= 0.5) {
     initStripe();
   }
@@ -925,8 +996,11 @@ async function completeOrder() {
               </span>
             </div>
 
-            <!-- Payment Method Selector Tabs -->
-            <div class="grid grid-cols-3 gap-2">
+            <!-- Dynamic Device-Aware Payment Method Selector -->
+            <div v-if="availablePaymentMethods.length > 1" :class="[
+              'grid gap-2',
+              availablePaymentMethods.length === 3 ? 'grid-cols-3' : 'grid-cols-2'
+            ]">
               <button
                 type="button"
                 @click="paymentMethod = 'card'"
@@ -942,6 +1016,7 @@ async function completeOrder() {
               </button>
 
               <button
+                v-if="availablePaymentMethods.includes('apple-pay')"
                 type="button"
                 @click="paymentMethod = 'apple-pay'"
                 :class="[
@@ -956,6 +1031,7 @@ async function completeOrder() {
               </button>
 
               <button
+                v-if="availablePaymentMethods.includes('google-pay')"
                 type="button"
                 @click="paymentMethod = 'google-pay'"
                 :class="[
@@ -967,6 +1043,32 @@ async function completeOrder() {
                 aria-label="Google Wallet"
               >
                 <IconGooglePay :width="48" :height="20" />
+              </button>
+            </div>
+
+            <!-- Single Card Banner when only card is active on this device -->
+            <div v-else class="flex items-center justify-between p-3.5 bg-[#fbf9f5] rounded-2xl border border-[#e0d9cc]">
+              <div class="flex items-center gap-2">
+                <CreditCard class="w-4 h-4 text-[#a47a3c]" />
+                <span class="text-xs font-bold text-stone-900">Credit or Debit Card</span>
+              </div>
+              <span class="text-[11px] text-stone-500 font-medium">Stripe Live Checkout</span>
+            </div>
+
+            <!-- Device Detection Status & Dev Testing Toggle -->
+            <div class="flex items-center justify-between text-[11px] text-stone-500 px-1 pt-0.5">
+              <span class="flex items-center gap-1.5">
+                <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                <span v-if="isApplePayAvailable">Apple Device Detected (Apple Pay enabled)</span>
+                <span v-else-if="isGooglePayAvailable">Chrome / Android Detected (Google Pay enabled)</span>
+                <span v-else>Card checkout configured</span>
+              </span>
+              <button
+                type="button"
+                @click="showAllPaymentMethodsForTesting = !showAllPaymentMethodsForTesting"
+                class="text-[#a47a3c] hover:underline font-semibold cursor-pointer"
+              >
+                {{ showAllPaymentMethodsForTesting ? 'Hide other wallets' : 'Show all wallets' }}
               </button>
             </div>
 
