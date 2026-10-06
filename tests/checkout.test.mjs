@@ -73,6 +73,8 @@ test('store pickup closed day marks isDayOpen false and disables all slots', () 
 test('confirmation rejects missing and malformed orders', () => {
   const order = { id: 1, order_number: '#MM-12345', total: '12.99', points_earned: 12, pickup_slot: 'ASAP', items: [{ name: 'Rice' }] };
   assert.equal(confirmedOrder({ success: true, order }), order);
+  const deliveryOrder = { id: 2, order_number: '#MM-12346', total: '25.00', points_earned: 25, delivery_address: '123 Main St', items: [{ name: 'Atta' }] };
+  assert.equal(confirmedOrder({ success: true, order: deliveryOrder }), deliveryOrder);
   for (const data of [{}, '<html>Login</html>', { success: false, order }, { success: true, order: { ...order, total: null } }, { success: true, order: { ...order, items: [] } }]) {
     assert.throws(() => confirmedOrder(data), /valid order confirmation/);
   }

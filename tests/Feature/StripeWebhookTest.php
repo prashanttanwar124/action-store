@@ -67,14 +67,39 @@ class StripeWebhookTest extends TestCase
         $this->assertEquals(8, $product->fresh()->stock);
     }
 
-    public function test_webhook_does_not_create_order_when_paid_amount_differs(): void
+    public function test_webhook_refunds_instead_of_creating_order_when_paid_amount_differs(): void
     {
         $product = Product::factory()->create(['stock' => 10, 'price' => 10.00]);
         $checkout = Checkout::factory()->holding($product, 2)->create(['stripe_payment_id' => 'pi_short_payment_321']);
 
+        $this->partialMock(StripePayments::class, function (MockInterface $mock) {
+            $mock->shouldReceive('isEnabled')->andReturn(true);
+            $mock->shouldReceive('refundPayment')->once()->with('pi_short_payment_321')->andReturn(Refund::constructFrom(['id' => 're_short']));
+        });
+
         $response = $this->postJson('/stripe/webhook', $this->succeededPayload($checkout, 50));
 
         $response->assertStatus(200);
+        $this->assertEquals(0, Order::count());
+        $this->assertModelMissing($checkout);
+        $this->assertEquals(10, $product->fresh()->stock);
+    }
+
+    public function test_webhook_refunds_payment_whose_checkout_holds_a_different_payment(): void
+    {
+        $product = Product::factory()->create(['stock' => 10, 'price' => 10.00]);
+        $checkout = Checkout::factory()->holding($product, 2)->create(['stripe_payment_id' => 'pi_current']);
+
+        $this->partialMock(StripePayments::class, function (MockInterface $mock) {
+            $mock->shouldReceive('isEnabled')->andReturn(true);
+            $mock->shouldReceive('refundPayment')->once()->with('pi_stale')->andReturn(Refund::constructFrom(['id' => 're_stale']));
+        });
+
+        $payload = $this->succeededPayload($checkout, 2000);
+        $payload['data']['object']['id'] = 'pi_stale';
+
+        $this->postJson('/stripe/webhook', $payload)->assertOk();
+
         $this->assertEquals(0, Order::count());
         $this->assertModelExists($checkout);
     }

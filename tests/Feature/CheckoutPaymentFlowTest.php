@@ -132,16 +132,20 @@ class CheckoutPaymentFlowTest extends TestCase
         $this->assertModelExists($checkout);
     }
 
-    public function test_complete_rejects_a_payment_for_a_different_amount(): void
+    public function test_complete_refunds_a_payment_for_a_different_amount(): void
     {
         $checkout = $this->checkoutFor($this->user);
         $this->fakeStripe(function (MockInterface $mock) use ($checkout) {
             $mock->shouldReceive('retrieveIntent')->andReturn($this->paidIntent($checkout, ['amount_received' => 50]));
+            $mock->shouldReceive('refundPayment')->once()->with($checkout->stripe_payment_id)->andReturn(Refund::constructFrom(['id' => 're_mismatch']));
         });
 
-        $this->actingAs($this->user)->postJson('/checkout/complete', ['checkout_id' => $checkout->id])->assertStatus(422);
+        $response = $this->actingAs($this->user)->postJson('/checkout/complete', ['checkout_id' => $checkout->id]);
 
+        $response->assertStatus(422);
+        $this->assertEquals('payment_mismatch_refunded', $response->json('errors.error_code.0'));
         $this->assertEquals(0, Order::count());
+        $this->assertModelMissing($checkout);
     }
 
     public function test_complete_without_stripe_cannot_create_an_order(): void
@@ -384,6 +388,122 @@ class CheckoutPaymentFlowTest extends TestCase
         $this->assertEquals('slot_full', $response->json('errors.error_code.0'));
     }
 
+    public function test_slot_capacity_only_counts_orders_in_exactly_that_slot(): void
+    {
+        $this->travelTo(now()->setTime(8, 0));
+        StoreSetting::current()->update([
+            'max_orders_per_slot' => 1,
+            'pickup_slot_start_time' => '09:00',
+            'pickup_slot_end_time' => '21:00',
+            'pickup_days' => ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'],
+        ]);
+        $slotLabel = '10:00 AM – 11:00 AM';
+        $today = now()->toDateString();
+        // Starts with the same text, but is a different pickup window
+        Order::factory()->create(['pickup_slot' => "{$today} · {$slotLabel} (Express)", 'status' => 'confirmed']);
+
+        $this->actingAs($this->user)->postJson('/checkout', $this->checkoutPayload() + [
+            'pickup_timing_mode' => 'scheduled',
+            'pickup_timing_type' => 'slot',
+            'pickup_date' => $today,
+            'pickup_slot' => $slotLabel,
+        ])->assertCreated();
+    }
+
+    public function test_resume_after_a_price_change_replaces_the_checkout_at_the_new_price(): void
+    {
+        $this->fakeStripe(function (MockInterface $mock) {
+            $mock->shouldReceive('createIntentFor')->twice()->andReturn($this->newIntent('pi_old_price'), $this->newIntent('pi_new_price'));
+            $mock->shouldReceive('retrieveIntent')->once()->with('pi_old_price')->andReturn($this->newIntent('pi_old_price'));
+            $mock->shouldReceive('cancelIntent')->once()->with('pi_old_price')->andReturn(
+                PaymentIntent::constructFrom(['id' => 'pi_old_price', 'status' => 'canceled'])
+            );
+        });
+
+        $this->actingAs($this->user)->postJson('/checkout', $this->checkoutPayload() + ['expected_total' => 20])->assertCreated();
+        $this->product->update(['price' => 50.00]);
+
+        $response = $this->actingAs($this->user)->postJson('/checkout', $this->checkoutPayload() + ['expected_total' => 100]);
+
+        $response->assertCreated()->assertJson(['clientSecret' => 'pi_new_price_secret', 'total' => 100]);
+        $checkout = Checkout::sole();
+        $this->assertEquals('pi_new_price', $checkout->stripe_payment_id);
+        $this->assertEquals(100.00, (float) $checkout->total);
+    }
+
+    public function test_resume_with_a_stale_expected_total_is_refused_and_releases_the_checkout(): void
+    {
+        $this->fakeStripe(function (MockInterface $mock) {
+            $mock->shouldReceive('createIntentFor')->once()->andReturn($this->newIntent('pi_stale_total'));
+            $mock->shouldReceive('retrieveIntent')->once()->andReturn($this->newIntent('pi_stale_total'));
+            $mock->shouldReceive('cancelIntent')->once()->with('pi_stale_total')->andReturn(
+                PaymentIntent::constructFrom(['id' => 'pi_stale_total', 'status' => 'canceled'])
+            );
+        });
+
+        $this->actingAs($this->user)->postJson('/checkout', $this->checkoutPayload() + ['expected_total' => 20])->assertCreated();
+        $this->product->update(['price' => 50.00]);
+
+        $response = $this->actingAs($this->user)->postJson('/checkout', $this->checkoutPayload() + ['expected_total' => 20]);
+
+        $response->assertUnprocessable();
+        $this->assertEquals('price_changed', $response->json('errors.error_code.0'));
+        $this->assertEquals(0, Checkout::count());
+    }
+
+    public function test_resume_with_a_stale_schedule_returns_the_order_when_payment_went_through_meanwhile(): void
+    {
+        $retrievals = 0;
+        $this->fakeStripe(function (MockInterface $mock) use (&$retrievals) {
+            $mock->shouldReceive('createIntentFor')->once()->andReturn($this->newIntent('pi_raced'));
+            // Unpaid when the resume starts, paid by the time the release tries to cancel it
+            $mock->shouldReceive('retrieveIntent')->twice()->andReturnUsing(function () use (&$retrievals) {
+                return $retrievals++ === 0 ? $this->newIntent('pi_raced') : $this->paidIntent(Checkout::sole());
+            });
+            $mock->shouldReceive('cancelIntent')->once()->andThrow(new \RuntimeException('This PaymentIntent has already succeeded.'));
+        });
+
+        $this->actingAs($this->user)->postJson('/checkout', $this->checkoutPayload())->assertCreated();
+        StoreSetting::current()->update(['is_pickup_active' => false]);
+
+        $response = $this->actingAs($this->user)->postJson('/checkout', $this->checkoutPayload());
+
+        $response->assertOk()->assertJson(['requires_payment' => false]);
+        $this->assertEquals('pi_raced', Order::sole()->stripe_payment_id);
+        $this->assertEquals(0, Checkout::count());
+    }
+
+    public function test_checkout_whose_refund_failed_is_only_refunded_even_when_stock_returns(): void
+    {
+        $checkout = $this->checkoutFor($this->user);
+        $this->product->update(['stock' => 0]);
+
+        $refundAttempts = 0;
+        $this->fakeStripe(function (MockInterface $mock) use ($checkout, &$refundAttempts) {
+            $mock->shouldReceive('retrieveIntent')->twice()->andReturn($this->paidIntent($checkout));
+            $mock->shouldReceive('refundPayment')->twice()->with($checkout->stripe_payment_id)->andReturnUsing(function () use (&$refundAttempts) {
+                if ($refundAttempts++ === 0) {
+                    throw new \RuntimeException('Stripe API error');
+                }
+
+                return Refund::constructFrom(['id' => 're_retried']);
+            });
+        });
+
+        $first = $this->actingAs($this->user)->postJson('/checkout/complete', ['checkout_id' => $checkout->id]);
+        $this->assertEquals('refund_failed', $first->json('errors.error_code.0'));
+        $this->assertEquals(Checkout::FAILURE_OUT_OF_STOCK, $checkout->fresh()->fulfillment_failure);
+
+        // Stock comes back before the retry: the customer was promised a refund, so no order is created
+        $this->product->update(['stock' => 10]);
+        $retry = $this->actingAs($this->user)->postJson('/checkout/complete', ['checkout_id' => $checkout->id]);
+
+        $this->assertEquals('out_of_stock_refunded', $retry->json('errors.error_code.0'));
+        $this->assertEquals(0, Order::count());
+        $this->assertModelMissing($checkout);
+        $this->assertEquals(10, $this->product->fresh()->stock);
+    }
+
     public function test_checkout_is_refused_in_production_when_stripe_is_not_configured(): void
     {
         $this->app['env'] = 'production';
@@ -543,6 +663,63 @@ class CheckoutPaymentFlowTest extends TestCase
 
         // Checkout must be released
         $this->assertDatabaseMissing('checkouts', ['stripe_payment_id' => 'pi_stale_schedule_123']);
+    }
+
+    public function test_cart_item_order_does_not_change_fingerprint(): void
+    {
+        $product2 = Product::factory()->create(['stock' => 10, 'price' => 15.00]);
+
+        $payloadA = [
+            'items' => [
+                ['id' => $this->product->id, 'type' => 'product', 'name' => $this->product->name, 'price' => 10.00, 'quantity' => 1],
+                ['id' => $product2->id, 'type' => 'product', 'name' => $product2->name, 'price' => 15.00, 'quantity' => 2],
+            ],
+            'payment_method' => 'card',
+            'fulfillment_type' => 'Store Pickup',
+        ];
+
+        $payloadB = [
+            'items' => [
+                ['id' => $product2->id, 'type' => 'product', 'name' => $product2->name, 'price' => 15.00, 'quantity' => 2],
+                ['id' => $this->product->id, 'type' => 'product', 'name' => $this->product->name, 'price' => 10.00, 'quantity' => 1],
+            ],
+            'payment_method' => 'card',
+            'fulfillment_type' => 'Store Pickup',
+        ];
+
+        $this->assertEquals(Checkout::fingerprintFor($payloadA), Checkout::fingerprintFor($payloadB));
+    }
+
+    public function test_intent_pays_for_accepts_payment_matching_checkout_intent_id_even_if_metadata_checkout_id_is_missing(): void
+    {
+        $checkout = $this->checkoutFor($this->user);
+        $checkout->update(['stripe_payment_id' => 'pi_test_no_meta']);
+
+        $intent = PaymentIntent::constructFrom([
+            'id' => 'pi_test_no_meta',
+            'status' => 'succeeded',
+            'amount_received' => (int) round((float) $checkout->total * 100),
+            'currency' => 'cad',
+            'metadata' => [],
+        ]);
+
+        $payments = app(StripePayments::class);
+        $this->assertTrue($payments->intentPaysFor($intent, $checkout));
+        $this->assertFalse($payments->isMismatchedPaymentFor($intent, $checkout));
+    }
+
+    public function test_non_stripe_checkout_out_of_stock_returns_422_instead_of_crashing(): void
+    {
+        $this->product->update(['stock' => 0]);
+
+        // When Stripe is not enabled in local/testing environment, starting checkout tries to convert immediately
+        $response = $this->actingAs($this->user)->postJson('/checkout', $this->checkoutPayload(quantity: 1));
+
+        $response->assertStatus(422)
+            ->assertJsonValidationErrors(['items']);
+        $this->assertEquals('out_of_stock', $response->json('errors.error_code.0'));
+        $this->assertEquals(0, Checkout::count());
+        $this->assertEquals(0, Order::count());
     }
 
     /**

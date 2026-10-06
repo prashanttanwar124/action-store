@@ -35,6 +35,10 @@ defineProps({
     type: String,
     default: 'Admin Console',
   },
+  fullWidth: {
+    type: Boolean,
+    default: false,
+  },
 });
 
 const page = usePage();
@@ -591,7 +595,7 @@ const navigationItems = [
       ></div>
 
       <!-- Main Slot Content -->
-      <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
+      <main :class="['flex-1 w-full mx-auto px-4 sm:px-6 lg:px-8 py-5 sm:py-6', fullWidth ? 'max-w-[1720px]' : 'max-w-7xl']">
         <PageSkeleton v-if="isPageLoading" type="admin" />
         <div v-show="!isPageLoading">
           <slot />
@@ -599,8 +603,8 @@ const navigationItems = [
       </main>
 
       <!-- Admin Backoffice Footer -->
-      <footer class="border-t border-[#e0d9cc]/60 py-6 text-xs text-[#6e6e73] bg-[#f3efe7]/40 mt-auto">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-3">
+      <footer class="border-t border-[#e0d9cc]/60 py-5 text-xs text-[#6e6e73] bg-[#f3efe7]/40 mt-auto">
+        <div :class="['mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-3', fullWidth ? 'max-w-[1720px]' : 'max-w-7xl']">
           <div class="flex items-center gap-2">
             <span class="font-serif font-medium text-[#1d1d1f]">Masala Mart</span>
             <span>·</span>

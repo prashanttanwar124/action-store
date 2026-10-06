@@ -55,6 +55,8 @@ class AdminOrderController extends Controller
                 'fulfillment_type' => $order->fulfillment_type,
                 'pickup_slot' => $order->pickup_slot,
                 'pickup_location' => $order->pickup_location,
+                'delivery_address' => $order->delivery_address,
+                'delivery_fee' => (float) $order->delivery_fee,
                 'status' => $order->status,
                 'notes' => $order->notes,
                 'created_at' => $order->created_at?->toISOString(),

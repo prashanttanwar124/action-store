@@ -14,8 +14,9 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
 /**
- * A payment attempt. It reserves stock and holds the cart until it is paid (and turned into
- * an order) or released. Orders only ever exist for paid checkouts.
+ * A payment attempt. It holds the priced cart until it is paid (and turned into an order) or
+ * released. Stock and slot capacity are not reserved: both are checked again when the payment
+ * succeeds, and the payment is refunded if either has run out. Orders only ever exist for paid checkouts.
  */
 class Checkout extends Model
 {
@@ -26,6 +27,13 @@ class Checkout extends Model
      * Minutes of inactivity after which an unpaid checkout is released. Each "Pay" click restarts the timer.
      */
     public const LIFETIME_MINUTES = 15;
+
+    /**
+     * Values of fulfillment_failure: why a paid checkout could not become an order.
+     */
+    public const FAILURE_OUT_OF_STOCK = 'out_of_stock';
+
+    public const FAILURE_SLOT_FULL = 'slot_full';
 
     /**
      * @var list<string>
@@ -49,6 +57,7 @@ class Checkout extends Model
         'notes',
         'items',
         'reserved_stock',
+        'fulfillment_failure',
         'expires_at',
     ];
 
@@ -73,7 +82,7 @@ class Checkout extends Model
     }
 
     /**
-     * Checkouts still holding stock and a pickup slot.
+     * Checkouts whose customer is still within the inactivity lifetime.
      *
      * @param  Builder<Checkout>  $query
      */
@@ -93,14 +102,6 @@ class Checkout extends Model
     }
 
     /**
-     * Restart the inactivity timer, e.g. when the customer retries the payment.
-     */
-    public function extendLifetime(): void
-    {
-        $this->update(['expires_at' => now()->addMinutes(self::LIFETIME_MINUTES)]);
-    }
-
-    /**
      * A stable hash of everything that defines what the customer is buying and how they get it.
      * The same hash on a later "Pay" click means the customer is retrying the same checkout.
      *
@@ -114,6 +115,8 @@ class Checkout extends Model
             'quantity' => (int) $item['quantity'],
             'is_subscribed' => ! empty($item['is_subscribed']),
         ], $validated['items']);
+
+        usort($items, fn ($a, $b) => strcmp($a['id'].':'.$a['type'], $b['id'].':'.$b['type']));
 
         $fields = [
             'payment_method', 'fulfillment_type', 'pickup_timing_mode', 'pickup_timing_type', 'pickup_date',
@@ -129,83 +132,53 @@ class Checkout extends Model
     }
 
     /**
+     * The fulfillment failure recorded on this checkout, if any.
+     */
+    public function fulfillmentFailure(): ?InsufficientStockException
+    {
+        return match ($this->fulfillment_failure) {
+            self::FAILURE_SLOT_FULL => new SlotCapacityExceededException(slot: $this->capacity_slot),
+            self::FAILURE_OUT_OF_STOCK => new InsufficientStockException,
+            default => null,
+        };
+    }
+
+    /**
      * Turn this paid checkout into an order, exactly once.
      *
      * The checkout row is locked, so when the browser and the webhook race, only one creates
-     * the order and the other receives that same order.
+     * the order and the other receives that same order. If stock or slot capacity has run out,
+     * the failure is saved on the checkout before the exception is thrown, so every later
+     * attempt only refunds it, even once stock or capacity comes back.
+     *
+     * @throws InsufficientStockException
      */
     public function convertToOrder(?string $paymentIntentId = null): ?Order
     {
         $paymentIntentId ??= $this->stripe_payment_id;
+        $failure = null;
 
-        $order = DB::transaction(function () use ($paymentIntentId) {
+        $order = DB::transaction(function () use ($paymentIntentId, &$failure) {
             $locked = static::whereKey($this->id)->lockForUpdate()->first();
             if (! $locked) {
                 return null;
             }
 
-            // Deduct stock upon successful payment confirmation
-            $reservedStock = $locked->reserved_stock;
-            $productsToDecrement = [];
-
-            if (is_array($reservedStock) && ! empty($reservedStock)) {
-                // Batch-load and lock products in consistent ascending ID order to eliminate deadlock risk
-                $productIds = array_map('intval', array_keys($reservedStock));
-                sort($productIds);
-
-                $products = Product::whereIn('id', $productIds)
-                    ->orderBy('id')
-                    ->lockForUpdate()
-                    ->get()
-                    ->keyBy('id');
-
-                foreach ($reservedStock as $productId => $qty) {
-                    $requiredQty = (int) $qty;
-                    if ($requiredQty <= 0) {
-                        continue;
-                    }
-
-                    $product = $products->get((int) $productId);
-                    if (! $product) {
-                        throw new InsufficientStockException(
-                            'One or more products could not be located.',
-                            (int) $productId
-                        );
-                    }
-
-                    $currentStock = (int) ($product->stock ?? 0);
-                    if ($currentStock < $requiredQty) {
-                        throw new InsufficientStockException(
-                            "Insufficient stock for '{$product->name}'. Only {$currentStock} available.",
-                            (int) $productId
-                        );
-                    }
-
-                    $productsToDecrement[] = ['product' => $product, 'qty' => $requiredQty];
-                }
+            if ($failure = $locked->fulfillmentFailure()) {
+                return null;
             }
 
-            // Check pickup slot capacity inside transaction to prevent overbooking races
-            if (! empty($locked->capacity_slot)) {
-                $storeInfo = StoreSetting::current();
-                $maxCapacity = (int) ($storeInfo->max_orders_per_slot ?? 0);
-                if ($maxCapacity > 0) {
-                    if ($storeInfo->id) {
-                        StoreSetting::whereKey($storeInfo->id)->lockForUpdate()->first();
-                    }
+            try {
+                $productsToDecrement = $locked->lockProductsToDecrement();
+                $locked->assertSlotHasCapacity();
+            } catch (InsufficientStockException $e) {
+                // Committed before any refund is attempted, so a racing request cannot fulfil it meanwhile
+                $locked->update([
+                    'fulfillment_failure' => $e instanceof SlotCapacityExceededException ? self::FAILURE_SLOT_FULL : self::FAILURE_OUT_OF_STOCK,
+                ]);
+                $failure = $e;
 
-                    $bookedCount = Order::query()
-                        ->where('pickup_slot', 'LIKE', "{$locked->capacity_slot}%")
-                        ->where('status', '!=', 'cancelled')
-                        ->count();
-
-                    if ($bookedCount >= $maxCapacity) {
-                        throw new SlotCapacityExceededException(
-                            "The pickup window ({$locked->capacity_slot}) is no longer available as capacity was reached.",
-                            $locked->capacity_slot
-                        );
-                    }
-                }
+                return null;
             }
 
             foreach ($productsToDecrement as $item) {
@@ -240,6 +213,10 @@ class Checkout extends Model
             return $order;
         });
 
+        if ($failure) {
+            throw $failure;
+        }
+
         if (! $order) {
             // A concurrent request already converted this checkout
             return $paymentIntentId ? Order::where('stripe_payment_id', $paymentIntentId)->first() : null;
@@ -252,6 +229,89 @@ class Checkout extends Model
         }
 
         return $order;
+    }
+
+    /**
+     * Lock this checkout's products and confirm there is enough stock for all of them.
+     * Call inside a database transaction.
+     *
+     * @return list<array{product: Product, qty: int}>
+     *
+     * @throws InsufficientStockException
+     */
+    private function lockProductsToDecrement(): array
+    {
+        $reservedStock = $this->reserved_stock;
+        $productsToDecrement = [];
+
+        if (is_array($reservedStock) && ! empty($reservedStock)) {
+            // Lock products in ascending id order, so concurrent conversions lock them in the same order
+            $productIds = array_map('intval', array_keys($reservedStock));
+            sort($productIds);
+
+            $products = Product::whereIn('id', $productIds)
+                ->orderBy('id')
+                ->lockForUpdate()
+                ->get()
+                ->keyBy('id');
+
+            foreach ($reservedStock as $productId => $qty) {
+                $requiredQty = (int) $qty;
+                if ($requiredQty <= 0) {
+                    continue;
+                }
+
+                $product = $products->get((int) $productId);
+                if (! $product) {
+                    throw new InsufficientStockException(
+                        'One or more products could not be located.',
+                        (int) $productId
+                    );
+                }
+
+                $currentStock = (int) ($product->stock ?? 0);
+                if ($currentStock < $requiredQty) {
+                    throw new InsufficientStockException(
+                        "Insufficient stock for '{$product->name}'. Only {$currentStock} available.",
+                        (int) $productId
+                    );
+                }
+
+                $productsToDecrement[] = ['product' => $product, 'qty' => $requiredQty];
+            }
+        }
+
+        return $productsToDecrement;
+    }
+
+    /**
+     * Confirm the chosen pickup window still has room. Call inside a database transaction:
+     * the store settings row is locked so concurrent conversions count placed orders one at a time.
+     *
+     * @throws SlotCapacityExceededException
+     */
+    private function assertSlotHasCapacity(): void
+    {
+        if (empty($this->capacity_slot)) {
+            return;
+        }
+
+        $storeInfo = StoreSetting::current();
+        $maxCapacity = (int) ($storeInfo->max_orders_per_slot ?? 0);
+        if ($maxCapacity <= 0) {
+            return;
+        }
+
+        if ($storeInfo->id) {
+            StoreSetting::whereKey($storeInfo->id)->lockForUpdate()->first();
+        }
+
+        if (Order::bookedInSlot($this->capacity_slot) >= $maxCapacity) {
+            throw new SlotCapacityExceededException(
+                "The pickup window ({$this->capacity_slot}) is no longer available as capacity was reached.",
+                $this->capacity_slot
+            );
+        }
     }
 
     /**

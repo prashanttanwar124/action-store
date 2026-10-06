@@ -3,9 +3,10 @@
 namespace App\Services;
 
 use App\Exceptions\InsufficientStockException;
+use App\Exceptions\PaymentMismatchException;
 use App\Models\Checkout;
-use App\Models\Order;
 use Illuminate\Support\Facades\Log;
+use RuntimeException;
 use Stripe\PaymentIntent;
 use Stripe\Refund;
 use Stripe\StripeClient;
@@ -103,12 +104,14 @@ class StripePayments
      */
     public function intentPaysFor(object $intent, Checkout $checkout): bool
     {
+        $intentCheckoutId = static::metadataValue($intent, 'checkout_id');
+
         return ($intent->status ?? null) === 'succeeded'
             && ! empty($checkout->stripe_payment_id)
             && ($intent->id ?? null) === $checkout->stripe_payment_id
             && (int) ($intent->amount_received ?? 0) === $this->amountInCents($checkout)
             && strtolower($intent->currency ?? '') === $this->currency()
-            && (string) static::metadataValue($intent, 'checkout_id') === (string) $checkout->id;
+            && ($intentCheckoutId === null || (string) $intentCheckoutId === (string) $checkout->id);
     }
 
     /**
@@ -126,58 +129,79 @@ class StripePayments
     }
 
     /**
-     * Complete a checkout into an order, or automatically refund the customer
-     * if stock or slot capacity is exhausted, preserving the checkout on refund failure.
+     * Determine whether a checkout's own PaymentIntent succeeded, but not for exactly the checkout's amount
+     * and currency. Such a payment can never be fulfilled and must be refunded.
+     */
+    public function isMismatchedPaymentFor(object $intent, Checkout $checkout): bool
+    {
+        return ($intent->status ?? null) === 'succeeded'
+            && ! empty($checkout->stripe_payment_id)
+            && ($intent->id ?? null) === $checkout->stripe_payment_id
+            && ! $this->intentPaysFor($intent, $checkout);
+    }
+
+    /**
+     * Complete a paid checkout into an order, or automatically refund the customer when it cannot
+     * be fulfilled (stock or slot capacity ran out, or the payment does not match the checkout).
+     *
+     * If the refund fails the checkout is kept, and every later call retries the refund.
      */
     public function completeOrRefund(Checkout $checkout, object $intent): CheckoutCompletionResult
     {
+        if ($this->isMismatchedPaymentFor($intent, $checkout)) {
+            Log::critical("Checkout {$checkout->id} payment {$intent->id} succeeded for the wrong amount or currency. Refunding customer.");
+
+            return $this->refundCheckout($checkout, $intent->id, new PaymentMismatchException);
+        }
+
         if (! $this->intentPaysFor($intent, $checkout)) {
             return CheckoutCompletionResult::notPaid();
         }
 
         try {
             $order = $checkout->convertToOrder($intent->id);
-            if (! $order) {
-                // A concurrent request already converted this checkout
-                $existingOrder = Order::where('stripe_payment_id', $intent->id)->first();
-                if ($existingOrder) {
-                    return CheckoutCompletionResult::completed($existingOrder);
-                }
-
-                // If checkout was already handled (e.g. refunded and deleted) by another thread
-                return CheckoutCompletionResult::alreadyHandled();
-            }
-
-            return CheckoutCompletionResult::completed($order);
         } catch (InsufficientStockException $e) {
             Log::critical("Checkout {$checkout->id} payment {$intent->id} succeeded, but fulfillment is unavailable: {$e->getMessage()}. Refunding customer.");
 
-            if ($this->isEnabled() && ! empty($intent->id)) {
-                try {
-                    $refund = $this->refundPayment($intent->id);
-                    $checkout->delete();
-
-                    return CheckoutCompletionResult::refunded($e, $refund);
-                } catch (\Throwable $refundError) {
-                    Log::critical("Automatic refund failed for checkout {$checkout->id} payment {$intent->id}: {$refundError->getMessage()}");
-
-                    return CheckoutCompletionResult::refundFailed($e, $refundError);
-                }
-            }
-
-            $checkout->delete();
-
-            return CheckoutCompletionResult::refunded($e);
+            return $this->refundCheckout($checkout, $intent->id, $e);
         }
+
+        // No order means the checkout is gone without one for this payment, e.g. another request refunded it
+        return $order ? CheckoutCompletionResult::completed($order) : CheckoutCompletionResult::alreadyHandled();
     }
 
     /**
-     * Release an unpaid checkout: stop its PaymentIntent on Stripe, then return the stock and delete it.
+     * Refund a checkout's payment in full, then delete the checkout. On failure the checkout is kept for a retry.
+     */
+    private function refundCheckout(Checkout $checkout, string $paymentIntentId, RuntimeException $failure): CheckoutCompletionResult
+    {
+        if (! $this->isEnabled()) {
+            $checkout->delete();
+
+            return CheckoutCompletionResult::refunded($failure);
+        }
+
+        try {
+            $refund = $this->refundPayment($paymentIntentId);
+        } catch (\Throwable $refundError) {
+            Log::critical("Automatic refund failed for checkout {$checkout->id} payment {$paymentIntentId}: {$refundError->getMessage()}");
+
+            return CheckoutCompletionResult::refundFailed($failure, $refundError);
+        }
+
+        $checkout->delete();
+
+        return CheckoutCompletionResult::refunded($failure, $refund);
+    }
+
+    /**
+     * Release an unpaid checkout: stop its PaymentIntent on Stripe, then delete the checkout.
      *
      * Stripe never lets a PaymentIntent be both cancelled and paid, so cancelling first means a
-     * customer can never be charged for a checkout that was deleted. If the cancel is refused
-     * because the payment already went through, the checkout becomes an order instead. If the
-     * payment is still processing, or Stripe cannot be reached, the checkout is kept for a later run.
+     * customer is not charged for a checkout that was deleted. If the cancel is refused because
+     * the payment already went through, the checkout becomes an order (or is refunded when it
+     * cannot be fulfilled) instead. If the payment is still processing, or Stripe cannot be
+     * reached, the checkout is kept for a later run.
      *
      * @return string One of self::RELEASED, self::PAID or self::DEFERRED.
      */

@@ -86,77 +86,7 @@ const deliveryAddress = ref('');
 const deliveryApt = ref('');
 const deliveryNotes = ref('');
 
-const paymentMethod = ref('card'); // 'card' | 'apple-pay' | 'google-pay'
-
-// Dynamic Device & Browser Wallet Detection
-const isApplePayAvailable = ref(false);
-const isGooglePayAvailable = ref(false);
-const showAllPaymentMethodsForTesting = ref(false);
-
-async function detectDeviceWallets() {
-  if (typeof window === 'undefined') return;
-
-  try {
-    if (window.ApplePaySession && typeof window.ApplePaySession.canMakePayments === 'function') {
-      isApplePayAvailable.value = window.ApplePaySession.canMakePayments();
-    } else {
-      const isApple = /Macintosh|iPhone|iPad|iPod/.test(navigator.userAgent);
-      const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
-      isApplePayAvailable.value = Boolean(isApple && isSafari && window.ApplePaySession);
-    }
-  } catch (e) {
-    isApplePayAvailable.value = false;
-  }
-
-  try {
-    const isChromeOrAndroid = /Chrome|Android/i.test(navigator.userAgent) && !/Edg|OPR/i.test(navigator.userAgent);
-    if (isChromeOrAndroid && (window.PaymentRequest || window.google)) {
-      isGooglePayAvailable.value = true;
-    }
-  } catch (e) {
-    isGooglePayAvailable.value = false;
-  }
-
-  if (stripe.value) {
-    try {
-      const pr = stripe.value.paymentRequest({
-        country: 'CA',
-        currency: 'cad',
-        total: {
-          label: 'Masala Mart',
-          amount: Math.max(50, Math.round(Number(checkoutTotal.value || 10) * 100)),
-        },
-      });
-      const result = await pr.canMakePayment();
-      if (result) {
-        if (result.applePay) isApplePayAvailable.value = true;
-        if (result.googlePay) isGooglePayAvailable.value = true;
-      }
-    } catch (e) {
-      // Ignore
-    }
-  }
-}
-
-const availablePaymentMethods = computed(() => {
-  if (showAllPaymentMethodsForTesting.value) {
-    return ['card', 'apple-pay', 'google-pay'];
-  }
-  const methods = ['card'];
-  if (isApplePayAvailable.value) {
-    methods.push('apple-pay');
-  }
-  if (isGooglePayAvailable.value) {
-    methods.push('google-pay');
-  }
-  return methods;
-});
-
-watch(availablePaymentMethods, (methods) => {
-  if (!methods.includes(paymentMethod.value)) {
-    paymentMethod.value = 'card';
-  }
-});
+const paymentMethod = ref('card');
 
 // Stripe SDK & Elements State
 const stripe = ref(null);
@@ -202,15 +132,6 @@ async function initStripe() {
           spacingUnit: '4px',
         },
         rules: {
-          '.Tab': {
-            display: 'none',
-          },
-          '.TabList': {
-            display: 'none',
-          },
-          '.Tab--selected': {
-            display: 'none',
-          },
           '.Input': {
             backgroundColor: '#ffffff',
             borderColor: '#e0d9cc',
@@ -247,7 +168,6 @@ async function initStripe() {
     if (container) {
       paymentElement.value.mount('#stripe-payment-element-mount');
       isStripeMounted.value = true;
-      detectDeviceWallets();
     }
   } catch (err) {
     console.error('Stripe initialization failed:', err);
@@ -392,7 +312,6 @@ const effectiveFulfillmentSlotLabel = computed(() => {
 });
 
 onMounted(() => {
-  detectDeviceWallets();
   if (isStripeConfigured.value && Number(checkoutTotal.value) >= 0.5) {
     initStripe();
   }
@@ -478,6 +397,7 @@ async function completeOrder() {
   const payload = {
     items: store.cartItems.map(item => ({
       id: item.id,
+      type: item.type || (item.isRecipeKit ? 'recipe-kit' : 'product'),
       name: item.name,
       price: Number(item.price),
       quantity: Number(item.quantity || 1),
@@ -1097,83 +1017,20 @@ async function collectPayment(clientSecret) {
             </div>
 
             <!-- Dynamic Device-Aware Payment Method Selector -->
-            <div v-if="availablePaymentMethods.length > 1" :class="[
-              'grid gap-2',
-              availablePaymentMethods.length === 3 ? 'grid-cols-3' : 'grid-cols-2'
-            ]">
-              <button
-                type="button"
-                @click="paymentMethod = 'card'"
-                :class="[
-                  'h-11 sm:h-12 px-2.5 rounded-2xl flex items-center justify-center gap-1.5 transition-all cursor-pointer font-bold text-xs active:scale-[0.98] border',
-                  paymentMethod === 'card'
-                    ? 'bg-[#1a1a1a] text-white border-[#1a1a1a] shadow-xs'
-                    : 'bg-[#fbf9f5] hover:bg-stone-100 text-stone-700 border-[#e0d9cc]'
-                ]"
-              >
-                <CreditCard class="w-4 h-4 text-[#e4b97a]" />
-                <span class="truncate">Card</span>
-              </button>
-
-              <button
-                v-if="availablePaymentMethods.includes('apple-pay')"
-                type="button"
-                @click="paymentMethod = 'apple-pay'"
-                :class="[
-                  'h-11 sm:h-12 px-2.5 rounded-2xl flex items-center justify-center transition-all cursor-pointer active:scale-[0.98] border',
-                  paymentMethod === 'apple-pay'
-                    ? 'bg-black text-white border-black shadow-xs ring-2 ring-[#a47a3c]/30'
-                    : 'bg-[#1a1a1a] hover:bg-black text-white border-[#333]'
-                ]"
-                aria-label="Apple Pay"
-              >
-                <IconApplePay :width="46" :height="20" class="text-white" />
-              </button>
-
-              <button
-                v-if="availablePaymentMethods.includes('google-pay')"
-                type="button"
-                @click="paymentMethod = 'google-pay'"
-                :class="[
-                  'h-11 sm:h-12 px-2.5 rounded-2xl flex items-center justify-center transition-all cursor-pointer active:scale-[0.98] border',
-                  paymentMethod === 'google-pay'
-                    ? 'bg-white text-stone-900 border-[#a47a3c] shadow-xs ring-2 ring-[#a47a3c]/30'
-                    : 'bg-[#fbf9f5] hover:bg-white text-stone-800 border-[#e0d9cc]'
-                ]"
-                aria-label="Google Wallet"
-              >
-                <IconGooglePay :width="48" :height="20" />
-              </button>
-            </div>
-
-            <!-- Single Card Banner when only card is active on this device -->
-            <div v-else class="flex items-center justify-between p-3.5 bg-[#fbf9f5] rounded-2xl border border-[#e0d9cc]">
+            <div class="flex items-center justify-between p-3.5 bg-[#fbf9f5] rounded-2xl border border-[#e0d9cc]">
               <div class="flex items-center gap-2">
                 <CreditCard class="w-4 h-4 text-[#a47a3c]" />
-                <span class="text-xs font-bold text-stone-900">Credit or Debit Card</span>
+                <span class="text-xs font-bold text-stone-900">Card & Express Payment</span>
               </div>
-              <span class="text-[11px] text-stone-500 font-medium">Stripe Live Checkout</span>
+              <div class="flex items-center gap-2 text-stone-500">
+                <IconApplePay :width="32" :height="14" class="text-stone-700" />
+                <IconGooglePay :width="32" :height="14" />
+                <span class="text-[10px] font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">Encrypted</span>
+              </div>
             </div>
 
-            <!-- Device Detection Status & Dev Testing Toggle -->
-            <div class="flex items-center justify-between text-[11px] text-stone-500 px-1 pt-0.5">
-              <span class="flex items-center gap-1.5">
-                <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
-                <span v-if="isApplePayAvailable">Apple Device Detected (Apple Pay enabled)</span>
-                <span v-else-if="isGooglePayAvailable">Chrome / Android Detected (Google Pay enabled)</span>
-                <span v-else>Card checkout configured</span>
-              </span>
-              <button
-                type="button"
-                @click="showAllPaymentMethodsForTesting = !showAllPaymentMethodsForTesting"
-                class="text-[#a47a3c] hover:underline font-semibold cursor-pointer"
-              >
-                {{ showAllPaymentMethodsForTesting ? 'Hide other wallets' : 'Show all wallets' }}
-              </button>
-            </div>
-
-            <!-- TAB 1: CARD -->
-            <div v-show="paymentMethod === 'card'" class="space-y-3">
+            <!-- PAYMENT FORM -->
+            <div class="space-y-3">
               <!-- Stripe Live Elements (when STRIPE_KEY is set in .env) -->
               <div v-if="isStripeConfigured" class="space-y-3">
                 <!-- Loading State (Sibling, never mounted inside Stripe target) -->
@@ -1204,7 +1061,7 @@ async function collectPayment(clientSecret) {
                 </div>
               </div>
 
-              <!-- Stripe Direct Card Fields (Clean minimal fields) -->
+              <!-- Stripe Direct Card Fields (Clean minimal fields when Stripe key not set) -->
               <div v-else class="space-y-3">
                 <div>
                   <Label class="block text-xs font-bold text-stone-800 uppercase tracking-wider mb-1">
@@ -1252,74 +1109,6 @@ async function collectPayment(clientSecret) {
               </div>
             </div>
 
-            <!-- TAB 2: APPLE PAY (Apple Wallet) -->
-            <div v-show="paymentMethod === 'apple-pay'" class="p-4 sm:p-5 bg-gradient-to-b from-[#1a1a1a] to-black rounded-2xl text-white space-y-3.5 shadow-sm animate-in fade-in duration-150">
-              <div class="flex items-center justify-between">
-                <div class="flex items-center gap-2.5">
-                  <div class="w-9 h-9 rounded-xl bg-white/10 flex items-center justify-center">
-                    <IconApplePay :width="40" :height="17" class="text-white" />
-                  </div>
-                  <div>
-                    <div class="text-xs font-bold text-white flex items-center gap-1.5">
-                      <span>Apple Pay · Apple Wallet</span>
-                      <span class="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">Ready</span>
-                    </div>
-                    <div class="text-[11px] text-stone-400">Touch ID / Face ID Biometric Authorization</div>
-                  </div>
-                </div>
-              </div>
-
-              <div class="p-3 bg-white/5 rounded-xl border border-white/10 text-xs text-stone-300 flex items-center justify-between">
-                <span class="text-stone-400">Apple Wallet Card:</span>
-                <span class="font-mono text-white font-bold">•••• 8824 (Apple Card)</span>
-              </div>
-
-              <button
-                type="button"
-                @click="completeOrder"
-                :disabled="isProcessing"
-                class="w-full h-11 bg-white hover:bg-stone-100 text-black font-bold text-xs rounded-xl flex items-center justify-center gap-2 transition-all cursor-pointer active:scale-[0.99] disabled:opacity-50"
-              >
-                <Loader2 v-if="isProcessing" class="w-4 h-4 animate-spin text-black" />
-                <IconApplePay v-else :width="36" :height="16" class="text-black" />
-                <span>{{ isProcessing ? 'Authorizing Biometrics...' : `Authorize & Pay $${checkoutTotal}` }}</span>
-              </button>
-            </div>
-
-            <!-- TAB 3: GOOGLE WALLET (Google Pay) -->
-            <div v-show="paymentMethod === 'google-pay'" class="p-4 sm:p-5 bg-[#fbf9f5] rounded-2xl border border-[#e0d9cc] space-y-3.5 shadow-2xs animate-in fade-in duration-150">
-              <div class="flex items-center justify-between">
-                <div class="flex items-center gap-2.5">
-                  <div class="w-9 h-9 rounded-xl bg-white border border-[#e0d9cc] flex items-center justify-center">
-                    <IconGooglePay :width="38" :height="16" />
-                  </div>
-                  <div>
-                    <div class="text-xs font-bold text-stone-900 flex items-center gap-1.5">
-                      <span>Google Wallet · Google Pay</span>
-                      <span class="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300">Ready</span>
-                    </div>
-                    <div class="text-[11px] text-stone-500">Google Account Linked · 1-Tap Checkout</div>
-                  </div>
-                </div>
-              </div>
-
-              <div class="p-3 bg-white rounded-xl border border-[#e0d9cc]/80 text-xs text-stone-600 flex items-center justify-between">
-                <span class="text-stone-500">Selected Google Wallet Card:</span>
-                <span class="font-mono text-stone-900 font-bold">•••• 4012 (Google Pay)</span>
-              </div>
-
-              <button
-                type="button"
-                @click="completeOrder"
-                :disabled="isProcessing"
-                class="w-full h-11 bg-[#1a1a1a] hover:bg-black text-white font-bold text-xs rounded-xl flex items-center justify-center gap-2 transition-all cursor-pointer active:scale-[0.99] disabled:opacity-50"
-              >
-                <Loader2 v-if="isProcessing" class="w-4 h-4 animate-spin text-white" />
-                <IconGooglePay v-else :width="38" :height="16" />
-                <span>{{ isProcessing ? 'Authorizing Google Wallet...' : `Pay $${checkoutTotal} with Google Wallet` }}</span>
-              </button>
-            </div>
-
             <!-- Minimum Order Amount Warning -->
             <div v-if="Number(page.props.minOrderAmount || 0) > 0 && store.subtotal < Number(page.props.minOrderAmount)" class="p-3 bg-amber-50 border border-amber-200 text-amber-900 text-xs rounded-xl flex items-center justify-between">
               <span class="font-medium">Minimum order required: ${{ Number(page.props.minOrderAmount).toFixed(2) }}</span>
@@ -1346,13 +1135,7 @@ async function collectPayment(clientSecret) {
                 <div class="flex items-center gap-2">
                   <Loader2 v-if="isProcessing" key="desktop-loading-spinner" class="w-4 h-4 animate-spin" />
                   <Lock v-else key="desktop-lock-icon" class="w-4 h-4 stroke-[2.2] text-[#e4b97a]" />
-                  <span v-if="paymentMethod === 'apple-pay'">
-                    {{ isProcessing ? 'Authorizing Apple Pay...' : `Pay with Apple Pay · ${effectiveFulfillmentSlotLabel}` }}
-                  </span>
-                  <span v-else-if="paymentMethod === 'google-pay'">
-                    {{ isProcessing ? 'Authorizing Google Wallet...' : `Pay with Google Wallet · ${effectiveFulfillmentSlotLabel}` }}
-                  </span>
-                  <span v-else>
+                  <span>
                     {{ isProcessing ? 'Authorizing Payment...' : `Complete Order · ${effectiveFulfillmentSlotLabel}` }}
                   </span>
                 </div>
@@ -1389,13 +1172,7 @@ async function collectPayment(clientSecret) {
           <div class="flex items-center gap-2">
             <Loader2 v-if="isProcessing" key="mobile-loading-spinner" class="w-4 h-4 animate-spin" />
             <Lock v-else key="mobile-lock-icon" class="w-4 h-4 stroke-[2.2] text-[#e4b97a]" />
-            <span v-if="paymentMethod === 'apple-pay'">
-              {{ isProcessing ? 'Authorizing Apple Pay...' : `Apple Pay · $${checkoutTotal}` }}
-            </span>
-            <span v-else-if="paymentMethod === 'google-pay'">
-              {{ isProcessing ? 'Authorizing Google Wallet...' : `Google Wallet · $${checkoutTotal}` }}
-            </span>
-            <span v-else>
+            <span>
               {{ isProcessing ? 'Authorizing Payment...' : `Pay · $${checkoutTotal}` }}
             </span>
           </div>

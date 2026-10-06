@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Exceptions\PaymentMismatchException;
 use App\Exceptions\SlotCapacityExceededException;
 use App\Models\Checkout;
 use App\Models\Order;
@@ -27,9 +28,10 @@ class OrderController extends Controller
     /**
      * Start (or resume) the customer's checkout and return what the browser needs to pay for it.
      *
-     * An order is only created once the payment succeeds. Until then the checkout reserves the
-     * stock. A repeated "Pay" click for the same cart (e.g. after a declined card) resumes the
-     * same checkout; a changed cart releases the old checkout and starts a new one.
+     * An order is only created once the payment succeeds; stock and slot capacity are checked
+     * again at that point. A repeated "Pay" click for the same cart (e.g. after a declined card)
+     * resumes the same checkout if its price still holds; a changed cart or price releases the
+     * old checkout and starts a new one.
      */
     public function store(Request $request, StripePayments $payments): JsonResponse|RedirectResponse
     {
@@ -156,11 +158,11 @@ class OrderController extends Controller
         }
 
         if ($result->isRefunded()) {
-            $isSlotError = $result->stockException instanceof SlotCapacityExceededException;
-            $message = $isSlotError
-                ? 'The pickup window you selected reached its capacity limit before payment was completed. Your payment has been automatically refunded in full.'
-                : 'One or more items in your cart went out of stock before payment was completed. Your payment has been automatically refunded in full.';
-            $errorCode = $isSlotError ? 'slot_full_refunded' : 'out_of_stock_refunded';
+            [$message, $errorCode] = match (true) {
+                $result->failure instanceof SlotCapacityExceededException => ['The pickup window you selected reached its capacity limit before payment was completed. Your payment has been automatically refunded in full.', 'slot_full_refunded'],
+                $result->failure instanceof PaymentMismatchException => ['Your payment did not match your order total. Your payment has been automatically refunded in full. Please try again.', 'payment_mismatch_refunded'],
+                default => ['One or more items in your cart went out of stock before payment was completed. Your payment has been automatically refunded in full.', 'out_of_stock_refunded'],
+            };
 
             throw ValidationException::withMessages([
                 'payment' => $message,
@@ -169,11 +171,14 @@ class OrderController extends Controller
         }
 
         if ($result->isRefundFailed()) {
-            $isSlotError = $result->stockException instanceof SlotCapacityExceededException;
-            $reason = $isSlotError ? 'the pickup window reached capacity' : 'one or more items went out of stock';
+            $reason = match (true) {
+                $result->failure instanceof SlotCapacityExceededException => 'the pickup window reached capacity before completion',
+                $result->failure instanceof PaymentMismatchException => 'it did not match your order total',
+                default => 'one or more items went out of stock before completion',
+            };
 
             throw ValidationException::withMessages([
-                'payment' => "Payment was received, but {$reason} before completion. We were unable to process an automated refund immediately, but our system will retry automatically. Please contact support if you do not see your refund within 24 hours.",
+                'payment' => "Payment was received, but {$reason}. We were unable to process an automated refund immediately, but our system will retry automatically. Please contact support if you do not see your refund within 24 hours.",
                 'error_code' => 'refund_failed',
             ]);
         }
@@ -192,29 +197,33 @@ class OrderController extends Controller
         $existing = Checkout::where('user_id', $user->id)->first();
 
         if ($existing && $existing->fingerprint === $fingerprint) {
-            $response = $this->resumeCheckout($request, $existing, $payments, $validated);
+            $response = $this->resumeCheckout($request, $existing, $payments, $validated, $user);
             if ($response) {
                 return $response;
             }
-        } elseif ($existing) {
-            $outcome = $payments->releaseCheckout($existing);
-
-            if ($outcome === StripePayments::PAID) {
-                return $this->orderResponse($request, Order::where('stripe_payment_id', $existing->stripe_payment_id)->firstOrFail(), 200);
-            }
-
-            if ($outcome === StripePayments::DEFERRED) {
-                throw ValidationException::withMessages([
-                    'payment' => 'Your previous payment is still being processed. Please wait a moment before changing your order.',
-                ]);
-            }
+        } elseif ($existing && $response = $this->releaseExisting($request, $existing, $payments)) {
+            return $response;
         }
 
         $checkout = $this->createCheckout($validated, $user, $fingerprint);
 
         // Without Stripe (local development and tests only) the checkout becomes an order straight away
         if (! $payments->isEnabled()) {
-            return $this->orderResponse($request, $checkout->convertToOrder(), 201);
+            try {
+                $order = $checkout->convertToOrder();
+                if (! $order) {
+                    throw new InsufficientStockException('This checkout could not be completed.');
+                }
+
+                return $this->orderResponse($request, $order, 201);
+            } catch (InsufficientStockException $e) {
+                $checkout->release();
+
+                throw ValidationException::withMessages([
+                    'items' => [$e->getMessage()],
+                    'error_code' => $e instanceof SlotCapacityExceededException ? 'slot_full' : 'out_of_stock',
+                ]);
+            }
         }
 
         try {
@@ -233,13 +242,41 @@ class OrderController extends Controller
     }
 
     /**
+     * Release the customer's previous checkout so a new one can start.
+     *
+     * Returns the order when that checkout turned out to be paid already, or null once it is released.
+     *
+     * @throws ValidationException When its payment is still processing.
+     */
+    private function releaseExisting(Request $request, Checkout $checkout, StripePayments $payments): JsonResponse|RedirectResponse|null
+    {
+        $outcome = $payments->releaseCheckout($checkout);
+
+        if ($outcome === StripePayments::PAID) {
+            $order = Order::where('stripe_payment_id', $checkout->stripe_payment_id)->first();
+            if ($order) {
+                return $this->orderResponse($request, $order, 200);
+            }
+        }
+
+        if ($outcome === StripePayments::DEFERRED) {
+            throw ValidationException::withMessages([
+                'payment' => 'Your previous payment is still being processed. Please wait a moment before changing your order.',
+            ]);
+        }
+
+        return null;
+    }
+
+    /**
      * Pick up an existing checkout for the same cart.
      *
-     * Returns null when the checkout could not be resumed and was released, so a new one should be started.
+     * The cart is priced and validated again exactly as for a new checkout. Returns null when the
+     * checkout could not be resumed (or its price changed) and was released, so a new one should be started.
      *
      * @param  array<string, mixed>  $validated
      */
-    private function resumeCheckout(Request $request, Checkout $checkout, StripePayments $payments, array $validated): JsonResponse|RedirectResponse|null
+    private function resumeCheckout(Request $request, Checkout $checkout, StripePayments $payments, array $validated, User $user): JsonResponse|RedirectResponse|null
     {
         if (empty($checkout->stripe_payment_id) || ! $payments->isEnabled()) {
             $checkout->release();
@@ -264,23 +301,31 @@ class OrderController extends Controller
         }
 
         if (in_array($intent->status, ['requires_payment_method', 'requires_confirmation', 'requires_action'], true)) {
-            // Revalidate pickup schedule to prevent resuming with expired or overbooked slots
+            // Catalog, stock, store rules and the pickup schedule may have changed since the checkout was priced
             try {
-                $storeInfo = StoreSetting::current();
-                $fulfillmentType = $validated['fulfillment_type'] ?? 'Store Pickup';
-                [$pickupSlot, $capacitySlot] = $this->resolvePickupSlot($validated, $storeInfo, $fulfillmentType);
-                $checkout->update([
-                    'pickup_slot' => $pickupSlot,
-                    'capacity_slot' => $capacitySlot,
-                ]);
+                $attributes = $this->checkoutAttributes($validated, $user);
             } catch (ValidationException $e) {
-                Log::info("Checkout {$checkout->id} pickup schedule is stale upon resumption: {$e->getMessage()}. Releasing checkout.");
-                $payments->releaseCheckout($checkout);
+                Log::info("Checkout {$checkout->id} is no longer valid upon resumption: {$e->getMessage()}. Releasing checkout.");
+
+                if ($response = $this->releaseExisting($request, $checkout, $payments)) {
+                    return $response;
+                }
 
                 throw $e;
             }
 
-            $checkout->extendLifetime();
+            // The amount on the PaymentIntent is fixed: a different charge needs a new checkout
+            if (! $this->chargeMatches($checkout, $attributes)) {
+                Log::info("Checkout {$checkout->id} price changed upon resumption. Replacing checkout.");
+
+                return $this->releaseExisting($request, $checkout, $payments);
+            }
+
+            $checkout->update([
+                'pickup_slot' => $attributes['pickup_slot'],
+                'capacity_slot' => $attributes['capacity_slot'],
+                'expires_at' => now()->addMinutes(Checkout::LIFETIME_MINUTES),
+            ]);
 
             return $this->checkoutResponse($checkout, $intent->client_secret, 200);
         }
@@ -299,11 +344,29 @@ class OrderController extends Controller
     }
 
     /**
-     * Validate the cart against the catalog and store rules, then reserve its stock in a new checkout.
+     * Validate and price the cart, then save it as a new checkout.
      *
      * @param  array<string, mixed>  $validated
      */
     private function createCheckout(array $validated, User $user, string $fingerprint): Checkout
+    {
+        return Checkout::create([
+            ...$this->checkoutAttributes($validated, $user),
+            'user_id' => $user->id,
+            'fingerprint' => $fingerprint,
+            'expires_at' => now()->addMinutes(Checkout::LIFETIME_MINUTES),
+        ]);
+    }
+
+    /**
+     * Validate the cart against the catalog, stock and store rules, and price it as checkout attributes.
+     *
+     * @param  array<string, mixed>  $validated
+     * @return array<string, mixed>
+     *
+     * @throws ValidationException
+     */
+    private function checkoutAttributes(array $validated, User $user): array
     {
         $storeInfo = StoreSetting::current();
         $result = $this->validateOrderRequirements($validated, $storeInfo);
@@ -318,36 +381,13 @@ class OrderController extends Controller
             }
         }
 
-        $requiredProductQuantities = $result['requiredProductQuantities'];
-
-        $products = Product::query()
-            ->whereIn('id', array_keys($requiredProductQuantities))
-            ->get()
-            ->keyBy('id');
-
-        foreach ($requiredProductQuantities as $productId => $totalQty) {
-            $product = $products->get($productId);
-            if (! $product) {
-                throw ValidationException::withMessages(['items' => ['One or more products could not be located.']]);
-            }
-            $currentStock = (int) ($product->stock ?? 0);
-            if ($currentStock < $totalQty) {
-                throw ValidationException::withMessages([
-                    'items' => ["Insufficient stock for '{$product->name}'. Total requested: {$totalQty}, but only {$currentStock} available."],
-                    'error_code' => 'out_of_stock',
-                ]);
-            }
-        }
-
         $fulfillmentType = $result['fulfillment_type'];
         $deliveryAddress = $validated['delivery_address'] ?? null;
         $defaultLocation = $fulfillmentType === 'Home Delivery'
             ? ($deliveryAddress ?: 'Delivery Address')
             : ($storeInfo->address.' · '.$storeInfo->name);
 
-        return Checkout::create([
-            'user_id' => $user->id,
-            'fingerprint' => $fingerprint,
+        return [
             'customer_name' => $user->name,
             'customer_email' => $user->email,
             'customer_phone' => $validated['customer_phone'] ?? $user->phone ?? null,
@@ -371,9 +411,34 @@ class OrderController extends Controller
                 'is_subscribed' => ! empty($item['is_subscribed']),
                 'image' => $item['image'] ?? null,
             ], $result['resolvedItems']),
-            'reserved_stock' => $requiredProductQuantities,
-            'expires_at' => now()->addMinutes(Checkout::LIFETIME_MINUTES),
-        ]);
+            'reserved_stock' => $result['requiredProductQuantities'],
+        ];
+    }
+
+    /**
+     * Determine whether a freshly priced cart charges exactly what the checkout was priced at.
+     *
+     * @param  array<string, mixed>  $attributes
+     */
+    private function chargeMatches(Checkout $checkout, array $attributes): bool
+    {
+        $cents = fn ($amount) => (int) round((float) $amount * 100);
+        $normalizeLines = function (array $items) use ($cents) {
+            $mapped = array_map(fn (array $item) => [
+                'product_id' => $item['product_id'] ?? null,
+                'quantity' => (int) $item['quantity'],
+                'unit_price' => $cents($item['unit_price']),
+            ], $items);
+            usort($mapped, fn ($a, $b) => strcmp((string) ($a['product_id'] ?? ''), (string) ($b['product_id'] ?? '')));
+
+            return $mapped;
+        };
+
+        return $cents($checkout->total) === $cents($attributes['total'])
+            && $cents($checkout->subtotal) === $cents($attributes['subtotal'])
+            && $cents($checkout->delivery_fee) === $cents($attributes['delivery_fee'])
+            && $normalizeLines($checkout->items ?? []) === $normalizeLines($attributes['items'])
+            && (array) $checkout->reserved_stock == $attributes['reserved_stock'];
     }
 
     /**
@@ -616,13 +681,7 @@ class OrderController extends Controller
                 // Check slot capacity limit: placed orders
                 $maxCapacity = (int) ($storeInfo->max_orders_per_slot ?? 0);
                 if ($maxCapacity > 0) {
-                    $slotPattern = "{$date} · {$slot['label']}%";
-                    $bookedCount = Order::query()
-                        ->where('pickup_slot', 'LIKE', $slotPattern)
-                        ->where('status', '!=', 'cancelled')
-                        ->count();
-
-                    if ($bookedCount >= $maxCapacity) {
+                    if (Order::bookedInSlot($capacitySlot) >= $maxCapacity) {
                         throw ValidationException::withMessages([
                             'pickup_slot' => "This pickup window ({$slot['label']}) has reached its capacity limit. Please select another time window.",
                             'error_code' => 'slot_full',

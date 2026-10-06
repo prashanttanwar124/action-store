@@ -61,6 +61,8 @@ class OrderPlaced implements ShouldBroadcastNow
                 'fulfillment_type' => $this->order->fulfillment_type,
                 'pickup_slot' => $this->order->pickup_slot,
                 'pickup_location' => $this->order->pickup_location,
+                'delivery_address' => $this->order->delivery_address,
+                'delivery_fee' => (float) $this->order->delivery_fee,
                 'status' => $this->order->status,
                 'notes' => $this->order->notes,
                 'created_at' => $this->order->created_at?->toISOString(),

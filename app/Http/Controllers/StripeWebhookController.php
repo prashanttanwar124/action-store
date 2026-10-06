@@ -88,7 +88,9 @@ class StripeWebhookController extends Controller
         }
 
         $checkout = $this->findCheckoutForIntent($intent);
-        if ($checkout) {
+
+        // A checkout that has since moved on to another PaymentIntent no longer owns this payment: refund it below
+        if ($checkout && $checkout->stripe_payment_id === $paymentIntentId) {
             $result = $payments->completeOrRefund($checkout, $intent);
 
             if ($result->isCompleted()) {
@@ -97,8 +99,14 @@ class StripeWebhookController extends Controller
                 return;
             }
 
-            if ($result->isRefunded() || $result->isAlreadyHandled()) {
-                Log::critical("Stripe webhook: Checkout {$checkout->id} payment {$paymentIntentId} succeeded, but items/slot unavailable or already handled: {$result->stockException?->getMessage()}. Handled/Auto-refunded.");
+            if ($result->isRefunded()) {
+                Log::critical("Stripe webhook: Checkout {$checkout->id} payment {$paymentIntentId} could not be fulfilled and was refunded: {$result->failure?->getMessage()}");
+
+                return;
+            }
+
+            if ($result->isAlreadyHandled()) {
+                Log::info("Stripe webhook: Checkout {$checkout->id} payment {$paymentIntentId} was already handled by another request.");
 
                 return;
             }
@@ -109,7 +117,7 @@ class StripeWebhookController extends Controller
                 throw new \RuntimeException("Automatic refund failed for {$paymentIntentId}: {$result->refundError?->getMessage()}");
             }
 
-            Log::critical("Stripe webhook: Payment {$paymentIntentId} does not match checkout {$checkout->id} (amount, currency or checkout mismatch).");
+            Log::warning("Stripe webhook: Payment {$paymentIntentId} for checkout {$checkout->id} is not reported as succeeded (status: ".($intent->status ?? 'unknown').').');
 
             return;
         }
@@ -127,8 +135,8 @@ class StripeWebhookController extends Controller
             return;
         }
 
-        // The checkout was released before this payment landed: give the money back
-        Log::critical("Stripe webhook: Payment {$paymentIntentId} succeeded but its checkout no longer exists. Refunding.");
+        // The checkout was released or refunded, or moved to another payment, before this payment landed: give the money back
+        Log::critical("Stripe webhook: Payment {$paymentIntentId} succeeded but no checkout holds it. Refunding.");
         if ($payments->isEnabled()) {
             try {
                 $payments->refundPayment($paymentIntentId);

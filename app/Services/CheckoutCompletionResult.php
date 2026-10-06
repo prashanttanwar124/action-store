@@ -2,8 +2,8 @@
 
 namespace App\Services;
 
-use App\Exceptions\InsufficientStockException;
 use App\Models\Order;
+use RuntimeException;
 use Stripe\Refund;
 use Throwable;
 
@@ -22,7 +22,7 @@ class CheckoutCompletionResult
     public function __construct(
         public readonly string $status,
         public readonly ?Order $order = null,
-        public readonly ?InsufficientStockException $stockException = null,
+        public readonly ?RuntimeException $failure = null,
         public readonly ?Refund $refund = null,
         public readonly ?Throwable $refundError = null
     ) {}
@@ -32,14 +32,17 @@ class CheckoutCompletionResult
         return new self(self::COMPLETED, order: $order);
     }
 
-    public static function refunded(InsufficientStockException $e, ?Refund $refund = null): self
+    /**
+     * The checkout could not be fulfilled (out of stock, slot full, or a mismatched payment) and was refunded.
+     */
+    public static function refunded(RuntimeException $failure, ?Refund $refund = null): self
     {
-        return new self(self::REFUNDED, stockException: $e, refund: $refund);
+        return new self(self::REFUNDED, failure: $failure, refund: $refund);
     }
 
-    public static function refundFailed(InsufficientStockException $e, Throwable $error): self
+    public static function refundFailed(RuntimeException $failure, Throwable $error): self
     {
-        return new self(self::REFUND_FAILED, stockException: $e, refundError: $error);
+        return new self(self::REFUND_FAILED, failure: $failure, refundError: $error);
     }
 
     public static function notPaid(): self

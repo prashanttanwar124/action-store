@@ -70,8 +70,20 @@ class Order extends Model
     }
 
     /**
-     * Generate an enterprise, collision-free, chronological order number.
-     * Format: #MM-YYYYMMDD-XXXX (e.g. #MM-20261004-1001)
+     * Count the placed (not cancelled) orders in a pickup window, given as "Y-m-d · <slot label>".
+     *
+     * Matched exactly: a slot label may contain LIKE wildcards or be the start of another label.
+     */
+    public static function bookedInSlot(string $capacitySlot): int
+    {
+        return static::query()
+            ->where('pickup_slot', $capacitySlot)
+            ->where('status', '!=', 'cancelled')
+            ->count();
+    }
+
+    /**
+     * Generate the next order number for today, e.g. #MM-20261004-1001-A3F9.
      */
     public static function generateOrderNumber(): string
     {
