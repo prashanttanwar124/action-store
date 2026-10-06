@@ -330,6 +330,8 @@ async function updateOrderStatus(order, nextStatus) {
     order.status = previousStatus;
     updateLocalStats(nextStatus, previousStatus);
     console.error('Failed to update order status via axios:', error);
+    const serverMessage = error.response?.data?.errors?.status?.[0] || error.response?.data?.message;
+    window.alert(serverMessage || 'Could not update the order status. Please try again.');
   } finally {
     updatingOrderId.value = null;
   }

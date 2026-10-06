@@ -2,8 +2,10 @@
 
 namespace App\Http\Controllers;
 
-use App\Events\OrderPlaced;
+use App\Exceptions\InsufficientStockException;
+use App\Models\Checkout;
 use App\Models\Order;
+use App\Services\StripePayments;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
@@ -15,7 +17,7 @@ class StripeWebhookController extends Controller
     /**
      * Handle incoming Stripe webhook events.
      */
-    public function handle(Request $request): JsonResponse
+    public function handle(Request $request, StripePayments $payments): JsonResponse
     {
         $payload = $request->getContent();
         $sigHeader = $request->header('Stripe-Signature');
@@ -58,87 +60,87 @@ class StripeWebhookController extends Controller
             ];
         }
 
-        if ($event->type === 'payment_intent.succeeded') {
-            $paymentIntent = $event->data->object;
-            $this->handlePaymentIntentSucceeded($paymentIntent);
-        } elseif ($event->type === 'payment_intent.payment_failed' || $event->type === 'payment_intent.canceled') {
-            $paymentIntent = $event->data->object;
-            $this->handlePaymentIntentFailed($paymentIntent);
-        } elseif ($event->type === 'charge.refunded') {
-            $charge = $event->data->object;
-            $this->handleChargeRefunded($charge);
-        } elseif ($event->type === 'charge.dispute.created') {
-            $dispute = $event->data->object;
-            $this->handleDisputeCreated($dispute);
-        }
+        match ($event->type) {
+            'payment_intent.succeeded' => $this->handlePaymentIntentSucceeded($event->data->object, $payments),
+            'payment_intent.canceled' => $this->handlePaymentIntentCanceled($event->data->object),
+            'charge.refunded' => $this->handleChargeRefunded($event->data->object),
+            'charge.dispute.created' => $this->handleDisputeCreated($event->data->object),
+            // A declined card (payment_intent.payment_failed) needs no action: the customer can retry the same checkout
+            default => null,
+        };
 
         return response()->json(['received' => true]);
     }
 
     /**
-     * Mark pending order as confirmed upon successful payment.
+     * Turn the paid checkout into an order (when the browser has not done so already).
      */
-    protected function handlePaymentIntentSucceeded(object $intent): void
+    protected function handlePaymentIntentSucceeded(object $intent, StripePayments $payments): void
     {
-        $stripePaymentId = $intent->id ?? null;
-        $orderId = $intent->metadata->order_id ?? null;
-
-        if (is_array($intent->metadata ?? null)) {
-            $orderId = $intent->metadata['order_id'] ?? null;
+        $paymentIntentId = $intent->id ?? null;
+        if (! $paymentIntentId || Order::where('stripe_payment_id', $paymentIntentId)->exists()) {
+            return;
         }
 
-        $order = null;
-        if ($orderId) {
-            $order = Order::find($orderId);
-        }
-        if (! $order && $stripePaymentId) {
-            $order = Order::where('stripe_payment_id', $stripePaymentId)->first();
-        }
-
-        if ($order && $order->status === 'pending_payment') {
-            $order->update([
-                'status' => 'confirmed',
-                'stripe_payment_id' => $stripePaymentId,
-            ]);
-
+        $checkout = $this->findCheckoutForIntent($intent);
+        if ($checkout) {
             try {
-                OrderPlaced::dispatch($order);
-            } catch (\Throwable $e) {
-                Log::warning('Stripe webhook OrderPlaced broadcast failed: '.$e->getMessage());
+                $order = $payments->completeCheckout($checkout, $intent);
+            } catch (InsufficientStockException $e) {
+                Log::critical("Stripe webhook: Checkout {$checkout->id} payment {$paymentIntentId} succeeded, but stock was insufficient: {$e->getMessage()}. Auto-refunding customer.");
+
+                if ($payments->isEnabled()) {
+                    try {
+                        $payments->refundPayment($paymentIntentId);
+                    } catch (\Throwable $refundError) {
+                        Log::critical("Stripe webhook: Automatic refund failed for {$paymentIntentId}: {$refundError->getMessage()}");
+                    }
+                }
+
+                $checkout->delete();
+
+                return;
             }
 
-            Log::info("Stripe webhook: Confirmed order {$order->order_number} for payment {$stripePaymentId}");
+            if ($order) {
+                Log::info("Stripe webhook: Created order {$order->order_number} for payment {$paymentIntentId}");
+            } else {
+                Log::critical("Stripe webhook: Payment {$paymentIntentId} does not match checkout {$checkout->id} (amount, currency or checkout mismatch).");
+            }
+
+            return;
+        }
+
+        // Not one of our checkout payments
+        if (! StripePayments::metadataValue($intent, 'checkout_id')) {
+            return;
+        }
+
+        // The checkout was released before this payment landed: give the money back
+        Log::critical("Stripe webhook: Payment {$paymentIntentId} succeeded but its checkout no longer exists. Refunding.");
+        if ($payments->isEnabled()) {
+            try {
+                $payments->refundPayment($paymentIntentId);
+            } catch (\Throwable $e) {
+                Log::critical("Stripe webhook: Refund of orphaned payment {$paymentIntentId} failed: {$e->getMessage()}");
+            }
         }
     }
 
     /**
-     * Cancel pending order and restock inventory when payment fails or is cancelled.
+     * Release the checkout once Stripe has cancelled its payment.
      */
-    protected function handlePaymentIntentFailed(object $intent): void
+    protected function handlePaymentIntentCanceled(object $intent): void
     {
-        $stripePaymentId = $intent->id ?? null;
-        $orderId = $intent->metadata->order_id ?? null;
+        $checkout = $this->findCheckoutForIntent($intent);
 
-        if (is_array($intent->metadata ?? null)) {
-            $orderId = $intent->metadata['order_id'] ?? null;
-        }
-
-        $order = null;
-        if ($orderId) {
-            $order = Order::find($orderId);
-        }
-        if (! $order && $stripePaymentId) {
-            $order = Order::where('stripe_payment_id', $stripePaymentId)->first();
-        }
-
-        if ($order && $order->status === 'pending_payment') {
-            $order->cancelAndRestock('Payment failed or cancelled on Stripe');
-            Log::info("Stripe webhook: Cancelled pending order {$order->order_number} after payment failure.");
+        if ($checkout && $checkout->stripe_payment_id === ($intent->id ?? null) && $checkout->release()) {
+            Log::info("Stripe webhook: Released checkout {$checkout->id} after its payment was cancelled.");
         }
     }
 
     /**
-     * Cancel order and restock inventory when a charge is refunded via Stripe.
+     * Cancel and restock the order only when its charge has been fully refunded.
      */
     protected function handleChargeRefunded(object $charge): void
     {
@@ -148,8 +150,21 @@ class StripeWebhookController extends Controller
         }
 
         $order = Order::where('stripe_payment_id', $paymentIntentId)->first();
-        if ($order && $order->status !== 'cancelled') {
-            $order->cancelAndRestock('Refunded via Stripe');
+        if (! $order) {
+            return;
+        }
+
+        if (empty($charge->refunded)) {
+            $refunded = number_format(((int) ($charge->amount_refunded ?? 0)) / 100, 2);
+            $order->update([
+                'notes' => trim(($order->notes ?? '')." [PARTIAL REFUND ON STRIPE: \${$refunded}]"),
+            ]);
+            Log::info("Stripe webhook: Recorded partial refund of \${$refunded} for order {$order->order_number}.");
+
+            return;
+        }
+
+        if ($order->cancelAndRestock('Refunded via Stripe')) {
             Log::info("Stripe webhook: Cancelled and restocked order {$order->order_number} following Stripe refund.");
         }
     }
@@ -172,5 +187,20 @@ class StripeWebhookController extends Controller
                 ]);
             }
         }
+    }
+
+    /**
+     * Find the checkout a PaymentIntent belongs to, by its metadata checkout id or its stored intent id.
+     */
+    protected function findCheckoutForIntent(object $intent): ?Checkout
+    {
+        $checkoutId = StripePayments::metadataValue($intent, 'checkout_id');
+        if ($checkoutId && $checkout = Checkout::find($checkoutId)) {
+            return $checkout;
+        }
+
+        $paymentIntentId = $intent->id ?? null;
+
+        return $paymentIntentId ? Checkout::where('stripe_payment_id', $paymentIntentId)->first() : null;
     }
 }

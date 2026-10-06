@@ -27,11 +27,8 @@ Route::get('/cart', [CartController::class, 'index'])->name('cart');
 
 Route::middleware('auth')->group(function () {
     Route::get('/checkout', [CartController::class, 'checkout'])->name('checkout');
-    Route::post('/checkout/create-payment-intent', [OrderController::class, 'createPaymentIntent'])->middleware('throttle:30,1')->name('checkout.payment-intent');
-    Route::post('/checkout/validate', [OrderController::class, 'validateOrder'])->middleware('throttle:30,1')->name('checkout.validate');
     Route::post('/checkout', [OrderController::class, 'store'])->middleware('throttle:20,1')->name('checkout.store');
-    Route::post('/checkout/confirm-payment', [OrderController::class, 'confirmPayment'])->middleware('throttle:30,1')->name('checkout.confirm-payment');
-    Route::post('/checkout/cancel-pending', [OrderController::class, 'cancelPending'])->middleware('throttle:30,1')->name('checkout.cancel-pending');
+    Route::post('/checkout/complete', [OrderController::class, 'complete'])->middleware('throttle:30,1')->name('checkout.complete');
 });
 
 Route::post('/stripe/webhook', [StripeWebhookController::class, 'handle'])->name('stripe.webhook');

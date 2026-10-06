@@ -5,15 +5,15 @@ namespace App\Http\Controllers\Admin;
 use App\Events\OrderStatusUpdated;
 use App\Http\Controllers\Controller;
 use App\Models\Order;
+use App\Services\StripePayments;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
-use Stripe\Refund;
-use Stripe\Stripe;
 
 class AdminOrderController extends Controller
 {
@@ -29,8 +29,6 @@ class AdminOrderController extends Controller
 
         if ($status && $status !== 'all') {
             $query->where('status', $status);
-        } else {
-            $query->where('status', '!=', 'pending_payment');
         }
 
         if ($search) {
@@ -78,7 +76,7 @@ class AdminOrderController extends Controller
 
         // Compute live KDS summary metrics for today
         $today = Carbon::today();
-        $todayOrders = Order::whereDate('created_at', $today)->where('status', '!=', 'pending_payment');
+        $todayOrders = Order::whereDate('created_at', $today);
 
         $stats = [
             'total_today' => (clone $todayOrders)->count(),
@@ -86,7 +84,7 @@ class AdminOrderController extends Controller
             'packing' => Order::where('status', 'packing')->count(),
             'ready_for_pickup' => Order::where('status', 'ready_for_pickup')->count(),
             'completed_today' => (clone $todayOrders)->where('status', 'completed')->count(),
-            'revenue_today' => (float) (clone $todayOrders)->whereNotIn('status', ['cancelled', 'pending_payment'])->sum('total'),
+            'revenue_today' => (float) (clone $todayOrders)->where('status', '!=', 'cancelled')->sum('total'),
         ];
 
         return Inertia::render('Admin/Orders/Index', [
@@ -102,49 +100,24 @@ class AdminOrderController extends Controller
     /**
      * Update the status of an order and broadcast via Laravel Reverb.
      */
-    public function updateStatus(Request $request, Order $order): JsonResponse|RedirectResponse
+    public function updateStatus(Request $request, Order $order, StripePayments $payments): JsonResponse|RedirectResponse
     {
         $validated = $request->validate([
             'status' => ['required', 'string', 'in:confirmed,packing,ready_for_pickup,completed,cancelled'],
         ]);
 
-        $previousStatus = $order->status;
         $newStatus = $validated['status'];
 
-        $order->update([
-            'status' => $newStatus,
-        ]);
+        if ($order->status === 'cancelled' && $newStatus !== 'cancelled') {
+            throw ValidationException::withMessages([
+                'status' => 'A cancelled order cannot be reopened: its stock was returned and any payment refunded.',
+            ]);
+        }
 
-        // Restock inventory and auto-refund if transitioned to cancelled
-        if ($newStatus === 'cancelled' && $previousStatus !== 'cancelled') {
-            // 1. Restock items
-            $order->load('items.product');
-            foreach ($order->items as $item) {
-                if ($item->product_id && $item->product) {
-                    $item->product->increment('stock', (int) $item->quantity);
-                }
-            }
-
-            // 2. Issue Stripe refund if paid online
-            if (! empty($order->stripe_payment_id) && ! app()->environment('testing')) {
-                $stripeSecret = config('services.stripe.secret');
-                if (! empty($stripeSecret)) {
-                    try {
-                        Stripe::setApiKey($stripeSecret);
-                        Refund::create([
-                            'payment_intent' => $order->stripe_payment_id,
-                            'reason' => 'requested_by_customer',
-                            'metadata' => [
-                                'admin_cancellation' => 'true',
-                                'order_number' => $order->order_number,
-                            ],
-                        ]);
-                        Log::info("Admin cancellation: Refund issued for order {$order->order_number} (payment: {$order->stripe_payment_id})");
-                    } catch (\Throwable $refundErr) {
-                        Log::error("Admin cancellation: Failed to refund order {$order->order_number}: {$refundErr->getMessage()}");
-                    }
-                }
-            }
+        if ($newStatus === 'cancelled') {
+            $this->cancelOrder($order, $payments);
+        } else {
+            $order->update(['status' => $newStatus]);
         }
 
         // Broadcast real-time status update to both Admin KDS and Customer tracking screens
@@ -159,5 +132,32 @@ class AdminOrderController extends Controller
         }
 
         return back()->with('success', "Order {$order->order_number} status updated to ".str_replace('_', ' ', $validated['status']));
+    }
+
+    /**
+     * Cancel an order, refunding its payment first so a failed refund leaves the order and its stock untouched.
+     *
+     * @throws ValidationException When the refund failed; the order is then left unchanged.
+     */
+    private function cancelOrder(Order $order, StripePayments $payments): void
+    {
+        if ($order->status === 'cancelled') {
+            return;
+        }
+
+        if ($order->stripe_payment_id && $payments->isEnabled()) {
+            try {
+                $payments->refundPayment($order->stripe_payment_id);
+                Log::info("Admin cancellation: Refund issued for order {$order->order_number} (payment: {$order->stripe_payment_id})");
+            } catch (\Throwable $e) {
+                Log::error("Admin cancellation: Failed to refund order {$order->order_number}: {$e->getMessage()}");
+
+                throw ValidationException::withMessages([
+                    'status' => "The refund for order {$order->order_number} failed, so the order was not cancelled. Please try again or refund it from the Stripe dashboard.",
+                ]);
+            }
+        }
+
+        $order->cancelAndRestock('Cancelled by admin');
     }
 }

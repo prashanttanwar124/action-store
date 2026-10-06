@@ -42,15 +42,6 @@ class CheckoutTest extends TestCase
         $response->assertUnauthorized();
     }
 
-    public function test_unauthenticated_user_cannot_create_payment_intent(): void
-    {
-        $response = $this->postJson('/checkout/create-payment-intent', [
-            'amount' => 20.00,
-        ]);
-
-        $response->assertUnauthorized();
-    }
-
     public function test_checkout_page_can_be_rendered(): void
     {
         $response = $this->actingAs($this->user)->get('/checkout');
@@ -313,14 +304,14 @@ class CheckoutTest extends TestCase
         $this->assertEquals(6, $product->fresh()->stock);
     }
 
-    public function test_checkout_supports_stripe_payment_method_and_stores_stripe_payment_id(): void
+    public function test_checkout_ignores_client_supplied_stripe_payment_id(): void
     {
         $product = Product::factory()->create([
             'stock' => 10,
             'price' => 25.00,
         ]);
 
-        $payload = [
+        $response = $this->actingAs($this->user)->postJson('/checkout', [
             'items' => [
                 [
                     'id' => $product->id,
@@ -330,60 +321,29 @@ class CheckoutTest extends TestCase
                 ],
             ],
             'payment_method' => 'stripe',
-            'stripe_payment_id' => 'pi_test_1234567890',
+            'stripe_payment_id' => 'pi_forged_by_client',
             'fulfillment_type' => 'Store Pickup',
-        ];
-
-        $response = $this->actingAs($this->user)->postJson('/checkout', $payload);
+        ]);
 
         $response->assertStatus(201);
         $this->assertDatabaseHas('orders', [
             'user_id' => $this->user->id,
             'customer_email' => 'aarav@example.com',
             'payment_method' => 'stripe',
-            'stripe_payment_id' => 'pi_test_1234567890',
+            'stripe_payment_id' => null,
         ]);
     }
 
-    public function test_create_payment_intent_validates_amount(): void
-    {
-        $response = $this->actingAs($this->user)->postJson('/checkout/create-payment-intent', [
-            'amount' => 0.10, // less than minimum 0.50
-        ]);
-
-        $response->assertStatus(422)
-            ->assertJsonValidationErrors(['amount']);
-    }
-
-    public function test_create_payment_intent_returns_503_when_stripe_is_not_configured(): void
-    {
-        config(['services.stripe.secret' => null]);
-
-        $response = $this->actingAs($this->user)->postJson('/checkout/create-payment-intent', [
-            'amount' => 25.00,
-            'currency' => 'cad',
-        ]);
-
-        $response->assertStatus(503)
-            ->assertJson([
-                'configured' => false,
-            ]);
-    }
-
-    public function test_authenticated_checkout_records_phone_and_cleans_session(): void
+    public function test_authenticated_checkout_records_phone(): void
     {
         $product = Product::factory()->create([
             'stock' => 10,
             'price' => 15.00,
         ]);
 
-        $response = $this->actingAs($this->user)->withSession([
-            'active_payment_intent_id' => 'pi_auth_test_999',
-            'checkout_token' => 'token_123',
-        ])->postJson('/checkout', [
+        $response = $this->actingAs($this->user)->postJson('/checkout', [
             'customer_phone' => '416-555-0199',
             'payment_method' => 'card',
-            'stripe_payment_id' => 'pi_auth_test_999',
             'fulfillment_type' => 'Store Pickup',
             'items' => [
                 [
@@ -401,11 +361,6 @@ class CheckoutTest extends TestCase
             'customer_name' => 'Aarav Patel',
             'customer_email' => 'aarav@example.com',
             'customer_phone' => '416-555-0199',
-            'stripe_payment_id' => 'pi_auth_test_999',
         ]);
-
-        // Asserts session cleanup: active_payment_intent_id & checkout_token should be forgotten
-        $response->assertSessionMissing('active_payment_intent_id');
-        $response->assertSessionMissing('checkout_token');
     }
 }

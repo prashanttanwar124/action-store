@@ -155,6 +155,30 @@ class Product extends Model
     }
 
     /**
+     * Return units to inventory (e.g. when an order is cancelled) and update the stock badge.
+     */
+    public function incrementStock(int $quantity = 1): void
+    {
+        $this->stock = (int) ($this->stock ?? 0) + $quantity;
+        $this->syncStockBadge();
+        $this->save();
+    }
+
+    /**
+     * Return reserved quantities to inventory. Call inside a database transaction.
+     *
+     * @param  array<int|string, int>  $quantitiesByProductId
+     */
+    public static function returnToStock(array $quantitiesByProductId): void
+    {
+        $products = static::whereIn('id', array_keys($quantitiesByProductId))->lockForUpdate()->get();
+
+        foreach ($products as $product) {
+            $product->incrementStock((int) $quantitiesByProductId[$product->id]);
+        }
+    }
+
+    /**
      * Keep the stock badge string in sync when stock is edited.
      */
     public function syncStockBadge(): void

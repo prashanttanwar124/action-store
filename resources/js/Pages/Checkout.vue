@@ -257,24 +257,10 @@ async function initStripe() {
   }
 }
 
-// Update Stripe Elements amount whenever cart total changes (zero backend sync calls!)
-watch(checkoutTotal, (newTotal) => {
-  const total = Number(newTotal);
-  if (elements.value && isStripeMounted.value && total >= 0.5) {
-    try {
-      elements.value.update({
-        amount: Math.round(total * 100),
-      });
-    } catch (e) {
-      console.warn('elements.update warning:', e);
-    }
-  }
-});
 
 const isProcessing = ref(false);
 const isMobileSummaryOpen = ref(false);
 const isScheduleModalOpen = ref(false);
-const checkoutIdempotencyKey = ref('chk_' + Date.now() + '_' + Math.random().toString(36).slice(2, 9));
 const orderPlaced = ref(false);
 
 const confirmedOrderNumber = ref('');
@@ -371,6 +357,20 @@ const deliveryFeeAmount = computed(() => fulfillmentMode.value === 'delivery' ? 
 
 const checkoutTotal = computed(() => {
   return (store.total + deliveryFeeAmount.value).toFixed(2);
+});
+
+// Update Stripe Elements amount whenever cart total changes (zero backend sync calls!)
+watch(checkoutTotal, (newTotal) => {
+  const total = Number(newTotal);
+  if (elements.value && isStripeMounted.value && total >= 0.5) {
+    try {
+      elements.value.update({
+        amount: Math.round(total * 100),
+      });
+    } catch (e) {
+      console.warn('elements.update warning:', e);
+    }
+  }
 });
 
 // Effective Chosen Slot Description
@@ -474,7 +474,7 @@ async function completeOrder() {
     }
   }
 
-  // 2. Order First: Send cart and fulfillment details to server to create pending order and reserve inventory!
+  // 2. Start (or resume) the checkout: the server validates the cart and reserves stock. The order is created only after payment.
   const payload = {
     items: store.cartItems.map(item => ({
       id: item.id,
@@ -486,14 +486,10 @@ async function completeOrder() {
       image: item.image || '',
       is_subscribed: Boolean(item.isSubscribed),
     })),
-    customer_name: page.props.auth?.user?.name || null,
-    customer_email: page.props.auth?.user?.email || null,
-    customer_phone: customerPhone.value?.trim() || page.props.auth?.user?.phone || null,
     payment_method: paymentMethod.value,
     fulfillment_type: isDelivery ? 'Home Delivery' : 'Store Pickup',
     ...schedule,
     expected_total: Number(checkoutTotal.value),
-    idempotency_key: checkoutIdempotencyKey.value,
     delivery_address: formattedDeliveryAddress,
     pickup_location: isDelivery ? (formattedDeliveryAddress || 'Delivery Address') : storePickupLocation,
     notes: isDelivery ? deliveryNotes.value : (storeInfo.value.curbside_instructions || null),
@@ -563,56 +559,52 @@ async function completeOrder() {
   }
 
   const resData = response.data;
-  const createdOrderId = resData.order_id;
-  const order = confirmedOrder(resData.order || resData);
+  let orderResponse = resData;
 
-  // 3. Confirm Stripe Payment if online payment is required
-  if (resData.requires_payment && resData.clientSecret) {
-    try {
-      const { error: stripeErr, paymentIntent } = await stripe.value.confirmPayment({
-        elements: elements.value,
-        clientSecret: resData.clientSecret,
-        confirmParams: {
-          return_url: window.location.origin + '/checkout',
-        },
-        redirect: 'if_required',
-      });
-
-      if (stripeErr) {
-        paymentError.value = stripeErr.message || 'Payment processing failed.';
-        errorMessage.value = paymentError.value;
-        // Cancel the pending order immediately to release the reserved stock!
-        try {
-          await axios.post('/checkout/cancel-pending', { order_id: createdOrderId });
-        } catch (cancelErr) {
-          // ignore
-        }
-        isProcessing.value = false;
-        return;
-      }
-
-      if (paymentIntent && paymentIntent.status === 'succeeded') {
-        try {
-          await axios.post('/checkout/confirm-payment', {
-            order_id: createdOrderId,
-            payment_intent_id: paymentIntent.id,
-          });
-        } catch (confErr) {
-          console.warn('confirm-payment notice warning:', confErr);
-        }
-      } else {
-        paymentError.value = 'Payment was not confirmed. Current status: ' + (paymentIntent?.status || 'incomplete');
-        errorMessage.value = paymentError.value;
-        isProcessing.value = false;
-        return;
-      }
-    } catch (err) {
-      console.error('Stripe confirmation error:', err);
-      paymentError.value = err.message || 'Payment processing error.';
+  // 3. Collect the payment. A declined card keeps the checkout, so the next "Pay" click retries it.
+  if (resData.requires_payment) {
+    const paymentIntentId = await collectPayment(resData.clientSecret);
+    if (!paymentIntentId) {
       errorMessage.value = paymentError.value;
       isProcessing.value = false;
       return;
     }
+
+    try {
+      const { data } = await axios.post('/checkout/complete', {
+        checkout_id: resData.checkout_id,
+        payment_intent_id: paymentIntentId,
+      });
+      orderResponse = data;
+    } catch (err) {
+      console.warn('checkout/complete error:', err);
+      const paymentMsg = err.response?.data?.errors?.payment
+        ? (Array.isArray(err.response.data.errors.payment) ? err.response.data.errors.payment[0] : err.response.data.errors.payment)
+        : null;
+      if (paymentMsg) {
+        generalError.value = paymentMsg;
+        errorMessage.value = paymentMsg;
+        isProcessing.value = false;
+        return;
+      }
+
+      // The payment went through, so Stripe's webhook still creates the order
+      store.clearCart();
+      generalError.value = 'Payment received. Your order is being confirmed and will appear in your orders shortly.';
+      errorMessage.value = generalError.value;
+      isProcessing.value = false;
+      return;
+    }
+  }
+
+  let order;
+  try {
+    order = confirmedOrder(orderResponse);
+  } catch (err) {
+    generalError.value = err.message;
+    errorMessage.value = err.message;
+    isProcessing.value = false;
+    return;
   }
 
   const orderNumber = order.order_number;
@@ -650,8 +642,44 @@ async function completeOrder() {
   });
 
   store.clearCart();
-  checkoutIdempotencyKey.value = 'chk_' + Date.now() + '_' + Math.random().toString(36).slice(2, 9);
   isProcessing.value = false;
+}
+
+/**
+ * Confirm the card payment with Stripe.
+ * Returns the PaymentIntent id once paid, or null with paymentError explaining why not.
+ */
+async function collectPayment(clientSecret) {
+  try {
+    if (!clientSecret || !stripe.value || !elements.value) {
+      throw new Error('Payment could not be started. Please try again.');
+    }
+
+    const { error: stripeErr, paymentIntent } = await stripe.value.confirmPayment({
+      elements: elements.value,
+      clientSecret,
+      confirmParams: {
+        return_url: window.location.origin + '/checkout',
+      },
+      redirect: 'if_required',
+    });
+
+    if (stripeErr) {
+      paymentError.value = stripeErr.message || 'Payment processing failed.';
+      return null;
+    }
+
+    if (paymentIntent?.status === 'succeeded') {
+      return paymentIntent.id;
+    }
+
+    paymentError.value = 'Payment was not confirmed. Current status: ' + (paymentIntent?.status || 'incomplete');
+    return null;
+  } catch (err) {
+    console.error('Stripe confirmation error:', err);
+    paymentError.value = err.message || 'Payment processing error.';
+    return null;
+  }
 }
 </script>
 

@@ -7,7 +7,6 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Log;
 
 class Order extends Model
 {
@@ -35,7 +34,7 @@ class Order extends Model
         'delivery_address',
         'status',
         'notes',
-        'idempotency_key',
+        'reserved_stock',
     ];
 
     /**
@@ -47,6 +46,7 @@ class Order extends Model
         'delivery_fee' => 'decimal:2',
         'total' => 'decimal:2',
         'points_earned' => 'integer',
+        'reserved_stock' => 'array',
     ];
 
     /**
@@ -95,47 +95,56 @@ class Order extends Model
     }
 
     /**
-     * Cancel this order and restore product inventory.
+     * Cancel this order and return its reserved stock.
+     *
+     * The row is locked and its status re-read, so concurrent callers (admin, refund webhook)
+     * restock only once.
+     *
+     * @return bool Whether this call cancelled the order.
      */
-    public function cancelAndRestock(?string $reason = null): void
+    public function cancelAndRestock(?string $reason = null): bool
     {
-        DB::transaction(function () use ($reason) {
-            $this->loadMissing('items.product');
-
-            foreach ($this->items as $item) {
-                if ($item->product_id && $item->product) {
-                    $item->product->increment('stock', (int) $item->quantity);
-                }
+        $cancelled = DB::transaction(function () use ($reason) {
+            $locked = static::whereKey($this->id)->lockForUpdate()->first();
+            if (! $locked || $locked->status === 'cancelled') {
+                return false;
             }
 
+            Product::returnToStock($locked->reservedStockQuantities());
+
             $noteSuffix = $reason ? " [Cancelled: {$reason}]" : ' [Cancelled]';
-            $this->update([
+            $locked->update([
                 'status' => 'cancelled',
-                'notes' => trim(($this->notes ?? '').$noteSuffix),
+                'notes' => trim(($locked->notes ?? '').$noteSuffix),
             ]);
+
+            return true;
         });
+
+        $this->refresh();
+
+        return $cancelled;
     }
 
     /**
-     * Cancel all abandoned orders that have been in pending_payment for more than the specified minutes.
+     * The product quantities this order took from stock.
+     *
+     * Orders placed before reserved stock was recorded fall back to their product line items.
+     *
+     * @return array<int, int>
      */
-    public static function cancelExpiredPendingOrders(int $minutes = 15): int
+    public function reservedStockQuantities(): array
     {
-        $expiredOrders = static::where('status', 'pending_payment')
-            ->where('created_at', '<', now()->subMinutes($minutes))
-            ->get();
-
-        $count = 0;
-        foreach ($expiredOrders as $order) {
-            try {
-                $order->cancelAndRestock("Payment timeout exceeded ({$minutes} mins)");
-                $count++;
-            } catch (\Throwable $e) {
-                Log::error("Failed to cancel expired pending order #{$order->order_number}: {$e->getMessage()}");
-            }
+        if (! empty($this->reserved_stock)) {
+            return $this->reserved_stock;
         }
 
-        return $count;
+        return $this->items()
+            ->whereNotNull('product_id')
+            ->get()
+            ->groupBy('product_id')
+            ->map(fn ($items) => (int) $items->sum('quantity'))
+            ->all();
     }
 
     /**

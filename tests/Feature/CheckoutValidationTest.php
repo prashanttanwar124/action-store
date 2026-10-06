@@ -7,6 +7,7 @@ use App\Models\RecipeKit;
 use App\Models\StoreSetting;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Carbon;
 use Tests\TestCase;
 
 class CheckoutValidationTest extends TestCase
@@ -222,29 +223,6 @@ class CheckoutValidationTest extends TestCase
             ->assertJsonValidationErrors(['total']);
     }
 
-    public function test_duplicate_order_with_same_idempotency_key_is_not_duplicated(): void
-    {
-        $product = Product::factory()->create(['price' => 15, 'stock' => 10]);
-        $key = 'test_key_12345';
-
-        $payload = [
-            'items' => [['id' => $product->id, 'name' => $product->name, 'price' => 15, 'quantity' => 1]],
-            'idempotency_key' => $key,
-            'fulfillment_type' => 'Store Pickup',
-        ];
-
-        $response1 = $this->postJson('/checkout', $payload)->assertCreated();
-        $orderNumber1 = $response1->json('order.order_number');
-
-        // Retry same request with identical idempotency key
-        $response2 = $this->postJson('/checkout', $payload)->assertOk();
-        $orderNumber2 = $response2->json('order.order_number');
-
-        $this->assertEquals($orderNumber1, $orderNumber2);
-        $this->assertDatabaseCount('orders', 1);
-        $this->assertEquals(9, $product->fresh()->stock); // Stock decremented only once!
-    }
-
     public function test_date_beyond_tomorrow_is_rejected(): void
     {
         $this->travelTo(now()->setTime(10, 0));
@@ -275,8 +253,8 @@ class CheckoutValidationTest extends TestCase
 
     public function test_store_pickup_operating_days_are_enforced(): void
     {
-        // 2026-10-04 is Sunday
-        $this->travelTo(now()->setTime(10, 0));
+        // 2026-10-04 is a Sunday
+        $this->travelTo(Carbon::parse('2026-10-04 10:00', config('app.timezone')));
         StoreSetting::current()->update([
             'pickup_days' => ['monday', 'tuesday'], // Sunday closed
         ]);

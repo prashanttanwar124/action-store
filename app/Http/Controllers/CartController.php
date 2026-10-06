@@ -37,15 +37,18 @@ class CartController extends Controller
 
         $bookedSlots = [];
         if ($maxCapacity > 0) {
-            $orders = Order::query()
-                ->where(function ($q) use ($today, $tomorrow) {
-                    $q->where('pickup_slot', 'LIKE', "{$today}%")
-                        ->orWhere('pickup_slot', 'LIKE', "{$tomorrow}%");
-                })
-                ->whereNotIn('status', ['cancelled'])
+            $forTodayOrTomorrow = function ($q) use ($today, $tomorrow) {
+                $q->where('pickup_slot', 'LIKE', "{$today}%")
+                    ->orWhere('pickup_slot', 'LIKE', "{$tomorrow}%");
+            };
+
+            // Placed orders holding a slot
+            $slotStrings = Order::query()
+                ->where($forTodayOrTomorrow)
+                ->where('status', '!=', 'cancelled')
                 ->pluck('pickup_slot');
 
-            foreach ($orders as $slotString) {
+            foreach ($slotStrings as $slotString) {
                 $parts = explode(' · ', $slotString, 2);
                 if (count($parts) === 2) {
                     $d = trim($parts[0]);
