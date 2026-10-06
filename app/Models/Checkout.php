@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Events\OrderPlaced;
 use App\Exceptions\InsufficientStockException;
+use App\Exceptions\SlotCapacityExceededException;
 use Database\Factories\CheckoutFactory;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -146,14 +147,24 @@ class Checkout extends Model
             $reservedStock = $locked->reserved_stock;
             $productsToDecrement = [];
 
-            if (is_array($reservedStock)) {
+            if (is_array($reservedStock) && ! empty($reservedStock)) {
+                // Batch-load and lock products in consistent ascending ID order to eliminate deadlock risk
+                $productIds = array_map('intval', array_keys($reservedStock));
+                sort($productIds);
+
+                $products = Product::whereIn('id', $productIds)
+                    ->orderBy('id')
+                    ->lockForUpdate()
+                    ->get()
+                    ->keyBy('id');
+
                 foreach ($reservedStock as $productId => $qty) {
                     $requiredQty = (int) $qty;
                     if ($requiredQty <= 0) {
                         continue;
                     }
 
-                    $product = Product::where('id', $productId)->lockForUpdate()->first();
+                    $product = $products->get((int) $productId);
                     if (! $product) {
                         throw new InsufficientStockException(
                             'One or more products could not be located.',
@@ -170,6 +181,24 @@ class Checkout extends Model
                     }
 
                     $productsToDecrement[] = ['product' => $product, 'qty' => $requiredQty];
+                }
+            }
+
+            // Check pickup slot capacity inside transaction to prevent overbooking races
+            $storeInfo = StoreSetting::current();
+            $maxCapacity = (int) ($storeInfo->max_orders_per_slot ?? 0);
+            if ($maxCapacity > 0 && $locked->pickup_slot && ! str_contains($locked->pickup_slot, 'ASAP') && ! str_contains($locked->pickup_slot, 'Custom Time')) {
+                $bookedCount = Order::query()
+                    ->where('pickup_slot', 'LIKE', "{$locked->pickup_slot}%")
+                    ->where('status', '!=', 'cancelled')
+                    ->lockForUpdate()
+                    ->count();
+
+                if ($bookedCount >= $maxCapacity) {
+                    throw new SlotCapacityExceededException(
+                        "The pickup window ({$locked->pickup_slot}) is no longer available as capacity was reached.",
+                        $locked->pickup_slot
+                    );
                 }
             }
 

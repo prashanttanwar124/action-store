@@ -138,6 +138,49 @@ class StripePayments
     }
 
     /**
+     * Complete a checkout into an order, or automatically refund the customer
+     * if stock or slot capacity is exhausted, preserving the checkout on refund failure.
+     */
+    public function completeOrRefund(Checkout $checkout, object $intent): CheckoutCompletionResult
+    {
+        if (! $this->intentPaysFor($intent, $checkout)) {
+            return CheckoutCompletionResult::notPaid();
+        }
+
+        try {
+            $order = $checkout->convertToOrder($intent->id);
+            if (! $order) {
+                // A concurrent request already converted this checkout
+                $existingOrder = Order::where('stripe_payment_id', $intent->id)->first();
+                if ($existingOrder) {
+                    return CheckoutCompletionResult::completed($existingOrder);
+                }
+            }
+
+            return CheckoutCompletionResult::completed($order);
+        } catch (InsufficientStockException $e) {
+            Log::critical("Checkout {$checkout->id} payment {$intent->id} succeeded, but fulfillment is unavailable: {$e->getMessage()}. Refunding customer.");
+
+            if ($this->isEnabled() && ! empty($intent->id)) {
+                try {
+                    $refund = $this->refundPayment($intent->id);
+                    $checkout->delete();
+
+                    return CheckoutCompletionResult::refunded($e, $refund);
+                } catch (\Throwable $refundError) {
+                    Log::critical("Automatic refund failed for checkout {$checkout->id} payment {$intent->id}: {$refundError->getMessage()}");
+
+                    return CheckoutCompletionResult::refundFailed($e, $refundError);
+                }
+            }
+
+            $checkout->delete();
+
+            return CheckoutCompletionResult::refunded($e);
+        }
+    }
+
+    /**
      * Release an unpaid checkout: stop its PaymentIntent on Stripe, then return the stock and delete it.
      *
      * Stripe never lets a PaymentIntent be both cancelled and paid, so cancelling first means a
@@ -161,16 +204,20 @@ class StripePayments
                     return self::DEFERRED;
                 }
 
-                try {
-                    if ($this->completeCheckout($checkout, $intent)) {
-                        return self::PAID;
-                    }
-                } catch (InsufficientStockException $e) {
-                    Log::critical("Release checkout {$checkout->id}: payment succeeded but stock was insufficient: {$e->getMessage()}. Refunding.");
-                    $this->refundPayment($checkout->stripe_payment_id);
-                    $checkout->delete();
+                $result = $this->completeOrRefund($checkout, $intent);
 
+                if ($result->isCompleted()) {
+                    return self::PAID;
+                }
+
+                if ($result->isRefunded()) {
                     return self::RELEASED;
+                }
+
+                if ($result->isRefundFailed()) {
+                    Log::warning("Checkout {$checkout->id} kept: refund failed, deferring for retry.");
+
+                    return self::DEFERRED;
                 }
 
                 if ($intent->status !== 'canceled') {

@@ -249,6 +249,25 @@ class StripeWebhookTest extends TestCase
         $this->assertModelMissing($checkout);
     }
 
+    public function test_webhook_returns_500_and_retains_checkout_when_refund_fails(): void
+    {
+        $product = Product::factory()->create(['stock' => 0, 'price' => 10.00]);
+        $checkout = Checkout::factory()->holding($product, 2)->create(['stripe_payment_id' => 'pi_fail_refund_webhook']);
+
+        $this->partialMock(StripePayments::class, function (MockInterface $mock) {
+            $mock->shouldReceive('isEnabled')->andReturn(true);
+            $mock->shouldReceive('currency')->andReturn('cad');
+            $mock->shouldReceive('amountInCents')->andReturn(2000);
+            $mock->shouldReceive('refundPayment')->once()->with('pi_fail_refund_webhook')->andThrow(new \RuntimeException('Stripe temporary failure'));
+        });
+
+        $response = $this->postJson('/stripe/webhook', $this->succeededPayload($checkout, 2000));
+
+        $response->assertStatus(500);
+        $this->assertEquals(0, Order::count());
+        $this->assertModelExists($checkout);
+    }
+
     /**
      * @return array<string, mixed>
      */

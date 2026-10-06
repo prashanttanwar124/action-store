@@ -287,6 +287,78 @@ class CheckoutPaymentFlowTest extends TestCase
         $this->assertModelMissing($checkout);
     }
 
+    public function test_complete_auto_refunds_if_pickup_slot_becomes_full_before_confirmation(): void
+    {
+        $slotLabel = '10:00 AM – 11:00 AM';
+        $today = now()->toDateString();
+        $slotString = "{$today} · {$slotLabel}";
+
+        StoreSetting::current()->update([
+            'max_orders_per_slot' => 1,
+        ]);
+
+        $checkout = $this->checkoutFor($this->user);
+        $checkout->update(['pickup_slot' => $slotString]);
+
+        // Another customer completed an order in this slot while user was entering payment details
+        Order::factory()->create(['pickup_slot' => $slotString, 'status' => 'confirmed']);
+
+        $this->fakeStripe(function (MockInterface $mock) use ($checkout) {
+            $mock->shouldReceive('retrieveIntent')->once()->andReturn($this->paidIntent($checkout));
+            $mock->shouldReceive('refundPayment')->once()->with($checkout->stripe_payment_id)->andReturn(Refund::constructFrom(['id' => 're_slot_full']));
+        });
+
+        $response = $this->actingAs($this->user)->postJson('/checkout/complete', ['checkout_id' => $checkout->id]);
+
+        $response->assertStatus(422)->assertJsonValidationErrors(['payment']);
+        $this->assertEquals('slot_full_refunded', $response->json('errors.error_code.0'));
+        $this->assertStringContainsString('capacity limit', $response->json('errors.payment.0'));
+        $this->assertEquals(1, Order::count()); // Only the other customer's order
+        $this->assertModelMissing($checkout);
+    }
+
+    public function test_resume_checkout_auto_refunds_without_500_if_stock_depleted(): void
+    {
+        $this->fakeStripe(function (MockInterface $mock) {
+            $mock->shouldReceive('createIntentFor')->once()->andReturn($this->newIntent('pi_depleted'));
+            $mock->shouldReceive('retrieveIntent')->andReturnUsing(fn () => $this->paidIntent(Checkout::sole()));
+            $mock->shouldReceive('refundPayment')->once()->with('pi_depleted')->andReturn(Refund::constructFrom(['id' => 're_depleted']));
+        });
+
+        // 1. Create checkout
+        $this->actingAs($this->user)->postJson('/checkout', $this->checkoutPayload())->assertCreated();
+
+        // 2. Stock runs out before resume
+        $this->product->update(['stock' => 0]);
+
+        // 3. User clicks pay again / resumes checkout with paid intent
+        $response = $this->actingAs($this->user)->postJson('/checkout', $this->checkoutPayload());
+
+        $response->assertStatus(422)->assertJsonValidationErrors(['payment']);
+        $this->assertEquals('out_of_stock_refunded', $response->json('errors.error_code.0'));
+        $this->assertEquals(0, Order::count());
+        $this->assertEquals(0, Checkout::count());
+    }
+
+    public function test_complete_checkout_retains_checkout_record_when_refund_fails_and_informs_customer(): void
+    {
+        $checkout = $this->checkoutFor($this->user);
+        $this->product->update(['stock' => 0]);
+
+        $this->fakeStripe(function (MockInterface $mock) use ($checkout) {
+            $mock->shouldReceive('retrieveIntent')->once()->andReturn($this->paidIntent($checkout));
+            $mock->shouldReceive('refundPayment')->once()->with($checkout->stripe_payment_id)->andThrow(new \RuntimeException('Stripe API error'));
+        });
+
+        $response = $this->actingAs($this->user)->postJson('/checkout/complete', ['checkout_id' => $checkout->id]);
+
+        $response->assertStatus(422)->assertJsonValidationErrors(['payment']);
+        $this->assertEquals('refund_failed', $response->json('errors.error_code.0'));
+        $this->assertStringContainsString('support team has been alerted', $response->json('errors.payment.0'));
+        $this->assertModelExists($checkout);
+        $this->assertEquals(0, Order::count());
+    }
+
     public function test_slot_held_by_placed_order_counts_towards_capacity(): void
     {
         $this->travelTo(now()->setTime(8, 0));

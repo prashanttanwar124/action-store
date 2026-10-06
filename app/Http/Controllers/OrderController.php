@@ -2,13 +2,14 @@
 
 namespace App\Http\Controllers;
 
-use App\Exceptions\InsufficientStockException;
+use App\Exceptions\SlotCapacityExceededException;
 use App\Models\Checkout;
 use App\Models\Order;
 use App\Models\Product;
 use App\Models\RecipeKit;
 use App\Models\StoreSetting;
 use App\Models\User;
+use App\Services\CheckoutCompletionResult;
 use App\Services\StripePayments;
 use Illuminate\Contracts\Cache\LockTimeoutException;
 use Illuminate\Http\JsonResponse;
@@ -16,7 +17,6 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
@@ -125,34 +125,53 @@ class OrderController extends Controller
             ]);
         }
 
-        try {
-            $order = $payments->completeCheckout($checkout, $intent);
-        } catch (InsufficientStockException $e) {
-            Log::critical("Checkout {$checkout->id} payment {$checkout->stripe_payment_id} succeeded, but stock was insufficient: {$e->getMessage()}. Refunding customer.");
+        $result = $payments->completeOrRefund($checkout, $intent);
 
-            if ($payments->isEnabled() && ! empty($checkout->stripe_payment_id)) {
-                try {
-                    $payments->refundPayment($checkout->stripe_payment_id);
-                } catch (\Throwable $refundError) {
-                    Log::critical("Automatic refund failed for checkout {$checkout->id} payment {$checkout->stripe_payment_id}: {$refundError->getMessage()}");
-                }
-            }
+        if ($response = $this->handleCompletionResult($request, $result)) {
+            return $response;
+        }
 
-            $checkout->delete();
+        throw ValidationException::withMessages([
+            'payment' => "Payment has not completed (status: {$intent->status}).",
+        ]);
+    }
+
+    /**
+     * Process the outcome of a checkout completion attempt, returning an order response
+     * or throwing appropriate validation exceptions with user-friendly refund messaging.
+     *
+     * @throws ValidationException
+     */
+    private function handleCompletionResult(Request $request, CheckoutCompletionResult $result): ?JsonResponse
+    {
+        if ($result->isCompleted()) {
+            return $this->orderResponse($request, $result->order, 200);
+        }
+
+        if ($result->isRefunded()) {
+            $isSlotError = $result->stockException instanceof SlotCapacityExceededException;
+            $message = $isSlotError
+                ? 'The pickup window you selected reached its capacity limit before payment was completed. Your payment has been automatically refunded in full.'
+                : 'One or more items in your cart went out of stock before payment was completed. Your payment has been automatically refunded in full.';
+            $errorCode = $isSlotError ? 'slot_full_refunded' : 'out_of_stock_refunded';
 
             throw ValidationException::withMessages([
-                'payment' => 'One or more items in your cart went out of stock before payment was completed. Your payment has been automatically refunded in full.',
-                'error_code' => 'out_of_stock_refunded',
+                'payment' => $message,
+                'error_code' => $errorCode,
             ]);
         }
 
-        if (! $order) {
+        if ($result->isRefundFailed()) {
+            $isSlotError = $result->stockException instanceof SlotCapacityExceededException;
+            $reason = $isSlotError ? 'the pickup window reached capacity' : 'one or more items went out of stock';
+
             throw ValidationException::withMessages([
-                'payment' => "Payment has not completed (status: {$intent->status}).",
+                'payment' => "Payment was received, but {$reason} before completion. Our automated refund could not be completed immediately, but our support team has been alerted and will process your refund promptly.",
+                'error_code' => 'refund_failed',
             ]);
         }
 
-        return $this->orderResponse($request, $order, 200);
+        return null;
     }
 
     /**
@@ -229,9 +248,10 @@ class OrderController extends Controller
             ]);
         }
 
-        // Paid already (e.g. the confirmation request was lost): finish the order now
-        if ($order = $payments->completeCheckout($checkout, $intent)) {
-            return $this->orderResponse($request, $order, 200);
+        // Paid already (e.g. the confirmation request was lost): finish the order now or handle refund
+        $result = $payments->completeOrRefund($checkout, $intent);
+        if ($response = $this->handleCompletionResult($request, $result)) {
+            return $response;
         }
 
         if (in_array($intent->status, ['requires_payment_method', 'requires_confirmation', 'requires_action'], true)) {
@@ -273,63 +293,61 @@ class OrderController extends Controller
             }
         }
 
-        return DB::transaction(function () use ($validated, $user, $fingerprint, $storeInfo, $result) {
-            $requiredProductQuantities = $result['requiredProductQuantities'];
+        $requiredProductQuantities = $result['requiredProductQuantities'];
 
-            $products = Product::query()
-                ->whereIn('id', array_keys($requiredProductQuantities))
-                ->get()
-                ->keyBy('id');
+        $products = Product::query()
+            ->whereIn('id', array_keys($requiredProductQuantities))
+            ->get()
+            ->keyBy('id');
 
-            foreach ($requiredProductQuantities as $productId => $totalQty) {
-                $product = $products->get($productId);
-                if (! $product) {
-                    throw ValidationException::withMessages(['items' => ['One or more products could not be located.']]);
-                }
-                $currentStock = (int) ($product->stock ?? 0);
-                if ($currentStock < $totalQty) {
-                    throw ValidationException::withMessages([
-                        'items' => ["Insufficient stock for '{$product->name}'. Total requested: {$totalQty}, but only {$currentStock} available."],
-                        'error_code' => 'out_of_stock',
-                    ]);
-                }
+        foreach ($requiredProductQuantities as $productId => $totalQty) {
+            $product = $products->get($productId);
+            if (! $product) {
+                throw ValidationException::withMessages(['items' => ['One or more products could not be located.']]);
             }
+            $currentStock = (int) ($product->stock ?? 0);
+            if ($currentStock < $totalQty) {
+                throw ValidationException::withMessages([
+                    'items' => ["Insufficient stock for '{$product->name}'. Total requested: {$totalQty}, but only {$currentStock} available."],
+                    'error_code' => 'out_of_stock',
+                ]);
+            }
+        }
 
-            $fulfillmentType = $result['fulfillment_type'];
-            $deliveryAddress = $validated['delivery_address'] ?? null;
-            $defaultLocation = $fulfillmentType === 'Home Delivery'
-                ? ($deliveryAddress ?: 'Delivery Address')
-                : ($storeInfo->address.' · '.$storeInfo->name);
+        $fulfillmentType = $result['fulfillment_type'];
+        $deliveryAddress = $validated['delivery_address'] ?? null;
+        $defaultLocation = $fulfillmentType === 'Home Delivery'
+            ? ($deliveryAddress ?: 'Delivery Address')
+            : ($storeInfo->address.' · '.$storeInfo->name);
 
-            return Checkout::create([
-                'user_id' => $user->id,
-                'fingerprint' => $fingerprint,
-                'customer_name' => $user->name,
-                'customer_email' => $user->email,
-                'customer_phone' => $validated['customer_phone'] ?? $user->phone ?? null,
-                'subtotal' => $result['subtotal'],
-                'delivery_fee' => $result['delivery_fee'],
-                'total' => $result['total'],
-                'payment_method' => $validated['payment_method'] ?? 'card',
-                'fulfillment_type' => $fulfillmentType,
-                'pickup_slot' => $result['pickup_slot'],
-                'pickup_location' => $validated['pickup_location'] ?? $defaultLocation,
-                'delivery_address' => $deliveryAddress,
-                'notes' => $validated['notes'] ?? null,
-                'items' => array_map(fn (array $item) => [
-                    'product_id' => $item['catalog_item'] instanceof Product ? $item['catalog_item']->id : null,
-                    'name' => $item['name'],
-                    'size' => $item['size'] ?? ($item['weight'] ?? null),
-                    'unit_price' => $item['price'],
-                    'quantity' => (int) $item['quantity'],
-                    'total_price' => round($item['price'] * (int) $item['quantity'], 2),
-                    'is_subscribed' => ! empty($item['is_subscribed']),
-                    'image' => $item['image'] ?? null,
-                ], $result['resolvedItems']),
-                'reserved_stock' => $requiredProductQuantities,
-                'expires_at' => now()->addMinutes(Checkout::LIFETIME_MINUTES),
-            ]);
-        });
+        return Checkout::create([
+            'user_id' => $user->id,
+            'fingerprint' => $fingerprint,
+            'customer_name' => $user->name,
+            'customer_email' => $user->email,
+            'customer_phone' => $validated['customer_phone'] ?? $user->phone ?? null,
+            'subtotal' => $result['subtotal'],
+            'delivery_fee' => $result['delivery_fee'],
+            'total' => $result['total'],
+            'payment_method' => $validated['payment_method'] ?? 'card',
+            'fulfillment_type' => $fulfillmentType,
+            'pickup_slot' => $result['pickup_slot'],
+            'pickup_location' => $validated['pickup_location'] ?? $defaultLocation,
+            'delivery_address' => $deliveryAddress,
+            'notes' => $validated['notes'] ?? null,
+            'items' => array_map(fn (array $item) => [
+                'product_id' => $item['catalog_item'] instanceof Product ? $item['catalog_item']->id : null,
+                'name' => $item['name'],
+                'size' => $item['size'] ?? ($item['weight'] ?? null),
+                'unit_price' => $item['price'],
+                'quantity' => (int) $item['quantity'],
+                'total_price' => round($item['price'] * (int) $item['quantity'], 2),
+                'is_subscribed' => ! empty($item['is_subscribed']),
+                'image' => $item['image'] ?? null,
+            ], $result['resolvedItems']),
+            'reserved_stock' => $requiredProductQuantities,
+            'expires_at' => now()->addMinutes(Checkout::LIFETIME_MINUTES),
+        ]);
     }
 
     /**

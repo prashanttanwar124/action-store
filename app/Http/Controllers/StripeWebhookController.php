@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers;
 
-use App\Exceptions\InsufficientStockException;
 use App\Models\Checkout;
 use App\Models\Order;
 use App\Services\StripePayments;
@@ -60,14 +59,20 @@ class StripeWebhookController extends Controller
             ];
         }
 
-        match ($event->type) {
-            'payment_intent.succeeded' => $this->handlePaymentIntentSucceeded($event->data->object, $payments),
-            'payment_intent.canceled' => $this->handlePaymentIntentCanceled($event->data->object),
-            'charge.refunded' => $this->handleChargeRefunded($event->data->object),
-            'charge.dispute.created' => $this->handleDisputeCreated($event->data->object),
-            // A declined card (payment_intent.payment_failed) needs no action: the customer can retry the same checkout
-            default => null,
-        };
+        try {
+            match ($event->type) {
+                'payment_intent.succeeded' => $this->handlePaymentIntentSucceeded($event->data->object, $payments),
+                'payment_intent.canceled' => $this->handlePaymentIntentCanceled($event->data->object),
+                'charge.refunded' => $this->handleChargeRefunded($event->data->object),
+                'charge.dispute.created' => $this->handleDisputeCreated($event->data->object),
+                // A declined card (payment_intent.payment_failed) needs no action: the customer can retry the same checkout
+                default => null,
+            };
+        } catch (\RuntimeException $e) {
+            Log::error("Stripe webhook processing failed: {$e->getMessage()}");
+
+            return response()->json(['error' => $e->getMessage()], 500);
+        }
 
         return response()->json(['received' => true]);
     }
@@ -84,29 +89,27 @@ class StripeWebhookController extends Controller
 
         $checkout = $this->findCheckoutForIntent($intent);
         if ($checkout) {
-            try {
-                $order = $payments->completeCheckout($checkout, $intent);
-            } catch (InsufficientStockException $e) {
-                Log::critical("Stripe webhook: Checkout {$checkout->id} payment {$paymentIntentId} succeeded, but stock was insufficient: {$e->getMessage()}. Auto-refunding customer.");
+            $result = $payments->completeOrRefund($checkout, $intent);
 
-                if ($payments->isEnabled()) {
-                    try {
-                        $payments->refundPayment($paymentIntentId);
-                    } catch (\Throwable $refundError) {
-                        Log::critical("Stripe webhook: Automatic refund failed for {$paymentIntentId}: {$refundError->getMessage()}");
-                    }
-                }
-
-                $checkout->delete();
+            if ($result->isCompleted()) {
+                Log::info("Stripe webhook: Created order {$result->order->order_number} for payment {$paymentIntentId}");
 
                 return;
             }
 
-            if ($order) {
-                Log::info("Stripe webhook: Created order {$order->order_number} for payment {$paymentIntentId}");
-            } else {
-                Log::critical("Stripe webhook: Payment {$paymentIntentId} does not match checkout {$checkout->id} (amount, currency or checkout mismatch).");
+            if ($result->isRefunded()) {
+                Log::critical("Stripe webhook: Checkout {$checkout->id} payment {$paymentIntentId} succeeded, but items/slot unavailable: {$result->stockException?->getMessage()}. Auto-refunded customer.");
+
+                return;
             }
+
+            if ($result->isRefundFailed()) {
+                Log::critical("Stripe webhook: Automatic refund failed for {$paymentIntentId}: {$result->refundError?->getMessage()}");
+
+                throw new \RuntimeException("Automatic refund failed for {$paymentIntentId}: {$result->refundError?->getMessage()}");
+            }
+
+            Log::critical("Stripe webhook: Payment {$paymentIntentId} does not match checkout {$checkout->id} (amount, currency or checkout mismatch).");
 
             return;
         }
@@ -123,6 +126,8 @@ class StripeWebhookController extends Controller
                 $payments->refundPayment($paymentIntentId);
             } catch (\Throwable $e) {
                 Log::critical("Stripe webhook: Refund of orphaned payment {$paymentIntentId} failed: {$e->getMessage()}");
+
+                throw new \RuntimeException("Refund of orphaned payment {$paymentIntentId} failed: {$e->getMessage()}");
             }
         }
     }
