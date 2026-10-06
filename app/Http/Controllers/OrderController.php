@@ -148,6 +148,13 @@ class OrderController extends Controller
             return $this->orderResponse($request, $result->order, 200);
         }
 
+        if ($result->isAlreadyHandled()) {
+            throw ValidationException::withMessages([
+                'payment' => 'This checkout has already been processed.',
+                'error_code' => 'already_processed',
+            ]);
+        }
+
         if ($result->isRefunded()) {
             $isSlotError = $result->stockException instanceof SlotCapacityExceededException;
             $message = $isSlotError
@@ -166,7 +173,7 @@ class OrderController extends Controller
             $reason = $isSlotError ? 'the pickup window reached capacity' : 'one or more items went out of stock';
 
             throw ValidationException::withMessages([
-                'payment' => "Payment was received, but {$reason} before completion. Our automated refund could not be completed immediately, but our support team has been alerted and will process your refund promptly.",
+                'payment' => "Payment was received, but {$reason} before completion. We were unable to process an automated refund immediately, but our system will retry automatically. Please contact support if you do not see your refund within 24 hours.",
                 'error_code' => 'refund_failed',
             ]);
         }
@@ -332,6 +339,7 @@ class OrderController extends Controller
             'payment_method' => $validated['payment_method'] ?? 'card',
             'fulfillment_type' => $fulfillmentType,
             'pickup_slot' => $result['pickup_slot'],
+            'capacity_slot' => $result['capacity_slot'] ?? null,
             'pickup_location' => $validated['pickup_location'] ?? $defaultLocation,
             'delivery_address' => $deliveryAddress,
             'notes' => $validated['notes'] ?? null,
@@ -471,7 +479,7 @@ class OrderController extends Controller
             }
         }
 
-        $pickupSlot = $this->pickupSlot($validated, $storeInfo, $fulfillmentType);
+        [$pickupSlot, $capacitySlot] = $this->resolvePickupSlot($validated, $storeInfo, $fulfillmentType);
         $total = max(0, round($subtotal + $deliveryFee, 2));
 
         return [
@@ -479,6 +487,7 @@ class OrderController extends Controller
             'delivery_fee' => $deliveryFee,
             'total' => $total,
             'pickup_slot' => $pickupSlot,
+            'capacity_slot' => $capacitySlot,
             'fulfillment_type' => $fulfillmentType,
             'resolvedItems' => $resolvedItems,
             'requiredProductQuantities' => $requiredProductQuantities,
@@ -486,11 +495,12 @@ class OrderController extends Controller
     }
 
     /**
-     * Build a fulfillment label from validated choices and current store settings.
+     * Build fulfillment and capacity slot labels from validated choices and current store settings.
      *
      * @param  array<string, mixed>  $data
+     * @return array{0: string, 1: ?string}
      */
-    private function pickupSlot(array $data, StoreSetting $storeInfo, string $fulfillmentType): string
+    private function resolvePickupSlot(array $data, StoreSetting $storeInfo, string $fulfillmentType): array
     {
         if ($fulfillmentType === 'Home Delivery') {
             if (! $storeInfo->is_delivery_active) {
@@ -507,7 +517,7 @@ class OrderController extends Controller
                 ]);
             }
 
-            return 'Home Delivery · '.$storeInfo->delivery_estimated_time;
+            return ['Home Delivery · '.$storeInfo->delivery_estimated_time, null];
         }
 
         if (! $storeInfo->is_pickup_active) {
@@ -543,7 +553,7 @@ class OrderController extends Controller
                 ]);
             }
 
-            return "ASAP (Ready in ~{$storeInfo->effective_prep_time_minutes} mins)";
+            return ["ASAP (Ready in ~{$storeInfo->effective_prep_time_minutes} mins)", null];
         }
 
         if (($data['pickup_timing_mode'] ?? null) === 'scheduled') {
@@ -559,6 +569,7 @@ class OrderController extends Controller
 
             $time = $data['pickup_time'] ?? '';
             $label = '';
+            $capacitySlot = null;
             if ($data['pickup_timing_type'] === 'slot') {
                 $slot = collect($storeInfo->available_pickup_slots)->firstWhere('label', $data['pickup_slot'] ?? '');
                 if (! $slot || ! preg_match('/^(\d{1,2}):(\d{2}) (AM|PM)/', $slot['label'], $parts)) {
@@ -570,6 +581,7 @@ class OrderController extends Controller
                 $hour = ((int) $parts[1] % 12) + ($parts[3] === 'PM' ? 12 : 0);
                 $time = sprintf('%02d:%02d', $hour, (int) $parts[2]);
                 $label = $slot['label'];
+                $capacitySlot = "{$date} · {$slot['label']}";
 
                 // Check slot capacity limit: placed orders
                 $maxCapacity = (int) ($storeInfo->max_orders_per_slot ?? 0);
@@ -606,14 +618,16 @@ class OrderController extends Controller
                 ]);
             }
 
-            return $date.' · '.($label ?: $pickupAt->format('g:i A').' (Custom Time)');
+            $displaySlot = $date.' · '.($label ?: $pickupAt->format('g:i A').' (Custom Time)');
+
+            return [$displaySlot, $capacitySlot];
         }
 
         if (! empty($data['pickup_slot'])) {
-            return $data['pickup_slot'];
+            return [$data['pickup_slot'], null];
         }
 
-        return "ASAP (Ready in ~{$storeInfo->effective_prep_time_minutes} mins)";
+        return ["ASAP (Ready in ~{$storeInfo->effective_prep_time_minutes} mins)", null];
     }
 
     /**

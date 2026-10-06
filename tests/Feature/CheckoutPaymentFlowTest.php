@@ -298,7 +298,7 @@ class CheckoutPaymentFlowTest extends TestCase
         ]);
 
         $checkout = $this->checkoutFor($this->user);
-        $checkout->update(['pickup_slot' => $slotString]);
+        $checkout->update(['pickup_slot' => $slotString, 'capacity_slot' => $slotString]);
 
         // Another customer completed an order in this slot while user was entering payment details
         Order::factory()->create(['pickup_slot' => $slotString, 'status' => 'confirmed']);
@@ -354,7 +354,7 @@ class CheckoutPaymentFlowTest extends TestCase
 
         $response->assertStatus(422)->assertJsonValidationErrors(['payment']);
         $this->assertEquals('refund_failed', $response->json('errors.error_code.0'));
-        $this->assertStringContainsString('support team has been alerted', $response->json('errors.payment.0'));
+        $this->assertStringContainsString('contact support if you do not see your refund', $response->json('errors.payment.0'));
         $this->assertModelExists($checkout);
         $this->assertEquals(0, Order::count());
     }
@@ -452,6 +452,58 @@ class CheckoutPaymentFlowTest extends TestCase
 
         $this->assertEquals('confirmed', $order->fresh()->status);
         $this->assertEquals(10, $this->product->fresh()->stock);
+    }
+
+    public function test_home_delivery_orders_succeed_even_when_exceeding_max_orders_per_slot(): void
+    {
+        StoreSetting::current()->update([
+            'max_orders_per_slot' => 15,
+            'is_delivery_active' => true,
+            'delivery_days' => [strtolower(now()->format('l'))],
+            'delivery_fee' => 0.00,
+        ]);
+
+        // Create 16 historical delivery orders with the default delivery slot label
+        Order::factory()->count(16)->create([
+            'fulfillment_type' => 'Home Delivery',
+            'pickup_slot' => 'Home Delivery · Same Day 5:00 PM – 8:00 PM',
+            'status' => 'confirmed',
+        ]);
+
+        $this->assertEquals(16, Order::count());
+
+        $checkout = $this->checkoutFor($this->user);
+        $checkout->update([
+            'fulfillment_type' => 'Home Delivery',
+            'pickup_slot' => 'Home Delivery · Same Day 5:00 PM – 8:00 PM',
+            'capacity_slot' => null,
+            'delivery_address' => '123 Main St, Edison, NJ',
+        ]);
+
+        $this->fakeStripe(function (MockInterface $mock) use ($checkout) {
+            $mock->shouldReceive('retrieveIntent')->once()->andReturn($this->paidIntent($checkout));
+        });
+
+        $response = $this->actingAs($this->user)->postJson('/checkout/complete', ['checkout_id' => $checkout->id]);
+
+        $response->assertOk();
+        $this->assertEquals(17, Order::count());
+        $this->assertModelMissing($checkout);
+    }
+
+    public function test_complete_or_refund_returns_already_handled_when_checkout_missing_and_no_order(): void
+    {
+        $checkout = $this->checkoutFor($this->user);
+        $intent = $this->paidIntent($checkout);
+
+        // Delete checkout (as if a concurrent webhook already handled and removed it)
+        $checkout->delete();
+
+        $payments = app(StripePayments::class);
+        $result = $payments->completeOrRefund($checkout, $intent);
+
+        $this->assertTrue($result->isAlreadyHandled());
+        $this->assertFalse($result->isCompleted());
     }
 
     /**

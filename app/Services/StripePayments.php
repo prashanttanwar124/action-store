@@ -126,18 +126,6 @@ class StripePayments
     }
 
     /**
-     * Turn a checkout into an order if the PaymentIntent is a verified, exact payment for it.
-     */
-    public function completeCheckout(Checkout $checkout, object $intent): ?Order
-    {
-        if (! $this->intentPaysFor($intent, $checkout)) {
-            return null;
-        }
-
-        return $checkout->convertToOrder($intent->id);
-    }
-
-    /**
      * Complete a checkout into an order, or automatically refund the customer
      * if stock or slot capacity is exhausted, preserving the checkout on refund failure.
      */
@@ -155,6 +143,9 @@ class StripePayments
                 if ($existingOrder) {
                     return CheckoutCompletionResult::completed($existingOrder);
                 }
+
+                // If checkout was already handled (e.g. refunded and deleted) by another thread
+                return CheckoutCompletionResult::alreadyHandled();
             }
 
             return CheckoutCompletionResult::completed($order);
@@ -210,7 +201,7 @@ class StripePayments
                     return self::PAID;
                 }
 
-                if ($result->isRefunded()) {
+                if ($result->isRefunded() || $result->isAlreadyHandled()) {
                     return self::RELEASED;
                 }
 

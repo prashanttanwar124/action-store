@@ -33,6 +33,7 @@ class CheckoutFactory extends Factory
             'payment_method' => 'card',
             'fulfillment_type' => 'Store Pickup',
             'pickup_slot' => 'ASAP (Ready in ~15 mins)',
+            'capacity_slot' => null,
             'pickup_location' => 'Masala Mart — Edison',
             'items' => [],
             'reserved_stock' => [],

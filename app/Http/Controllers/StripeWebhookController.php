@@ -97,8 +97,8 @@ class StripeWebhookController extends Controller
                 return;
             }
 
-            if ($result->isRefunded()) {
-                Log::critical("Stripe webhook: Checkout {$checkout->id} payment {$paymentIntentId} succeeded, but items/slot unavailable: {$result->stockException?->getMessage()}. Auto-refunded customer.");
+            if ($result->isRefunded() || $result->isAlreadyHandled()) {
+                Log::critical("Stripe webhook: Checkout {$checkout->id} payment {$paymentIntentId} succeeded, but items/slot unavailable or already handled: {$result->stockException?->getMessage()}. Handled/Auto-refunded.");
 
                 return;
             }

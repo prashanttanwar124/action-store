@@ -43,6 +43,7 @@ class Checkout extends Model
         'payment_method',
         'fulfillment_type',
         'pickup_slot',
+        'capacity_slot',
         'pickup_location',
         'delivery_address',
         'notes',
@@ -185,20 +186,25 @@ class Checkout extends Model
             }
 
             // Check pickup slot capacity inside transaction to prevent overbooking races
-            $storeInfo = StoreSetting::current();
-            $maxCapacity = (int) ($storeInfo->max_orders_per_slot ?? 0);
-            if ($maxCapacity > 0 && $locked->pickup_slot && ! str_contains($locked->pickup_slot, 'ASAP') && ! str_contains($locked->pickup_slot, 'Custom Time')) {
-                $bookedCount = Order::query()
-                    ->where('pickup_slot', 'LIKE', "{$locked->pickup_slot}%")
-                    ->where('status', '!=', 'cancelled')
-                    ->lockForUpdate()
-                    ->count();
+            if (! empty($locked->capacity_slot)) {
+                $storeInfo = StoreSetting::current();
+                $maxCapacity = (int) ($storeInfo->max_orders_per_slot ?? 0);
+                if ($maxCapacity > 0) {
+                    if ($storeInfo->id) {
+                        StoreSetting::whereKey($storeInfo->id)->lockForUpdate()->first();
+                    }
 
-                if ($bookedCount >= $maxCapacity) {
-                    throw new SlotCapacityExceededException(
-                        "The pickup window ({$locked->pickup_slot}) is no longer available as capacity was reached.",
-                        $locked->pickup_slot
-                    );
+                    $bookedCount = Order::query()
+                        ->where('pickup_slot', 'LIKE', "{$locked->capacity_slot}%")
+                        ->where('status', '!=', 'cancelled')
+                        ->count();
+
+                    if ($bookedCount >= $maxCapacity) {
+                        throw new SlotCapacityExceededException(
+                            "The pickup window ({$locked->capacity_slot}) is no longer available as capacity was reached.",
+                            $locked->capacity_slot
+                        );
+                    }
                 }
             }
 

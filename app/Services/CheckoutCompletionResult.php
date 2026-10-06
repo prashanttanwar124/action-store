@@ -17,6 +17,8 @@ class CheckoutCompletionResult
 
     public const NOT_PAID = 'not_paid';
 
+    public const ALREADY_HANDLED = 'already_handled';
+
     public function __construct(
         public readonly string $status,
         public readonly ?Order $order = null,
@@ -45,6 +47,11 @@ class CheckoutCompletionResult
         return new self(self::NOT_PAID);
     }
 
+    public static function alreadyHandled(): self
+    {
+        return new self(self::ALREADY_HANDLED);
+    }
+
     public function isCompleted(): bool
     {
         return $this->status === self::COMPLETED;
@@ -63,5 +70,10 @@ class CheckoutCompletionResult
     public function isNotPaid(): bool
     {
         return $this->status === self::NOT_PAID;
+    }
+
+    public function isAlreadyHandled(): bool
+    {
+        return $this->status === self::ALREADY_HANDLED;
     }
 }
