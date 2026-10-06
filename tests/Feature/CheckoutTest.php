@@ -18,6 +18,7 @@ class CheckoutTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+        $this->travelTo(now()->setTime(14, 0));
         $this->user = User::factory()->create([
             'name' => 'Aarav Patel',
             'email' => 'aarav@example.com',
@@ -69,7 +70,7 @@ class CheckoutTest extends TestCase
                 ],
             ],
             'payment_method' => 'apple-pay',
-            'pickup_slot' => 'Today 6–7 pm',
+            'pickup_timing_mode' => 'asap',
         ];
 
         $response = $this->actingAs($this->user)->postJson('/checkout', $payload);

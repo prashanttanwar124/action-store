@@ -17,6 +17,7 @@ class CheckoutValidationTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+        $this->travelTo(now()->setTime(14, 0));
 
         $user = User::factory()->create();
         $this->actingAs($user);
@@ -315,6 +316,39 @@ class CheckoutValidationTest extends TestCase
         $response2->assertInvalid(['pickup_slot']);
         $this->assertEquals('slot_full', $response2->json('errors.error_code.0'));
         $this->assertDatabaseCount('orders', 1); // No 2nd order created!
+    }
+
+    public function test_omitting_pickup_timing_mode_with_custom_pickup_slot_is_rejected(): void
+    {
+        $product = Product::factory()->create(['price' => 15.00]);
+
+        $response = $this->postJson('/checkout', [
+            'items' => [['id' => $product->id, 'name' => $product->name, 'price' => 15.00, 'quantity' => 1]],
+            'fulfillment_type' => 'Store Pickup',
+            'pickup_slot' => 'Bypassed Slot Label',
+        ]);
+
+        $response->assertUnprocessable();
+        $response->assertInvalid(['pickup_timing_mode']);
+        $this->assertEquals('timing_mode_required', $response->json('errors.error_code.0'));
+        $this->assertDatabaseCount('orders', 0);
+    }
+
+    public function test_omitting_pickup_timing_mode_outside_store_hours_is_rejected(): void
+    {
+        // 11:30 PM (after store close)
+        $this->travelTo(now()->setTime(23, 30));
+        $product = Product::factory()->create(['price' => 10]);
+
+        $response = $this->postJson('/checkout', [
+            'items' => [['id' => $product->id, 'name' => $product->name, 'price' => 10, 'quantity' => 1]],
+            'fulfillment_type' => 'Store Pickup',
+            // Omitting pickup_timing_mode defaults to asap and must check store hours
+        ]);
+
+        $response->assertStatus(422)
+            ->assertJsonValidationErrors(['pickup_timing_mode']);
+        $this->assertEquals('slot_expired', $response->json('errors.error_code.0'));
     }
 
     /**

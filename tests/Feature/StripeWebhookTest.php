@@ -268,6 +268,41 @@ class StripeWebhookTest extends TestCase
         $this->assertModelExists($checkout);
     }
 
+    public function test_webhook_does_not_refund_when_order_already_created_for_deleted_checkout(): void
+    {
+        $order = Order::factory()->create([
+            'status' => 'confirmed',
+            'stripe_payment_id' => 'pi_concurrent_confirmed_123',
+            'total' => 20.00,
+        ]);
+
+        // Mock StripePayments so refundPayment is NEVER called
+        $this->partialMock(StripePayments::class, function (MockInterface $mock) {
+            $mock->shouldReceive('isEnabled')->andReturn(true);
+            $mock->shouldReceive('refundPayment')->never();
+        });
+
+        // The checkout is missing (already converted and deleted), but metadata has checkout_id
+        $payload = [
+            'type' => 'payment_intent.succeeded',
+            'data' => [
+                'object' => [
+                    'id' => 'pi_concurrent_confirmed_123',
+                    'status' => 'succeeded',
+                    'amount_received' => 2000,
+                    'currency' => 'cad',
+                    'metadata' => ['checkout_id' => '999999'],
+                ],
+            ],
+        ];
+
+        $response = $this->postJson('/stripe/webhook', $payload);
+
+        $response->assertStatus(200)->assertJson(['received' => true]);
+        $this->assertEquals(1, Order::where('stripe_payment_id', 'pi_concurrent_confirmed_123')->count());
+        $this->assertEquals('confirmed', $order->fresh()->status);
+    }
+
     /**
      * @return array<string, mixed>
      */

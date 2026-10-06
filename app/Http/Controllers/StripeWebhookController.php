@@ -119,6 +119,14 @@ class StripeWebhookController extends Controller
             return;
         }
 
+        // Before treating this payment as an orphan and refunding, check if an order already exists
+        // (for example, if browser confirmation converted the checkout to an order between the initial check and checkout lookup)
+        if (Order::where('stripe_payment_id', $paymentIntentId)->exists()) {
+            Log::info("Stripe webhook: Order already exists for payment {$paymentIntentId}. Skipping orphan refund.");
+
+            return;
+        }
+
         // The checkout was released before this payment landed: give the money back
         Log::critical("Stripe webhook: Payment {$paymentIntentId} succeeded but its checkout no longer exists. Refunding.");
         if ($payments->isEnabled()) {

@@ -30,6 +30,7 @@ class CheckoutPaymentFlowTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+        $this->travelTo(now()->setTime(14, 0));
 
         Event::fake([OrderPlaced::class]);
 
@@ -504,6 +505,44 @@ class CheckoutPaymentFlowTest extends TestCase
 
         $this->assertTrue($result->isAlreadyHandled());
         $this->assertFalse($result->isCompleted());
+    }
+
+    public function test_resuming_unpaid_checkout_rejects_stale_pickup_time_and_releases_checkout(): void
+    {
+        $this->travelTo(now()->setTime(14, 0));
+        $store = StoreSetting::current();
+        $store->update(['prep_time_minutes' => 15]);
+
+        $this->fakeStripe(function (MockInterface $mock) {
+            $mock->shouldReceive('createIntentFor')->once()->andReturn($this->newIntent('pi_stale_schedule_123'));
+            $mock->shouldReceive('retrieveIntent')->once()->with('pi_stale_schedule_123')->andReturn($this->newIntent('pi_stale_schedule_123'));
+            $mock->shouldReceive('cancelIntent')->once()->with('pi_stale_schedule_123')->andReturn(PaymentIntent::constructFrom(['id' => 'pi_stale_schedule_123', 'status' => 'canceled']));
+        });
+
+        $payload = array_replace($this->checkoutPayload(), [
+            'pickup_timing_mode' => 'scheduled',
+            'pickup_timing_type' => 'custom',
+            'pickup_date' => now()->toDateString(),
+            'pickup_time' => '14:30',
+        ]);
+
+        // 1. Initial checkout at 14:00 with pickup at 14:30 succeeds
+        $first = $this->actingAs($this->user)->postJson('/checkout', $payload);
+        $first->assertStatus(201);
+        $this->assertDatabaseHas('checkouts', ['stripe_payment_id' => 'pi_stale_schedule_123']);
+
+        // 2. Fast forward time past the preparation threshold (e.g. 14:25, leaving only 5 mins prep)
+        $this->travelTo(now()->setTime(14, 25));
+
+        // 3. Customer attempts to resume / retry payment with the same stale scheduled time
+        $retry = $this->actingAs($this->user)->postJson('/checkout', $payload);
+
+        $retry->assertStatus(422)
+            ->assertJsonValidationErrors(['pickup_time']);
+        $this->assertEquals('slot_expired', $retry->json('errors.error_code.0'));
+
+        // Checkout must be released
+        $this->assertDatabaseMissing('checkouts', ['stripe_payment_id' => 'pi_stale_schedule_123']);
     }
 
     /**

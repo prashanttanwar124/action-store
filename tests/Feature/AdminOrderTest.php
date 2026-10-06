@@ -21,6 +21,7 @@ class AdminOrderTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+        $this->travelTo(now()->setTime(14, 0));
         $this->seed(AdminSeeder::class);
     }
 
@@ -115,7 +116,7 @@ class AdminOrderTest extends TestCase
             ],
             'payment_method' => 'card',
             'fulfillment_type' => 'Store Pickup',
-            'pickup_slot' => 'Today 4–5 pm',
+            'pickup_timing_mode' => 'asap',
             'pickup_location' => 'Masala Mart — Edison',
             'customer_name' => 'Kavita Sharma',
             'customer_email' => 'kavita@example.com',

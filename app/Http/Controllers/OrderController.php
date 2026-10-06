@@ -192,7 +192,7 @@ class OrderController extends Controller
         $existing = Checkout::where('user_id', $user->id)->first();
 
         if ($existing && $existing->fingerprint === $fingerprint) {
-            $response = $this->resumeCheckout($request, $existing, $payments);
+            $response = $this->resumeCheckout($request, $existing, $payments, $validated);
             if ($response) {
                 return $response;
             }
@@ -236,8 +236,10 @@ class OrderController extends Controller
      * Pick up an existing checkout for the same cart.
      *
      * Returns null when the checkout could not be resumed and was released, so a new one should be started.
+     *
+     * @param  array<string, mixed>  $validated
      */
-    private function resumeCheckout(Request $request, Checkout $checkout, StripePayments $payments): JsonResponse|RedirectResponse|null
+    private function resumeCheckout(Request $request, Checkout $checkout, StripePayments $payments, array $validated): JsonResponse|RedirectResponse|null
     {
         if (empty($checkout->stripe_payment_id) || ! $payments->isEnabled()) {
             $checkout->release();
@@ -262,6 +264,22 @@ class OrderController extends Controller
         }
 
         if (in_array($intent->status, ['requires_payment_method', 'requires_confirmation', 'requires_action'], true)) {
+            // Revalidate pickup schedule to prevent resuming with expired or overbooked slots
+            try {
+                $storeInfo = StoreSetting::current();
+                $fulfillmentType = $validated['fulfillment_type'] ?? 'Store Pickup';
+                [$pickupSlot, $capacitySlot] = $this->resolvePickupSlot($validated, $storeInfo, $fulfillmentType);
+                $checkout->update([
+                    'pickup_slot' => $pickupSlot,
+                    'capacity_slot' => $capacitySlot,
+                ]);
+            } catch (ValidationException $e) {
+                Log::info("Checkout {$checkout->id} pickup schedule is stale upon resumption: {$e->getMessage()}. Releasing checkout.");
+                $payments->releaseCheckout($checkout);
+
+                throw $e;
+            }
+
             $checkout->extendLifetime();
 
             return $this->checkoutResponse($checkout, $intent->client_secret, 200);
@@ -527,7 +545,19 @@ class OrderController extends Controller
             ]);
         }
 
-        $targetDay = ($data['pickup_timing_mode'] ?? null) === 'scheduled' ? ($data['pickup_date'] ?? 'today') : 'today';
+        $timingMode = $data['pickup_timing_mode'] ?? null;
+
+        // If pickup_slot was provided without scheduled timing mode, it cannot bypass validation
+        if (! empty($data['pickup_slot']) && $timingMode !== 'scheduled') {
+            throw ValidationException::withMessages([
+                'pickup_timing_mode' => 'Pickup timing mode must be scheduled when selecting a pickup slot.',
+                'error_code' => 'timing_mode_required',
+            ]);
+        }
+
+        $timingMode ??= 'asap';
+
+        $targetDay = $timingMode === 'scheduled' ? ($data['pickup_date'] ?? 'today') : 'today';
         if (! $storeInfo->isPickupAvailableOn($targetDay)) {
             $days = implode(', ', array_map('ucfirst', (array) ($storeInfo->pickup_days ?? [])));
             throw ValidationException::withMessages([
@@ -536,7 +566,7 @@ class OrderController extends Controller
             ]);
         }
 
-        if (isset($data['pickup_timing_mode']) && $data['pickup_timing_mode'] === 'asap') {
+        if ($timingMode === 'asap') {
             $tz = config('app.timezone');
             $now = now($tz);
             $currentTime = $now->format('H:i');
@@ -556,10 +586,10 @@ class OrderController extends Controller
             return ["ASAP (Ready in ~{$storeInfo->effective_prep_time_minutes} mins)", null];
         }
 
-        if (($data['pickup_timing_mode'] ?? null) === 'scheduled') {
+        if ($timingMode === 'scheduled') {
             $tz = config('app.timezone');
             $now = now($tz);
-            $date = $data['pickup_date'];
+            $date = $data['pickup_date'] ?? null;
             if (! in_array($date, [$now->toDateString(), $now->copy()->addDay()->toDateString()], true)) {
                 throw ValidationException::withMessages([
                     'pickup_date' => 'Choose today or tomorrow for pickup.',
@@ -570,7 +600,7 @@ class OrderController extends Controller
             $time = $data['pickup_time'] ?? '';
             $label = '';
             $capacitySlot = null;
-            if ($data['pickup_timing_type'] === 'slot') {
+            if (($data['pickup_timing_type'] ?? '') === 'slot') {
                 $slot = collect($storeInfo->available_pickup_slots)->firstWhere('label', $data['pickup_slot'] ?? '');
                 if (! $slot || ! preg_match('/^(\d{1,2}):(\d{2}) (AM|PM)/', $slot['label'], $parts)) {
                     throw ValidationException::withMessages([
@@ -623,11 +653,10 @@ class OrderController extends Controller
             return [$displaySlot, $capacitySlot];
         }
 
-        if (! empty($data['pickup_slot'])) {
-            return [$data['pickup_slot'], null];
-        }
-
-        return ["ASAP (Ready in ~{$storeInfo->effective_prep_time_minutes} mins)", null];
+        throw ValidationException::withMessages([
+            'pickup_timing_mode' => 'Invalid pickup timing mode.',
+            'error_code' => 'timing_mode_invalid',
+        ]);
     }
 
     /**
