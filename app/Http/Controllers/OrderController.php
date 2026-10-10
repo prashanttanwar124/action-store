@@ -408,7 +408,7 @@ class OrderController extends Controller
                 'unit_price' => $item['price'],
                 'quantity' => (int) $item['quantity'],
                 'total_price' => round($item['price'] * (int) $item['quantity'], 2),
-                'is_subscribed' => ! empty($item['is_subscribed']),
+                'is_subscribed' => false,
                 'image' => $item['image'] ?? null,
             ], $result['resolvedItems']),
             'reserved_stock' => $result['requiredProductQuantities'],
@@ -502,12 +502,7 @@ class OrderController extends Controller
                 throw ValidationException::withMessages(["items.{$index}.id" => 'This item is no longer available. Please update your cart.']);
             }
 
-            $isSubscribed = ! empty($item['is_subscribed']);
-            if ($isSubscribed && ! ($catalogItem instanceof Product && $catalogItem->has_subscription)) {
-                throw ValidationException::withMessages(["items.{$index}.is_subscribed" => 'This item is not eligible for subscription pricing.']);
-            }
-
-            $unitPrice = round($catalogItem->price * ($isSubscribed ? 0.95 : 1), 2);
+            $unitPrice = round($catalogItem->price, 2);
             $quantity = (int) $item['quantity'];
 
             if ($catalogItem instanceof Product) {

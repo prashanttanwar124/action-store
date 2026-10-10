@@ -28,7 +28,6 @@ export const useStore = defineStore('masalaStore', () => {
   const currentUserId = ref(null);
   const isInitialized = ref(false);
   const cart = ref([]);
-  const subscriptions = ref([]);
   const pastOrders = ref([]);
   const masalaPoints = ref(0);
 
@@ -79,7 +78,6 @@ export const useStore = defineStore('masalaStore', () => {
             const existing = userCart.find(u => u.id === gItem.id);
             if (existing) {
               existing.quantity += gItem.quantity;
-              if (gItem.isSubscribed) existing.isSubscribed = true;
             } else {
               userCart.push(gItem);
             }
@@ -90,16 +88,14 @@ export const useStore = defineStore('masalaStore', () => {
       cart.value = userCart;
       saveUserStorage(`masala_cart_user_${newUserId}`, cart.value);
 
-      // Load user-specific points, past orders, and subscriptions
+      // Load user-specific points and past orders
       masalaPoints.value = loadUserStorage(`masala_points_user_${newUserId}`, 0);
       pastOrders.value = loadUserStorage(`masala_orders_user_${newUserId}`, []);
-      subscriptions.value = loadUserStorage(`masala_subs_user_${newUserId}`, []);
     } else {
       // Guest mode
       cart.value = loadUserStorage('masala_cart_guest', []);
       masalaPoints.value = 0;
       pastOrders.value = [];
-      subscriptions.value = [];
     }
 
     isInitialized.value = true;
@@ -128,12 +124,6 @@ export const useStore = defineStore('masalaStore', () => {
   watch(pastOrders, (newVal) => {
     if (currentUserId.value) {
       saveUserStorage(`masala_orders_user_${currentUserId.value}`, newVal);
-    }
-  }, { deep: true });
-
-  watch(subscriptions, (newVal) => {
-    if (currentUserId.value) {
-      saveUserStorage(`masala_subs_user_${currentUserId.value}`, newVal);
     }
   }, { deep: true });
 
@@ -171,7 +161,6 @@ export const useStore = defineStore('masalaStore', () => {
         cookingTime: item.cooking_time || item.cookingTime,
         isRecipeKit: !!(item.is_recipe_kit || item.isRecipeKit),
         buyAgain: !!(item.buy_again || item.buyAgain),
-        hasSubscribeAndSave: !!(item.has_subscription || item.hasSubscribeAndSave),
         label: item.photo_label || item.photoLabel || item.slug,
         frequentlyBoughtTogether: item.frequently_bought_together || item.frequentlyBoughtTogether || [],
         recipeIngredients: item.recipe_ingredients || item.recipeIngredients || [],
@@ -224,11 +213,7 @@ export const useStore = defineStore('masalaStore', () => {
       const slug = prod ? prod.slug : (item.slug || String(item.id));
       const category = prod ? prod.category : (item.category || 'grocery');
       const originalPrice = prod ? prod.originalPrice : Number(item.originalPrice || price);
-
-      let unitCost = price;
-      if (item.isSubscribed) {
-        unitCost = Number((price * 0.95).toFixed(2));
-      }
+      const unitCost = price;
 
       return {
         id: item.id,
@@ -237,7 +222,6 @@ export const useStore = defineStore('masalaStore', () => {
         image,
         category,
         quantity: item.quantity,
-        isSubscribed: !!item.isSubscribed,
         unitCost,
         price: unitCost,
         originalPrice,
@@ -265,10 +249,6 @@ export const useStore = defineStore('masalaStore', () => {
     return Number(cartItems.value.reduce((sum, item) => sum + item.total, 0).toFixed(2));
   });
 
-  const subscribeSavings = computed(() => {
-    return Number((rawSubtotal.value - subtotal.value).toFixed(2));
-  });
-
   const total = computed(() => {
     return subtotal.value;
   });
@@ -290,16 +270,14 @@ export const useStore = defineStore('masalaStore', () => {
     return getQuantity(productId);
   }
 
-  function addToCart(itemOrId, count = 1, isSub = false) {
+  function addToCart(itemOrId, count = 1) {
     let id = itemOrId;
-    let sub = isSub;
     let qty = count;
     const itemObj = (typeof itemOrId === 'object' && itemOrId !== null) ? itemOrId : null;
 
     if (itemObj) {
       id = itemObj.id || itemObj.slug;
       if (itemObj.quantity) qty = itemObj.quantity;
-      if (itemObj.isSubscribed !== undefined) sub = itemObj.isSubscribed;
     }
 
     const resolvedId = resolveProductId(id);
@@ -307,7 +285,6 @@ export const useStore = defineStore('masalaStore', () => {
 
     if (existing) {
       existing.quantity += qty;
-      if (sub) existing.isSubscribed = true;
     } else {
       const prod = products.value.find(p => p.id === resolvedId || p.slug === id);
       cart.value.push({
@@ -319,7 +296,6 @@ export const useStore = defineStore('masalaStore', () => {
         image: itemObj?.image || prod?.image || '/images/products/atta.jpg',
         size: itemObj?.size || itemObj?.weight || prod?.sizeMain || '',
         quantity: qty,
-        isSubscribed: sub,
       });
     }
   }
@@ -356,21 +332,6 @@ export const useStore = defineStore('masalaStore', () => {
     }
   }
 
-  function toggleSubscription(subId) {
-    const sub = subscriptions.value.find(s => s.id === subId);
-    if (sub) {
-      sub.status = sub.status === 'active' ? 'paused' : 'active';
-      sub.nextDate = sub.status === 'active' ? 'Next Month' : 'Paused';
-    }
-  }
-
-  function skipSubscription(subId) {
-    const sub = subscriptions.value.find(s => s.id === subId);
-    if (sub) {
-      sub.nextDate = 'Skipped · Next Month';
-    }
-  }
-
   function getProductBySlug(slug) {
     if (!slug) return null;
     return products.value.find(p => p.slug === slug || String(p.id) === String(slug)) || null;
@@ -387,13 +348,11 @@ export const useStore = defineStore('masalaStore', () => {
     products,
     impulseItems,
     recipeKits,
-    subscriptions,
     pastOrders,
     cart,
     cartItems,
     totalItemCount,
     rawSubtotal,
-    subscribeSavings,
     subtotal,
     total,
     masalaPoints,
@@ -408,8 +367,6 @@ export const useStore = defineStore('masalaStore', () => {
     deleteItem,
     clearCart,
     reorderAll,
-    toggleSubscription,
-    skipSubscription,
     getProductBySlug,
     setProducts,
     syncUser,

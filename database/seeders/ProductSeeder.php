@@ -36,7 +36,7 @@ class ProductSeeder extends Seeder
                 'freshness_line' => 'Freshly milled batch · Zero maida added',
                 'description' => 'Traditional chakki stone-ground whole wheat flour for ultra-soft, fluffy phulkas and rotis.',
                 'buy_again' => true,
-                'has_subscription' => true,
+                'has_subscription' => false,
                 'frequently_bought_together' => [
                     ['id' => 'ghee', 'name' => 'Desi Ghee', 'size' => '500 ml', 'price' => 9.99, 'image' => '/images/products/ghee.jpg'],
                     ['id' => 'toor-dal', 'name' => 'Organic Toor Dal', 'size' => '4 lb', 'price' => 7.99, 'image' => '/images/products/toor_dal.jpg'],
@@ -104,9 +104,9 @@ class ProductSeeder extends Seeder
                 'buy_again' => true,
                 'has_subscription' => false,
                 'frequently_bought_together' => [
-                    ['id' => 'garam-masala', 'name' => 'Garam Masala', 'size' => '100 g', 'price' => 3.49, 'image' => '/images/products/garam_masala.jpg', 'checked' => true],
-                    ['id' => 'garlic-naan', 'name' => 'Garlic Naan', 'size' => '4 pack', 'price' => 3.99, 'image' => '/images/products/sweets.jpg', 'checked' => false],
-                    ['id' => 'kasuri-methi', 'name' => 'Kasuri Methi', 'size' => '50 g', 'price' => 2.49, 'image' => '/images/products/okra.jpg', 'checked' => false],
+                    ['id' => 'garam-masala', 'name' => 'Aromatic Garam Masala', 'size' => '100 g', 'price' => 3.49, 'image' => '/images/products/garam_masala.jpg', 'checked' => true],
+                    ['id' => 'coriander', 'name' => 'Fresh Coriander', 'size' => '1 bunch', 'price' => 0.99, 'image' => '/images/products/curry_leaves.jpg', 'checked' => true],
+                    ['id' => 'green-chillies', 'name' => 'Green Chillies (Hari Mirch)', 'size' => '100 g', 'price' => 0.89, 'image' => '/images/products/okra.jpg', 'checked' => true],
                 ],
             ],
             [
@@ -126,7 +126,7 @@ class ProductSeeder extends Seeder
                 'freshness_line' => 'Aged in climate-controlled storage for maximum aroma and non-sticky fluffiness.',
                 'description' => 'Aged Himalayan long grain basmati rice. Slender grains elongate to twice their size when cooked.',
                 'buy_again' => true,
-                'has_subscription' => true,
+                'has_subscription' => false,
                 'frequently_bought_together' => [
                     ['id' => 'ghee', 'name' => 'Desi Ghee', 'size' => '500 ml', 'price' => 9.99, 'image' => '/images/products/ghee.jpg'],
                 ],

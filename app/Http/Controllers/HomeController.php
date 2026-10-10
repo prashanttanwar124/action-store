@@ -45,7 +45,6 @@ class HomeController extends Controller
                 'category',
                 'category_title',
                 'buy_again',
-                'has_subscription',
             ])
             ->limit(10)
             ->get();
@@ -81,7 +80,6 @@ class HomeController extends Controller
         $category = (string) $request->input('category', 'all');
         $sort = (string) $request->input('sort', 'featured');
         $inStock = $request->boolean('in_stock');
-        $hasSub = $request->boolean('has_sub');
         $tab = (string) $request->input('tab', 'products');
 
         $productsQuery = Product::query()
@@ -99,7 +97,6 @@ class HomeController extends Controller
                 'category',
                 'category_title',
                 'buy_again',
-                'has_subscription',
                 'description',
             ]);
 
@@ -122,10 +119,6 @@ class HomeController extends Controller
                 $q->whereNull('stock_badge')
                     ->orWhere('stock_badge', 'not like', '%out%');
             });
-        }
-
-        if ($hasSub) {
-            $productsQuery->where('has_subscription', true);
         }
 
         switch ($sort) {
@@ -200,7 +193,6 @@ class HomeController extends Controller
                 'category' => $category,
                 'sort' => $sort,
                 'in_stock' => $inStock,
-                'has_sub' => $hasSub,
                 'tab' => $tab,
             ],
         ]);

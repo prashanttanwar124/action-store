@@ -66,7 +66,6 @@ const form = useForm({
   freshness_line: props.product.freshness_line || '',
   description: props.product.description || '',
   buy_again: !!props.product.buy_again,
-  has_subscription: !!props.product.has_subscription,
   existing_images: [...(props.product.images || [])],
   image_files: [],
   image_urls: [],
@@ -615,17 +614,6 @@ const submit = () => {
                 <div>
                   <div class="text-xs font-semibold text-[#1d1d1f]">Buy It Again</div>
                   <div class="text-[10px] text-[#86868b]">Shows in customer reorder carousel</div>
-                </div>
-              </label>
-
-              <label class="flex items-center gap-2.5 p-3 rounded-2xl border border-[#e0d9cc] bg-[#faf8f5] cursor-pointer hover:bg-stone-50 select-none">
-                <Checkbox 
-                  :checked="form.has_subscription" 
-                  @update:checked="form.has_subscription = $event"
-                />
-                <div>
-                  <div class="text-xs font-semibold text-[#1d1d1f]">Subscribe & Save</div>
-                  <div class="text-[10px] text-[#86868b]">Enables 5% recurring discount</div>
                 </div>
               </label>
             </div>

@@ -404,7 +404,6 @@ async function completeOrder() {
       size: item.size || item.weight || '',
       weight: item.weight || item.size || '',
       image: item.image || '',
-      is_subscribed: Boolean(item.isSubscribed),
     })),
     payment_method: paymentMethod.value,
     fulfillment_type: isDelivery ? 'Home Delivery' : 'Store Pickup',

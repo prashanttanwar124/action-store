@@ -60,7 +60,6 @@ const props = defineProps({
       category: 'all',
       sort: 'featured',
       in_stock: false,
-      has_sub: false,
       tab: 'products',
     }),
   },
@@ -73,7 +72,6 @@ const searchQuery = ref(props.filters.q || '');
 const activeCategory = ref(props.filters.category || 'all');
 const activeSort = ref(props.filters.sort || 'featured');
 const inStockOnly = ref(Boolean(props.filters.in_stock));
-const subscribeOnly = ref(Boolean(props.filters.has_sub));
 const activeTab = ref(props.filters.tab || 'products');
 
 // Keep Pinia cart store synced with incoming paginated products
@@ -89,7 +87,6 @@ watch(() => props.filters, (newFilters) => {
   activeCategory.value = newFilters.category || 'all';
   activeSort.value = newFilters.sort || 'featured';
   inStockOnly.value = Boolean(newFilters.in_stock);
-  subscribeOnly.value = Boolean(newFilters.has_sub);
   activeTab.value = newFilters.tab || 'products';
 }, { deep: true });
 
@@ -149,8 +146,7 @@ const hasActiveFilters = computed(() => {
     searchQuery.value.trim() || 
     activeCategory.value !== 'all' || 
     activeSort.value !== 'featured' || 
-    inStockOnly.value || 
-    subscribeOnly.value
+    inStockOnly.value
   );
 });
 
@@ -172,7 +168,6 @@ function applyFilters(page = 1) {
   if (activeCategory.value && activeCategory.value !== 'all') params.category = activeCategory.value;
   if (activeSort.value && activeSort.value !== 'featured') params.sort = activeSort.value;
   if (inStockOnly.value) params.in_stock = 1;
-  if (subscribeOnly.value) params.has_sub = 1;
   if (activeTab.value && activeTab.value !== 'products') params.tab = activeTab.value;
   if (page && page > 1) params.page = page;
 
@@ -212,11 +207,6 @@ function toggleInStock() {
   applyFilters(1);
 }
 
-function toggleSubscribe() {
-  subscribeOnly.value = !subscribeOnly.value;
-  applyFilters(1);
-}
-
 function onTabSelect(tab) {
   activeTab.value = tab;
   applyFilters(1);
@@ -227,7 +217,6 @@ function resetAllFilters() {
   activeCategory.value = 'all';
   activeSort.value = 'featured';
   inStockOnly.value = false;
-  subscribeOnly.value = false;
   activeTab.value = 'products';
   router.get('/search', {}, {
     preserveState: true,
@@ -517,23 +506,6 @@ watch([() => props.products?.current_page, () => props.recipeKits?.current_page]
               <span>In Stock</span>
             </button>
 
-            <!-- Subscribe & Save Toggle -->
-            <button 
-              v-if="activeTab === 'products'"
-              type="button"
-              @click="toggleSubscribe"
-              :class="[
-                'inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-full text-xs font-bold border transition-all cursor-pointer shadow-2xs whitespace-nowrap',
-                subscribeOnly 
-                  ? 'bg-amber-900 text-white border-amber-900 shadow-xs' 
-                  : 'bg-white text-stone-800 border-stone-300 hover:text-black hover:border-stone-400 hover:bg-stone-50'
-              ]"
-            >
-              <Sparkles class="w-3 h-3 sm:w-3.5 sm:h-3.5" :class="subscribeOnly ? 'text-white' : 'text-amber-700'" />
-              <span class="hidden sm:inline">Subscribe &amp; Save (5%)</span>
-              <span class="sm:hidden">Sub &amp; Save</span>
-            </button>
-
             <!-- Sort Dropdown -->
             <Select :model-value="activeSort" @update:model-value="onSortChange">
               <SelectTrigger class="h-7 sm:h-8 w-auto rounded-full border border-stone-300 bg-white hover:bg-stone-50 px-2.5 sm:px-3 text-xs font-bold text-stone-900 shadow-2xs gap-1 sm:gap-1.5 focus:border-[#1a1a1a] focus:ring-3 focus:ring-[#1a1a1a]/10 whitespace-nowrap">
@@ -577,14 +549,6 @@ watch([() => props.products?.current_page, () => props.recipeKits?.current_page]
               <!-- Photo label badge -->
               <span class="photo-label absolute top-2.5 left-2.5 text-[11px] text-[#1d1d1f] font-mono bg-white/85 backdrop-blur-xs px-2 py-0.5 rounded-lg z-10 shadow-2xs">
                 {{ item.photo_label || item.photoLabel || item.category || 'grocery' }}
-              </span>
-
-              <!-- Subscribe Badge if applicable -->
-              <span 
-                v-if="item.has_subscription"
-                class="absolute top-2.5 right-2.5 bg-[#a47a3c] text-white text-[9.5px] font-bold px-1.5 py-0.5 rounded-md shadow-xs z-10"
-              >
-                -5% SUB
               </span>
 
               <!-- In-cart Stepper or Add to cart button -->

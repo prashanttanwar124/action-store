@@ -3,7 +3,7 @@ import { ref, computed, watch } from 'vue';
 import { Head, Link } from '@inertiajs/vue3';
 import StoreLayout from '../Layouts/StoreLayout.vue';
 import { useStore } from '../stores/cart';
-import { ChevronLeft, ChevronRight, Clock, Plus, Minus, Sparkles, RefreshCw, CheckCircle2, ShieldCheck, Snowflake } from 'lucide-vue-next';
+import { ChevronLeft, ChevronRight, Clock, Plus, Minus, Sparkles, RefreshCw, CheckCircle2, ShieldCheck, Snowflake, Check } from 'lucide-vue-next';
 
 const props = defineProps({
   slug: {
@@ -13,6 +13,10 @@ const props = defineProps({
   product: {
     type: Object,
     default: null,
+  },
+  frequentlyBoughtTogether: {
+    type: Array,
+    default: () => [],
   },
 });
 
@@ -43,10 +47,10 @@ const product = computed(() => {
       servings: props.product.servings,
       cookingTime: props.product.cooking_time,
       isRecipeKit: !!props.product.is_recipe_kit,
-      hasSubscribeAndSave: !!props.product.has_subscription,
-      hasSubscription: !!props.product.has_subscription,
       label: props.product.photo_label,
-      frequentlyBoughtTogether: props.product.frequently_bought_together || [],
+      frequentlyBoughtTogether: (props.frequentlyBoughtTogether && props.frequentlyBoughtTogether.length > 0)
+        ? props.frequentlyBoughtTogether
+        : (props.product.frequently_bought_together || []),
       recipeIngredients: props.product.recipe_ingredients || [],
     };
   } else {
@@ -83,19 +87,22 @@ watch(() => product.value.image, (newImg) => {
   if (newImg) activeImage.value = newImg;
 }, { immediate: true });
 
-const isSubscribed = ref(false);
 const quantity = ref(1);
 const addedNotification = ref(false);
+const notificationMessage = ref('');
 
 const fbtSelected = ref({});
 
 const fbtItems = computed(() => {
-  if (product.value.frequentlyBoughtTogether?.length > 0) {
-    return product.value.frequentlyBoughtTogether.map(item => ({
+  const items = product.value.frequentlyBoughtTogether || [];
+  if (Array.isArray(items) && items.length > 0) {
+    return items.map(item => ({
       id: item.id || item.slug,
+      slug: item.slug || String(item.id),
       name: item.name,
-      size: item.size || item.weight,
+      size: item.size || item.size_main || item.weight || '',
       price: Number(item.price),
+      originalPrice: Number(item.original_price || item.price),
       image: item.image || '/images/products/garam_masala.jpg',
     }));
   }
@@ -104,17 +111,23 @@ const fbtItems = computed(() => {
     .slice(0, 3)
     .map(p => ({
       id: p.id,
+      slug: p.slug,
       name: p.name,
-      size: p.sizeMain || p.size,
+      size: p.sizeMain || p.size || '',
       price: Number(p.price),
+      originalPrice: Number(p.originalPrice || p.price),
       image: p.image,
     }));
 });
 
-// Default first companion item selected
+// Default all companion items selected
 watch(fbtItems, (items) => {
-  if (items.length > 0 && Object.keys(fbtSelected.value).length === 0) {
-    fbtSelected.value = { [items[0].id]: true };
+  if (items.length > 0) {
+    const initial = {};
+    items.forEach(item => {
+      initial[item.id] = true;
+    });
+    fbtSelected.value = initial;
   }
 }, { immediate: true });
 
@@ -122,10 +135,15 @@ function toggleFbtItem(id) {
   fbtSelected.value[id] = !fbtSelected.value[id];
 }
 
+const selectedFbtItems = computed(() => {
+  return fbtItems.value.filter(item => Boolean(fbtSelected.value[item.id]));
+});
+
+const selectedFbtCount = computed(() => {
+  return selectedFbtItems.value.length;
+});
+
 const unitPrice = computed(() => {
-  if (isSubscribed.value) {
-    return Number((product.value.price * 0.95).toFixed(2));
-  }
   return Number(product.value.price.toFixed(2));
 });
 
@@ -134,42 +152,78 @@ const displayPrice = computed(() => {
 });
 
 const totalFbtAll = computed(() => {
-  const allFbtSum = fbtItems.value.reduce((acc, item) => acc + Number(item.price), 0);
-  return (unitPrice.value + allFbtSum).toFixed(2);
+  const companionSum = selectedFbtItems.value.reduce((acc, item) => acc + Number(item.price), 0);
+  return ((unitPrice.value * quantity.value) + companionSum).toFixed(2);
+});
+
+const fbtButtonText = computed(() => {
+  const count = selectedFbtCount.value;
+  if (count === fbtItems.value.length && count > 0) {
+    return `Add ${product.value.name} + all ${count}`;
+  } else if (count > 0) {
+    return `Add ${product.value.name} + ${count} selected`;
+  } else {
+    return `Add ${product.value.name} only`;
+  }
 });
 
 function handleAction() {
   store.addToCart({
     id: product.value.id,
+    slug: product.value.slug,
     name: product.value.name,
     weight: product.value.sizeMain,
     price: unitPrice.value,
     originalPrice: product.value.price,
     quantity: quantity.value,
-    isSubscribed: isSubscribed.value,
-    subscriptionInterval: isSubscribed.value ? 'Monthly' : undefined,
-    nextPickup: isSubscribed.value ? 'Oct 3' : undefined,
     image: product.value.image,
   });
+
+  notificationMessage.value = `Added ${quantity.value}x ${product.value.name} to cart!`;
+  addedNotification.value = true;
+  setTimeout(() => {
+    addedNotification.value = false;
+  }, 3000);
+}
+
+function handleAddAllFbt() {
+  // Add main product to cart
+  store.addToCart({
+    id: product.value.id,
+    slug: product.value.slug,
+    name: product.value.name,
+    weight: product.value.sizeMain,
+    price: unitPrice.value,
+    originalPrice: product.value.price,
+    quantity: quantity.value,
+    image: product.value.image,
+  });
+
+  // Add all selected companion items
+  selectedFbtItems.value.forEach(item => {
+    store.addToCart({
+      id: item.id,
+      slug: item.slug,
+      name: item.name,
+      weight: item.size,
+      price: item.price,
+      originalPrice: item.originalPrice || item.price,
+      image: item.image,
+      quantity: 1,
+    });
+  });
+
+  const count = selectedFbtCount.value;
+  if (count > 0) {
+    notificationMessage.value = `Added ${product.value.name} + ${count} companion items to cart!`;
+  } else {
+    notificationMessage.value = `Added ${quantity.value}x ${product.value.name} to cart!`;
+  }
 
   addedNotification.value = true;
   setTimeout(() => {
     addedNotification.value = false;
-  }, 2500);
-}
-
-function handleAddAllFbt() {
-  handleAction();
-  fbtItems.value.forEach(item => {
-    store.addToCart({
-      id: item.id,
-      name: item.name,
-      weight: item.size,
-      price: item.price,
-      originalPrice: item.price,
-      image: item.image,
-    });
-  });
+  }, 3000);
 }
 </script>
 
@@ -301,13 +355,10 @@ function handleAddAllFbt() {
               <!-- Price & Unit -->
               <div class="flex items-baseline gap-2.5 mt-2">
                 <span class="text-2xl sm:text-3xl font-serif font-medium text-[#1d1d1f]">
-                  ${{ isSubscribed ? (product.price * 0.95).toFixed(2) : product.price.toFixed(2) }}
+                  ${{ product.price.toFixed(2) }}
                 </span>
                 <span v-if="product.unitPrice" class="text-xs text-[#6e6e73] font-normal">
                   {{ product.unitPrice }}
-                </span>
-                <span v-if="isSubscribed" class="text-[11px] font-bold text-[#7a5620] bg-[#f5eee2] border border-[#e0d9cc] px-2 py-0.5 rounded-full">
-                  Save 5%
                 </span>
               </div>
             </div>
@@ -325,40 +376,6 @@ function handleAddAllFbt() {
               {{ product.description }}
             </p>
 
-            <!-- Subscribe & Save 5% Toggle -->
-            <div 
-              v-if="product.hasSubscribeAndSave || product.hasSubscription"
-              class="border border-[#e0d9cc] rounded-2xl p-4 bg-[#f3efe7] flex items-center justify-between select-none"
-            >
-              <div>
-                <div class="font-bold text-sm text-[#1d1d1f] flex items-center gap-1.5">
-                  <span>Subscribe & Save 5%</span>
-                  <span class="text-xs font-semibold text-[#7a5620]">(${{ (product.price * 0.95).toFixed(2) }}/ea)</span>
-                </div>
-                <div class="text-xs text-[#6e6e73] font-normal mt-0.5">
-                  Auto-reorder. Skip, pause or cancel anytime.
-                </div>
-              </div>
-
-              <!-- Smooth Clean Toggle Switch -->
-              <button
-                type="button"
-                @click="isSubscribed = !isSubscribed"
-                :class="[
-                  'w-12 h-7 rounded-full p-0.5 transition-colors relative cursor-pointer',
-                  isSubscribed ? 'bg-[#1a1a1a]' : 'bg-[#e0d9cc]'
-                ]"
-                aria-label="Toggle Subscribe & Save"
-              >
-                <div 
-                  :class="[
-                    'w-6 h-6 bg-white rounded-full shadow-sm transition-transform duration-200',
-                    isSubscribed ? 'translate-x-5' : 'translate-x-0'
-                  ]"
-                ></div>
-              </button>
-            </div>
-
             <!-- Frequently Bought Together (Screen 1 Specification) -->
             <div 
               v-if="fbtItems.length > 0" 
@@ -366,7 +383,7 @@ function handleAddAllFbt() {
             >
               <div>
                 <h2 class="font-serif font-medium text-base sm:text-lg text-[#1d1d1f]">Frequently bought together</h2>
-                <p class="text-xs text-[#6e6e73] font-normal mt-0.5">68% of {{ product.name.toLowerCase().includes('paneer') ? 'paneer' : product.name }} shoppers add these</p>
+                <p class="text-xs text-[#6e6e73] font-normal mt-0.5">Shoppers who bought {{ product.name }} frequently add these items</p>
               </div>
 
               <!-- FBT Items List with Dividers -->
@@ -376,17 +393,17 @@ function handleAddAllFbt() {
                   :key="item.id"
                   class="py-3.5 first:pt-1 last:pb-1 flex items-center justify-between gap-3"
                 >
-                  <div class="flex items-center gap-3.5">
-                    <div class="w-14 h-14 rounded-2xl bg-white/80 overflow-hidden shrink-0 border border-[#e0d9cc] shadow-2xs">
-                      <img :src="item.image" :alt="item.name" class="w-full h-full object-cover" />
+                  <Link :href="'/products/' + item.slug" class="flex items-center gap-3.5 flex-1 min-w-0 group cursor-pointer">
+                    <div class="w-14 h-14 rounded-2xl bg-white/80 overflow-hidden shrink-0 border border-[#e0d9cc] shadow-2xs group-hover:border-[#a47a3c] transition-colors">
+                      <img :src="item.image" :alt="item.name" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
                     </div>
-                    <div>
-                      <div class="font-serif font-medium text-sm sm:text-base text-[#1d1d1f] leading-snug">{{ item.name }}</div>
-                      <div class="text-xs text-[#6e6e73] font-normal mt-0.5">{{ item.size }}</div>
+                    <div class="min-w-0">
+                      <div class="font-serif font-medium text-sm sm:text-base text-[#1d1d1f] leading-snug truncate group-hover:text-[#a47a3c] transition-colors">{{ item.name }}</div>
+                      <div class="text-xs text-[#6e6e73] font-normal mt-0.5 truncate">{{ item.size }}</div>
                     </div>
-                  </div>
+                  </Link>
 
-                  <div class="flex items-center gap-3">
+                  <div class="flex items-center gap-3 shrink-0">
                     <span class="font-serif font-medium text-base text-[#1d1d1f]">${{ Number(item.price).toFixed(2) }}</span>
                     <!-- Action Button: solid filled checkmark when selected, outline plus when unselected -->
                     <button 
@@ -394,9 +411,10 @@ function handleAddAllFbt() {
                       @click="toggleFbtItem(item.id)"
                       :class="[
                         'w-8 h-8 rounded-full flex items-center justify-center transition-all cursor-pointer active:scale-95',
-                        fbtSelected[item.id] ? 'bg-[#1a1a1a] text-white shadow-xs' : 'border-2 border-[#1a1a1a] text-[#1a1a1a] bg-transparent'
+                        fbtSelected[item.id] ? 'bg-[#1a1a1a] text-white shadow-xs' : 'border-2 border-[#1a1a1a] text-[#1a1a1a] bg-transparent hover:bg-stone-200'
                       ]"
-                      :aria-label="'Toggle ' + item.name"
+                      :aria-label="'Include ' + item.name + ' in bundle'"
+                      :title="fbtSelected[item.id] ? 'Included in bundle (click to uncheck)' : 'Click to include in bundle'"
                     >
                       <Check v-if="fbtSelected[item.id]" class="w-4 h-4 stroke-[3]" />
                       <Plus v-else class="w-4 h-4 stroke-[2.5]" />
@@ -405,13 +423,13 @@ function handleAddAllFbt() {
                 </div>
               </div>
 
-              <!-- Combined Add All Pill (Screen 1: Add paneer + all 3    $15.96) -->
+              <!-- Combined Add All Pill -->
               <button 
                 type="button"
                 @click="handleAddAllFbt"
                 class="w-full py-4 px-6 bg-[#ece7de] hover:bg-[#e0d9cc] text-[#1d1d1f] font-semibold text-xs sm:text-sm rounded-full flex items-center justify-between cursor-pointer transition-colors shadow-2xs mt-3 active:scale-[0.99]"
               >
-                <span>Add {{ product.name.toLowerCase().includes('paneer') ? 'paneer' : product.name }} + all {{ fbtItems.length }}</span>
+                <span>{{ fbtButtonText }}</span>
                 <span class="font-serif font-medium text-base sm:text-lg text-[#1d1d1f]">${{ totalFbtAll }}</span>
               </button>
             </div>
@@ -467,7 +485,7 @@ function handleAddAllFbt() {
                   @click="handleAction"
                   class="flex-1 h-12 bg-[#1a1a1a] hover:bg-black text-white font-semibold text-sm rounded-full flex items-center justify-between px-6 transition-all cursor-pointer active:scale-[0.99] shadow-md"
                 >
-                  <span>{{ isSubscribed ? 'Subscribe monthly' : (store.getItemQuantity(product.slug) > 0 ? 'Add another' : 'Add to cart') }}</span>
+                  <span>{{ store.getItemQuantity(product.slug) > 0 ? 'Add another' : 'Add to cart' }}</span>
                   <span class="font-serif font-medium text-base">${{ displayPrice }}</span>
                 </button>
               </div>
@@ -478,7 +496,7 @@ function handleAddAllFbt() {
               >
                 <div class="flex items-center gap-2">
                   <CheckCircle2 class="w-4 h-4 text-[#7a5620]" />
-                  <span>Added {{ quantity }}x {{ product.name }} to cart!</span>
+                  <span>{{ notificationMessage || (`Added ${quantity}x ${product.name} to cart!`) }}</span>
                 </div>
                 <Link href="/cart" class="underline text-[#7a5620] font-semibold inline-flex items-center gap-1">
                   <span>View Cart</span>
@@ -588,7 +606,7 @@ function handleAddAllFbt() {
           @click="handleAction"
           class="flex-1 h-11 bg-[#1a1a1a] active:bg-black text-white font-semibold text-xs rounded-full flex items-center justify-between px-5 shadow-md"
         >
-          <span>{{ isSubscribed ? 'Subscribe' : (store.getItemQuantity(product.slug) > 0 ? 'Add another' : 'Add to cart') }}</span>
+          <span>{{ store.getItemQuantity(product.slug) > 0 ? 'Add another' : 'Add to cart' }}</span>
           <span class="font-serif font-medium text-sm">${{ displayPrice }}</span>
         </button>
       </div>
@@ -600,7 +618,7 @@ function handleAddAllFbt() {
       >
         <div class="flex items-center gap-2">
           <CheckCircle2 class="w-4 h-4 text-[#a47a3c]" />
-          <span>Added to cart!</span>
+          <span>{{ notificationMessage || 'Added to cart!' }}</span>
         </div>
         <Link href="/cart" class="underline text-[#a47a3c] font-semibold inline-flex items-center gap-1">
           <span>View Cart</span>

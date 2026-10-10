@@ -36,7 +36,7 @@ const submit = () => {
           Create Your Account
         </h1>
         <p class="text-xs text-[#6e6e73]">
-          Join for 1-hour express pickup, subscription discounts, and Masala Rewards points.
+          Join for 1-hour express pickup and Masala Rewards points.
         </p>
       </div>
 

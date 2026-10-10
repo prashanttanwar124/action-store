@@ -40,7 +40,6 @@ class StoreProductRequest extends FormRequest
             'description' => ['nullable', 'string'],
             'supplier_id' => ['nullable', 'integer', 'exists:suppliers,id'],
             'buy_again' => ['boolean'],
-            'has_subscription' => ['boolean'],
             'image_files' => ['nullable', 'array'],
             'image_files.*' => ['file', 'image', 'mimes:jpeg,png,jpg,webp,gif', 'max:10240'],
             'image_urls' => ['nullable', 'array'],

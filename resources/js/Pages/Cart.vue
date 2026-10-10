@@ -124,12 +124,6 @@ const store = useStore();
                 <div class="flex-1">
                   <div class="flex items-center gap-2">
                     <h3 class="font-semibold text-sm text-[#1d1d1f]">{{ item.name }}</h3>
-                    <span 
-                      v-if="item.isSubscribed" 
-                      class="px-2 py-0.5 bg-[#f5eee2] text-[#7a5620] text-[10px] font-semibold rounded-full shrink-0 border border-[#e0d9cc]"
-                    >
-                      Monthly · -5%
-                    </span>
                   </div>
                   <div class="text-xs text-[#6e6e73] font-normal mt-0.5">{{ item.weight }}</div>
                   <div class="text-xs font-serif font-medium text-[#1d1d1f] mt-1">
@@ -153,7 +147,7 @@ const store = useStore();
                   </button>
                   <span class="text-xs font-bold text-[#1d1d1f]">{{ item.quantity }}</span>
                   <button 
-                    @click="store.addToCart({ id: item.id, name: item.name, weight: item.weight, price: item.price, originalPrice: item.originalPrice, isSubscribed: item.isSubscribed, image: item.image })" 
+                    @click="store.addToCart({ id: item.id, name: item.name, weight: item.weight, price: item.price, originalPrice: item.originalPrice, image: item.image })" 
                     class="p-1 hover:text-[#1a1a1a] cursor-pointer flex items-center justify-center text-[#1d1d1f]"
                     aria-label="Increase quantity"
                   >

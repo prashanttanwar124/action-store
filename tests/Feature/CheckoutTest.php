@@ -290,13 +290,12 @@ class CheckoutTest extends TestCase
         $product = Product::factory()->create([
             'stock' => 10,
             'price' => 10.00,
-            'has_subscription' => true,
         ]);
 
         $response = $this->actingAs($this->user)->postJson('/checkout', [
             'items' => [
-                ['id' => $product->id, 'name' => $product->name, 'price' => 10.00, 'quantity' => 2, 'is_subscribed' => false],
-                ['id' => $product->id, 'name' => $product->name, 'price' => 9.50, 'quantity' => 2, 'is_subscribed' => true],
+                ['id' => $product->id, 'name' => $product->name, 'price' => 10.00, 'quantity' => 2],
+                ['id' => $product->id, 'name' => $product->name, 'price' => 10.00, 'quantity' => 2],
             ],
             'fulfillment_type' => 'Store Pickup',
         ]);

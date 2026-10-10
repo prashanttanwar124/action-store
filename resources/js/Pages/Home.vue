@@ -77,11 +77,11 @@ const defaultBannerSlides = [
   },
   {
     id: 'atta',
-    tag: 'SUBSCRIBE & SAVE · 10% OFF',
+    tag: 'PANTRY ESSENTIAL · BESTSELLER',
     title: 'Never run out\nof fresh atta.',
     subtitle: '100% stone ground whole wheat flour for ultra-soft golden phulkas.',
     highlight: '20 lb bag · Zero maida added',
-    cta: 'Subscribe for $18.04',
+    cta: 'Shop Atta for $18.99',
     link: '/products/atta',
     image: '/images/products/atta.jpg',
     alt: 'Chakki Atta 100% stone ground whole wheat flour',
@@ -982,13 +982,6 @@ const handleAddKitToCart = (kit) => {
                 {{ item.photo_label || item.photoLabel || item.category || 'product' }}
               </span>
 
-              <span 
-                v-if="item.has_subscription"
-                class="absolute top-2.5 right-2.5 bg-[#a47a3c] text-white text-[9.5px] font-bold px-1.5 py-0.5 rounded-md shadow-xs z-10"
-              >
-                -5% SUB
-              </span>
-
               <!-- Stepper or Add button -->
               <div 
                 v-if="store.getItemQuantity(item.id || item.slug) > 0"
@@ -1150,36 +1143,7 @@ const handleAddKitToCart = (kit) => {
         </div>
       </section>
 
-      <!-- SECTION: Subscribe & Save Banner Callout -->
-      <section class="bg-[#1a1a1a] text-white p-6 sm:p-9 rounded-3xl flex flex-col md:flex-row items-start md:items-center justify-between gap-6 shadow-sm border border-[#e0d9cc]/20">
-        <div class="space-y-2">
-          <div class="flex items-center gap-2 text-[11px] font-semibold text-[#a47a3c] uppercase tracking-wider">
-            <span class="w-2 h-2 rounded-full bg-[#a47a3c]"></span>
-            <span>AUTOMATIC REPLENISHMENT · ZERO COMMITMENT</span>
-          </div>
-          <h3 class="text-xl sm:text-2xl font-serif font-medium tracking-tight">
-            Never run out of Chakki Atta or Basmati again.
-          </h3>
-          <p class="text-xs text-stone-300 font-normal max-w-xl leading-relaxed">
-            Subscribe to monthly essentials and get 5% discount on every bag. Skip, pause, or cancel anytime in one click.
-          </p>
-        </div>
 
-        <div class="shrink-0 flex flex-row gap-3 w-full md:w-auto">
-          <Link 
-            href="/categories/staples" 
-            class="flex-1 sm:flex-none px-5 py-3 bg-[#a47a3c] hover:bg-[#8e6630] text-white text-xs font-semibold rounded-full text-center transition-colors shadow-sm"
-          >
-            Explore Staples (-5%)
-          </Link>
-          <Link 
-            href="/account" 
-            class="flex-1 sm:flex-none px-5 py-3 bg-stone-800 hover:bg-stone-700 text-white text-xs font-semibold rounded-full text-center transition-colors"
-          >
-            Manage Subscriptions
-          </Link>
-        </div>
-      </section>
 
       </div>
     </div>

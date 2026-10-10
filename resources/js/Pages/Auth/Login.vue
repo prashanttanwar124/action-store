@@ -51,7 +51,7 @@ const fillDemo = (email, password = 'password') => {
           Welcome Back
         </h1>
         <p class="text-xs text-[#6e6e73]">
-          Sign in to manage orders, subscriptions, and Masala Rewards points.
+          Sign in to manage orders and Masala Rewards points.
         </p>
       </div>
 

@@ -65,7 +65,7 @@ const page = usePage();
           <ul class="space-y-1.5 text-[#6e6e73] font-normal">
             <li><Link href="/cart" class="hover:text-[#1d1d1f]">Shopping Cart & Pickup Status</Link></li>
             <li><Link href="/checkout" class="hover:text-[#1d1d1f]">Express Store Pickup</Link></li>
-            <li><Link href="/account" class="hover:text-[#1d1d1f]">Subscriptions & Auto-Reorder</Link></li>
+            <li><Link href="/account" class="hover:text-[#1d1d1f]">My Account & Rewards</Link></li>
             <li><Link href="/reorder" class="hover:text-[#1d1d1f]">Past Orders & Instant Reorder</Link></li>
             <li v-if="page.props.auth?.user">
               <Link href="/logout" method="post" as="button" class="hover:text-rose-600 cursor-pointer">

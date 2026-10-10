@@ -80,10 +80,9 @@ test('confirmation rejects missing and malformed orders', () => {
   }
 });
 
-test('cart subtotal uses the same per-unit subscription rounding as checkout', () => {
+test('cart subtotal computes correctly for items in cart', () => {
   setActivePinia(createPinia());
   const store = useStore();
-  store.addToCart({ id: 1, name: 'Paneer', price: 4.99, quantity: 3, isSubscribed: true });
-  assert.equal(store.subtotal, 14.22);
-  assert.equal(store.subscribeSavings, 0.75);
+  store.addToCart({ id: 1, name: 'Paneer', price: 4.99, quantity: 3 });
+  assert.equal(store.subtotal, 14.97);
 });

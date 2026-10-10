@@ -48,29 +48,6 @@ class CheckoutValidationTest extends TestCase
         $this->assertDatabaseHas('products', ['id' => $product->id, 'stock' => 50]);
     }
 
-    public function test_subscription_price_is_rounded_per_unit_from_catalog(): void
-    {
-        $product = Product::factory()->create(['price' => 4.99, 'has_subscription' => true]);
-
-        $this->postJson('/checkout', [
-            'items' => [['id' => $product->id, 'name' => $product->name, 'price' => 0, 'quantity' => 3, 'is_subscribed' => true]],
-        ])->assertCreated();
-
-        $this->assertDatabaseHas('order_items', ['unit_price' => 4.74, 'total_price' => 14.22, 'is_subscribed' => true]);
-        $this->assertDatabaseHas('orders', ['total' => 14.22]);
-    }
-
-    public function test_ineligible_subscription_does_not_create_an_order(): void
-    {
-        $product = Product::factory()->create(['has_subscription' => false]);
-
-        $this->postJson('/checkout', [
-            'items' => [['id' => $product->id, 'name' => $product->name, 'price' => 1, 'quantity' => 1, 'is_subscribed' => true]],
-        ])->assertUnprocessable()->assertInvalid(['items.0.is_subscribed' => 'This item is not eligible for subscription pricing.']);
-
-        $this->assertDatabaseCount('orders', 0);
-    }
-
     public function test_past_custom_pickup_is_rejected_without_changing_stock(): void
     {
         $this->travelTo(now()->setTime(17, 0));

@@ -225,7 +225,6 @@ class AdminProductController extends Controller
                 'freshness_line' => $product->freshness_line,
                 'description' => $product->description,
                 'buy_again' => (bool) $product->buy_again,
-                'has_subscription' => (bool) $product->has_subscription,
             ],
             'defaultCategories' => $this->getCategoriesList(),
             'suppliers' => Supplier::where('status', 'active')

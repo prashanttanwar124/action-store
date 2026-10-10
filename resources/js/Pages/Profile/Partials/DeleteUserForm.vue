@@ -35,7 +35,7 @@ const closeModal = () => {
 <template>
   <div class="space-y-4">
     <div class="text-xs text-[#6e6e73] leading-relaxed">
-      Once your account is deleted, all of your saved grocery preferences, past orders, active subscriptions, and Masala Rewards points will be permanently erased.
+      Once your account is deleted, all of your saved grocery preferences, past orders, and Masala Rewards points will be permanently erased.
     </div>
 
     <div>
