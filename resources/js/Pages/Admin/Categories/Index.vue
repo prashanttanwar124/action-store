@@ -294,20 +294,20 @@ const toggleCategoryActive = (category) => {
       <!-- ========================================== -->
       <!-- TOP HEADER & PRIMARY ACTIONS               -->
       <!-- ========================================== -->
-      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white border border-[#e0d9cc] rounded-3xl p-6 sm:p-7 shadow-2xs">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white border border-[#e4e4e7] rounded-lg p-6 sm:p-7 shadow-2xs">
         <div>
           <div class="flex items-center gap-2 mb-1.5">
-            <span class="text-[11px] font-mono uppercase bg-[#1a1a1a] text-white px-2.5 py-0.5 rounded-full font-semibold">
+            <span class="text-[11px] font-mono uppercase bg-[#18181b] text-white px-2.5 py-0.5 rounded-md font-semibold">
               Store Catalog
             </span>
-            <span class="text-[11px] text-[#7a5620] bg-[#f5eee2] border border-[#e0d9cc] px-2.5 py-0.5 rounded-full font-medium">
+            <span class="text-[11px] text-[#27272a] bg-[#f4f4f5] border border-[#e4e4e7] px-2.5 py-0.5 rounded-md font-medium">
               Taxonomy & Collections
             </span>
           </div>
-          <h1 class="text-2xl sm:text-3xl font-serif font-medium text-[#1d1d1f] tracking-tight">
+          <h1 class="text-2xl sm:text-3xl font-semibold text-[#09090b] tracking-tight">
             Product Categories
           </h1>
-          <p class="text-xs sm:text-sm text-[#6e6e73] font-normal mt-1 max-w-2xl leading-relaxed">
+          <p class="text-xs sm:text-sm text-[#52525b] font-normal mt-1 max-w-2xl leading-relaxed">
             Manage your store's department aisles, Hindi labels, aisle sort priority, category banners, and storefront navigation.
           </p>
         </div>
@@ -316,7 +316,7 @@ const toggleCategoryActive = (category) => {
           <button
             type="button"
             @click="showCreateModal = true"
-            class="inline-flex items-center gap-2 px-4 py-2.5 bg-[#1a1a1a] hover:bg-black text-white rounded-full text-xs font-semibold transition-all shadow-xs hover:scale-[1.02] cursor-pointer"
+            class="inline-flex items-center gap-2 px-4 py-2.5 bg-[#18181b] hover:bg-black text-white rounded-md text-xs font-semibold transition-all shadow-xs hover:scale-[1.02] cursor-pointer"
           >
             <Plus class="w-4 h-4" />
             <span>Add Category</span>
@@ -330,15 +330,15 @@ const toggleCategoryActive = (category) => {
       <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
         
         <!-- Total Categories -->
-        <div class="bg-white border border-[#e0d9cc] rounded-2xl p-5 shadow-2xs flex flex-col justify-between hover:border-[#a47a3c]/60 transition-colors">
-          <div class="flex items-center justify-between text-[#6e6e73]">
+        <div class="bg-white border border-[#e4e4e7] rounded-lg p-5 shadow-2xs flex flex-col justify-between hover:border-[#18181b]/60 transition-colors">
+          <div class="flex items-center justify-between text-[#52525b]">
             <span class="text-xs font-semibold uppercase tracking-wider">Total Categories</span>
-            <div class="w-8 h-8 rounded-xl bg-[#f5eee2] flex items-center justify-center text-[#a47a3c]">
+            <div class="w-8 h-8 rounded-md bg-[#f4f4f5] flex items-center justify-center text-[#18181b]">
               <FolderTree class="w-4 h-4" />
             </div>
           </div>
           <div class="mt-4">
-            <div class="text-2xl sm:text-3xl font-serif font-medium text-[#1d1d1f]">
+            <div class="text-2xl sm:text-3xl font-semibold text-[#09090b]">
               {{ metrics.total_categories }}
             </div>
             <div class="flex items-center gap-1.5 mt-1 text-[11px] text-emerald-700">
@@ -349,36 +349,36 @@ const toggleCategoryActive = (category) => {
         </div>
 
         <!-- Active in Store -->
-        <div class="bg-white border border-[#e0d9cc] rounded-2xl p-5 shadow-2xs flex flex-col justify-between hover:border-[#a47a3c]/60 transition-colors">
-          <div class="flex items-center justify-between text-[#6e6e73]">
+        <div class="bg-white border border-[#e4e4e7] rounded-lg p-5 shadow-2xs flex flex-col justify-between hover:border-[#18181b]/60 transition-colors">
+          <div class="flex items-center justify-between text-[#52525b]">
             <span class="text-xs font-semibold uppercase tracking-wider">Active In Storefront</span>
-            <div class="w-8 h-8 rounded-xl bg-emerald-50 flex items-center justify-center text-emerald-600">
+            <div class="w-8 h-8 rounded-md bg-emerald-50 flex items-center justify-center text-emerald-600">
               <CheckCircle2 class="w-4 h-4" />
             </div>
           </div>
           <div class="mt-4">
-            <div class="text-2xl sm:text-3xl font-serif font-medium text-[#1d1d1f]">
+            <div class="text-2xl sm:text-3xl font-semibold text-[#09090b]">
               {{ metrics.active_categories }}
             </div>
-            <div class="flex items-center gap-1.5 mt-1 text-[11px] text-[#6e6e73]">
+            <div class="flex items-center gap-1.5 mt-1 text-[11px] text-[#52525b]">
               <span>{{ metrics.total_categories - metrics.active_categories }} hidden from navigation</span>
             </div>
           </div>
         </div>
 
         <!-- Total Products Categorized -->
-        <div class="bg-white border border-[#e0d9cc] rounded-2xl p-5 shadow-2xs flex flex-col justify-between hover:border-[#a47a3c]/60 transition-colors">
-          <div class="flex items-center justify-between text-[#6e6e73]">
+        <div class="bg-white border border-[#e4e4e7] rounded-lg p-5 shadow-2xs flex flex-col justify-between hover:border-[#18181b]/60 transition-colors">
+          <div class="flex items-center justify-between text-[#52525b]">
             <span class="text-xs font-semibold uppercase tracking-wider">Total Products</span>
-            <div class="w-8 h-8 rounded-xl bg-[#f5eee2] flex items-center justify-center text-[#a47a3c]">
+            <div class="w-8 h-8 rounded-md bg-[#f4f4f5] flex items-center justify-center text-[#18181b]">
               <Package class="w-4 h-4" />
             </div>
           </div>
           <div class="mt-4">
-            <div class="text-2xl sm:text-3xl font-serif font-medium text-[#1d1d1f]">
+            <div class="text-2xl sm:text-3xl font-semibold text-[#09090b]">
               {{ metrics.total_products }}
             </div>
-            <div class="flex items-center gap-1.5 mt-1 text-[11px] text-[#6e6e73]">
+            <div class="flex items-center gap-1.5 mt-1 text-[11px] text-[#52525b]">
               <span>Assigned across catalog aisles</span>
             </div>
           </div>
@@ -389,24 +389,24 @@ const toggleCategoryActive = (category) => {
       <!-- ========================================== -->
       <!-- SEARCH, FILTERS & SORT CONTROLS            -->
       <!-- ========================================== -->
-      <div class="bg-white border border-[#e0d9cc] rounded-2xl p-4 shadow-2xs space-y-3">
+      <div class="bg-white border border-[#e4e4e7] rounded-lg p-4 shadow-2xs space-y-3">
         <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
           
           <!-- Search Bar -->
           <div class="relative flex-1 max-w-md">
-            <Search class="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-[#86868b]" />
+            <Search class="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-[#71717a]" />
             <input 
               v-model="searchInput"
               @input="handleSearchChange"
               type="text"
               placeholder="Search by category name, slug, or Hindi title..."
-              class="w-full pl-9 pr-9 py-2 text-xs bg-[#fbf9f5] border border-[#e0d9cc] rounded-full focus:outline-none focus:ring-3 focus:ring-[#1a1a1a]/10 focus:border-[#1a1a1a] focus:bg-white transition-all"
+              class="w-full pl-9 pr-9 py-2 text-xs bg-[#fafafa] border border-[#e4e4e7] rounded-md focus:outline-none focus:ring-3 focus:ring-[#18181b]/10 focus:border-[#18181b] focus:bg-white transition-all"
             />
             <button 
               v-if="searchInput" 
               type="button" 
               @click="searchInput = ''; applyFilters()" 
-              class="absolute right-3 top-1/2 -translate-y-1/2 text-[#86868b] hover:text-[#1d1d1f] cursor-pointer"
+              class="absolute right-3 top-1/2 -translate-y-1/2 text-[#71717a] hover:text-[#09090b] cursor-pointer"
             >
               <X class="w-3.5 h-3.5" />
             </button>
@@ -417,9 +417,9 @@ const toggleCategoryActive = (category) => {
             
             <!-- Status Select -->
             <div class="flex items-center gap-2">
-              <span class="text-xs text-[#86868b] whitespace-nowrap">Status:</span>
+              <span class="text-xs text-[#71717a] whitespace-nowrap">Status:</span>
               <Select :model-value="currentStatus" @update:model-value="setStatus">
-                <SelectTrigger class="w-36 h-8 rounded-full bg-[#fbf9f5] border-[#e0d9cc] text-xs font-medium focus:border-[#1a1a1a] focus:ring-3 focus:ring-[#1a1a1a]/10 shadow-2xs">
+                <SelectTrigger class="w-36 h-8 rounded-md bg-[#fafafa] border-[#e4e4e7] text-xs font-medium focus:border-[#18181b] focus:ring-3 focus:ring-[#18181b]/10 shadow-2xs">
                   <SelectValue placeholder="All Status" />
                 </SelectTrigger>
                 <SelectContent>
@@ -432,9 +432,9 @@ const toggleCategoryActive = (category) => {
 
             <!-- Sort Select -->
             <div class="flex items-center gap-2">
-              <span class="text-xs text-[#86868b] whitespace-nowrap">Sort:</span>
+              <span class="text-xs text-[#71717a] whitespace-nowrap">Sort:</span>
               <Select :model-value="currentSort" @update:model-value="setSort">
-                <SelectTrigger class="w-44 h-8 rounded-full bg-[#fbf9f5] border-[#e0d9cc] text-xs font-medium focus:border-[#1a1a1a] focus:ring-3 focus:ring-[#1a1a1a]/10 shadow-2xs">
+                <SelectTrigger class="w-44 h-8 rounded-md bg-[#fafafa] border-[#e4e4e7] text-xs font-medium focus:border-[#18181b] focus:ring-3 focus:ring-[#18181b]/10 shadow-2xs">
                   <SelectValue placeholder="Sort Order" />
                 </SelectTrigger>
                 <SelectContent>
@@ -451,15 +451,15 @@ const toggleCategoryActive = (category) => {
         </div>
 
         <!-- Filter Segment Pills -->
-        <div class="flex items-center gap-1.5 overflow-x-auto pb-1 text-xs no-scrollbar pt-1 border-t border-[#e0d9cc]/40">
+        <div class="flex items-center gap-1.5 overflow-x-auto pb-1 text-xs no-scrollbar pt-1 border-t border-[#e4e4e7]/40">
           <button 
             type="button"
             @click="setStatus('all')"
             :class="[
-              'px-3 py-1 rounded-full font-medium transition-colors cursor-pointer',
+              'px-3 py-1 rounded-md font-medium transition-colors cursor-pointer',
               currentStatus === 'all'
-                ? 'bg-[#1a1a1a] text-white shadow-2xs'
-                : 'bg-[#fbf9f5] text-[#6e6e73] hover:text-[#1d1d1f] hover:bg-[#f0ebe1] border border-[#e0d9cc]/60'
+                ? 'bg-[#18181b] text-white shadow-2xs'
+                : 'bg-[#fafafa] text-[#52525b] hover:text-[#09090b] hover:bg-[#f4f4f5] border border-[#e4e4e7]/60'
             ]"
           >
             All Categories ({{ metrics.total_categories }})
@@ -468,10 +468,10 @@ const toggleCategoryActive = (category) => {
             type="button"
             @click="setStatus('active')"
             :class="[
-              'px-3 py-1 rounded-full font-medium transition-colors cursor-pointer flex items-center gap-1.5',
+              'px-3 py-1 rounded-md font-medium transition-colors cursor-pointer flex items-center gap-1.5',
               currentStatus === 'active'
-                ? 'bg-[#1a1a1a] text-white shadow-2xs'
-                : 'bg-[#fbf9f5] text-[#6e6e73] hover:text-[#1d1d1f] hover:bg-[#f0ebe1] border border-[#e0d9cc]/60'
+                ? 'bg-[#18181b] text-white shadow-2xs'
+                : 'bg-[#fafafa] text-[#52525b] hover:text-[#09090b] hover:bg-[#f4f4f5] border border-[#e4e4e7]/60'
             ]"
           >
             <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
@@ -481,10 +481,10 @@ const toggleCategoryActive = (category) => {
             type="button"
             @click="setStatus('inactive')"
             :class="[
-              'px-3 py-1 rounded-full font-medium transition-colors cursor-pointer flex items-center gap-1.5',
+              'px-3 py-1 rounded-md font-medium transition-colors cursor-pointer flex items-center gap-1.5',
               currentStatus === 'inactive'
-                ? 'bg-[#1a1a1a] text-white shadow-2xs'
-                : 'bg-[#fbf9f5] text-[#6e6e73] hover:text-[#1d1d1f] hover:bg-[#f0ebe1] border border-[#e0d9cc]/60'
+                ? 'bg-[#18181b] text-white shadow-2xs'
+                : 'bg-[#fafafa] text-[#52525b] hover:text-[#09090b] hover:bg-[#f4f4f5] border border-[#e4e4e7]/60'
             ]"
           >
             <span class="w-1.5 h-1.5 rounded-full bg-zinc-400"></span>
@@ -495,7 +495,7 @@ const toggleCategoryActive = (category) => {
             v-if="searchInput || currentStatus !== 'all' || currentSort !== 'sort_order'"
             type="button" 
             @click="resetFilters" 
-            class="ml-auto text-xs text-[#a47a3c] hover:underline font-medium cursor-pointer"
+            class="ml-auto text-xs text-[#18181b] hover:underline font-medium cursor-pointer"
           >
             Reset Filters
           </button>
@@ -505,11 +505,11 @@ const toggleCategoryActive = (category) => {
       <!-- ========================================== -->
       <!-- CATEGORIES TABLE                           -->
       <!-- ========================================== -->
-      <div class="bg-white border border-[#e0d9cc] rounded-3xl overflow-hidden shadow-2xs">
+      <div class="bg-white border border-[#e4e4e7] rounded-lg overflow-hidden shadow-2xs">
         <div class="overflow-x-auto">
           <table class="w-full text-left border-collapse">
             <thead>
-              <tr class="border-b border-[#e0d9cc] bg-[#fbf9f5]/80 text-[11px] font-mono uppercase tracking-wider text-[#86868b]">
+              <tr class="border-b border-[#e4e4e7] bg-[#fafafa]/80 text-[11px] font-mono uppercase tracking-wider text-[#71717a]">
                 <th class="py-3.5 pl-6 pr-3">Category</th>
                 <th class="py-3.5 px-3">Slug & Route</th>
                 <th class="py-3.5 px-3 text-center">Priority</th>
@@ -518,17 +518,17 @@ const toggleCategoryActive = (category) => {
                 <th class="py-3.5 pr-6 pl-3 text-right">Actions</th>
               </tr>
             </thead>
-            <tbody class="divide-y divide-[#e0d9cc]/60 text-xs">
+            <tbody class="divide-y divide-[#e4e4e7]/60 text-xs">
               <tr 
                 v-for="cat in categories.data" 
                 :key="cat.id" 
-                class="hover:bg-[#fbf9f5] transition-colors group"
+                class="hover:bg-[#fafafa] transition-colors group"
               >
                 <!-- Category Details with Thumbnail & Icon -->
                 <td class="py-4 pl-6 pr-3">
                   <div class="flex items-center gap-3.5">
                     <!-- Thumbnail or Icon Fallback -->
-                    <div class="w-12 h-12 rounded-2xl border border-[#e0d9cc] bg-[#f5eee2] overflow-hidden shrink-0 flex items-center justify-center relative shadow-2xs group-hover:border-[#a47a3c]/60 transition-colors">
+                    <div class="w-12 h-12 rounded-lg border border-[#e4e4e7] bg-[#f4f4f5] overflow-hidden shrink-0 flex items-center justify-center relative shadow-2xs group-hover:border-[#18181b]/60 transition-colors">
                       <img 
                         v-if="cat.image" 
                         :src="cat.image" 
@@ -538,23 +538,23 @@ const toggleCategoryActive = (category) => {
                       />
                       <component 
                         :is="getCategoryIconComponent(cat.icon)" 
-                        class="w-5 h-5 text-[#a47a3c]"
+                        class="w-5 h-5 text-[#18181b]"
                       />
                     </div>
 
                     <div>
                       <div class="flex items-center gap-2">
-                        <span class="font-serif font-medium text-sm text-[#1d1d1f] group-hover:text-[#a47a3c] transition-colors">
+                        <span class="font-semibold text-sm text-[#09090b] group-hover:text-[#18181b] transition-colors">
                           {{ cat.name }}
                         </span>
                         <span 
                           v-if="cat.hindi_title" 
-                          class="px-2 py-0.5 rounded-full text-[10px] font-medium bg-[#f5eee2] text-[#7a5620] border border-[#e0d9cc]/80"
+                          class="px-2 py-0.5 rounded-md text-[10px] font-medium bg-[#f4f4f5] text-[#27272a] border border-[#e4e4e7]/80"
                         >
                           {{ cat.hindi_title }}
                         </span>
                       </div>
-                      <p v-if="cat.description" class="text-[11px] text-[#6e6e73] line-clamp-1 max-w-sm mt-0.5 font-normal">
+                      <p v-if="cat.description" class="text-[11px] text-[#52525b] line-clamp-1 max-w-sm mt-0.5 font-normal">
                         {{ cat.description }}
                       </p>
                     </div>
@@ -564,14 +564,14 @@ const toggleCategoryActive = (category) => {
                 <!-- Slug & Storefront Link -->
                 <td class="py-4 px-3">
                   <div class="flex items-center gap-1.5">
-                    <span class="font-mono text-[11px] text-[#6e6e73] bg-[#f5eee2] px-2 py-0.5 rounded-md border border-[#e0d9cc]">
+                    <span class="font-mono text-[11px] text-[#52525b] bg-[#f4f4f5] px-2 py-0.5 rounded-md border border-[#e4e4e7]">
                       /categories/{{ cat.slug }}
                     </span>
                     <a 
                       :href="`/categories/${cat.slug}`" 
                       target="_blank" 
                       title="View category page in storefront"
-                      class="text-[#86868b] hover:text-[#1a1a1a] transition-colors p-1"
+                      class="text-[#71717a] hover:text-[#18181b] transition-colors p-1"
                     >
                       <ExternalLink class="w-3.5 h-3.5" />
                     </a>
@@ -580,7 +580,7 @@ const toggleCategoryActive = (category) => {
 
                 <!-- Priority (Sort Order) -->
                 <td class="py-4 px-3 text-center">
-                  <span class="inline-flex items-center justify-center font-mono text-xs px-2.5 py-0.5 rounded-full bg-[#fbf9f5] border border-[#e0d9cc] text-[#1d1d1f] font-semibold">
+                  <span class="inline-flex items-center justify-center font-mono text-xs px-2.5 py-0.5 rounded-md bg-[#fafafa] border border-[#e4e4e7] text-[#09090b] font-semibold">
                     #{{ cat.sort_order }}
                   </span>
                 </td>
@@ -589,9 +589,9 @@ const toggleCategoryActive = (category) => {
                 <td class="py-4 px-3 text-center">
                   <Link 
                     :href="route('admin.products.index', { category: cat.slug })"
-                    class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-[#f5eee2] hover:bg-[#e8decb] text-[#7a5620] text-xs font-medium border border-[#e0d9cc] transition-colors"
+                    class="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-[#f4f4f5] hover:bg-[#e4e4e7] text-[#27272a] text-xs font-medium border border-[#e4e4e7] transition-colors"
                   >
-                    <Package class="w-3 h-3 text-[#a47a3c]" />
+                    <Package class="w-3 h-3 text-[#18181b]" />
                     <span>{{ cat.products_count }} {{ cat.products_count === 1 ? 'item' : 'items' }}</span>
                   </Link>
                 </td>
@@ -603,7 +603,7 @@ const toggleCategoryActive = (category) => {
                     @click="toggleCategoryActive(cat)"
                     :title="cat.is_active ? 'Click to hide category from store' : 'Click to make category active'"
                     :class="[
-                      'inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium transition-all cursor-pointer shadow-2xs',
+                      'inline-flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-medium transition-all cursor-pointer shadow-2xs',
                       cat.is_active 
                         ? 'bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100' 
                         : 'bg-zinc-100 text-zinc-600 border border-zinc-200 hover:bg-zinc-200'
@@ -625,7 +625,7 @@ const toggleCategoryActive = (category) => {
                     <button
                       type="button"
                       @click="openEditModal(cat)"
-                      class="p-1.5 text-[#6e6e73] hover:text-[#1d1d1f] hover:bg-[#f0ebe1] rounded-lg transition-colors cursor-pointer"
+                      class="p-1.5 text-[#52525b] hover:text-[#09090b] hover:bg-[#f4f4f5] rounded-lg transition-colors cursor-pointer"
                       title="Edit Category Details"
                     >
                       <Edit2 class="w-4 h-4" />
@@ -633,7 +633,7 @@ const toggleCategoryActive = (category) => {
                     <button
                       type="button"
                       @click="openDeleteModal(cat)"
-                      class="p-1.5 text-[#86868b] hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer"
+                      class="p-1.5 text-[#71717a] hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer"
                       title="Delete Category"
                     >
                       <Trash2 class="w-4 h-4" />
@@ -645,17 +645,17 @@ const toggleCategoryActive = (category) => {
               <!-- Empty State -->
               <tr v-if="categories.data.length === 0">
                 <td colspan="6" class="py-12 text-center">
-                  <div class="w-12 h-12 rounded-full bg-[#f5eee2] text-[#a47a3c] flex items-center justify-center mx-auto mb-3">
+                  <div class="w-12 h-12 rounded-md bg-[#f4f4f5] text-[#18181b] flex items-center justify-center mx-auto mb-3">
                     <FolderTree class="w-6 h-6" />
                   </div>
-                  <h3 class="font-serif font-medium text-base text-[#1d1d1f]">No categories found</h3>
-                  <p class="text-xs text-[#6e6e73] mt-1 max-w-sm mx-auto">
+                  <h3 class="font-semibold text-base text-[#09090b]">No categories found</h3>
+                  <p class="text-xs text-[#52525b] mt-1 max-w-sm mx-auto">
                     Try adjusting your search criteria, clearing active filters, or create a brand new store category.
                   </p>
                   <button 
                     type="button" 
                     @click="resetFilters" 
-                    class="mt-4 text-xs font-semibold text-[#a47a3c] hover:underline"
+                    class="mt-4 text-xs font-semibold text-[#18181b] hover:underline"
                   >
                     Clear All Filters
                   </button>
@@ -668,10 +668,10 @@ const toggleCategoryActive = (category) => {
         <!-- Pagination Footer -->
         <div 
           v-if="categories.links && categories.links.length > 3" 
-          class="border-t border-[#e0d9cc] px-6 py-4 flex flex-col sm:flex-row items-center justify-between gap-3 bg-[#fbf9f5]/50"
+          class="border-t border-[#e4e4e7] px-6 py-4 flex flex-col sm:flex-row items-center justify-between gap-3 bg-[#fafafa]/50"
         >
-          <div class="text-xs text-[#6e6e73]">
-            Showing <span class="font-medium text-[#1d1d1f]">{{ categories.from || 0 }}</span> to <span class="font-medium text-[#1d1d1f]">{{ categories.to || 0 }}</span> of <span class="font-medium text-[#1d1d1f]">{{ categories.total }}</span> categories
+          <div class="text-xs text-[#52525b]">
+            Showing <span class="font-medium text-[#09090b]">{{ categories.from || 0 }}</span> to <span class="font-medium text-[#09090b]">{{ categories.to || 0 }}</span> of <span class="font-medium text-[#09090b]">{{ categories.total }}</span> categories
           </div>
           <div class="flex items-center gap-1">
             <template v-for="(link, i) in categories.links" :key="i">
@@ -680,16 +680,16 @@ const toggleCategoryActive = (category) => {
                 :href="link.url"
                 v-html="link.label"
                 :class="[
-                  'px-3 py-1 rounded-full text-xs transition-colors',
+                  'px-3 py-1 rounded-md text-xs transition-colors',
                   link.active
-                    ? 'bg-[#1a1a1a] text-white font-semibold'
-                    : 'text-[#6e6e73] hover:text-[#1d1d1f] hover:bg-[#f0ebe1]'
+                    ? 'bg-[#18181b] text-white font-semibold'
+                    : 'text-[#52525b] hover:text-[#09090b] hover:bg-[#f4f4f5]'
                 ]"
               />
               <span
                 v-else
                 v-html="link.label"
-                class="px-3 py-1 text-xs text-[#86868b] opacity-50 cursor-not-allowed"
+                class="px-3 py-1 text-xs text-[#71717a] opacity-50 cursor-not-allowed"
               />
             </template>
           </div>
@@ -726,17 +726,17 @@ const toggleCategoryActive = (category) => {
           >
             <div 
               v-if="showCreateModal"
-              class="bg-white rounded-3xl max-w-lg w-full p-6 sm:p-7 shadow-2xl border border-[#e0d9cc] space-y-5"
+              class="bg-white rounded-lg max-w-lg w-full p-6 sm:p-7 shadow-2xl border border-[#e4e4e7] space-y-5"
             >
               <div class="flex items-center justify-between">
                 <div>
-                  <h3 class="font-serif font-medium text-xl text-[#1d1d1f]">Add Product Category</h3>
-                  <p class="text-xs text-[#6e6e73] mt-0.5">Create a store aisle and storefront collection</p>
+                  <h3 class="font-semibold text-xl text-[#09090b]">Add Product Category</h3>
+                  <p class="text-xs text-[#52525b] mt-0.5">Create a store aisle and storefront collection</p>
                 </div>
                 <button 
                   type="button" 
                   @click="showCreateModal = false" 
-                  class="text-[#86868b] hover:text-[#1d1d1f] cursor-pointer"
+                  class="text-[#71717a] hover:text-[#09090b] cursor-pointer"
                 >
                   <X class="w-5 h-5" />
                 </button>
@@ -745,7 +745,7 @@ const toggleCategoryActive = (category) => {
               <form @submit.prevent="submitCreate" class="space-y-4">
                 <!-- Name -->
                 <div>
-                  <label class="block text-xs font-semibold text-[#1d1d1f] mb-1">
+                  <label class="block text-xs font-semibold text-[#09090b] mb-1">
                     Category Name <span class="text-rose-500">*</span>
                   </label>
                   <input 
@@ -753,7 +753,7 @@ const toggleCategoryActive = (category) => {
                     @input="handleCreateNameInput"
                     type="text" 
                     placeholder="e.g. Organic Ghee & Oils" 
-                    class="w-full px-3.5 py-2 text-xs bg-[#fbf9f5] border border-[#e0d9cc] rounded-xl focus:bg-white focus:outline-none focus:ring-3 focus:ring-[#1a1a1a]/10 focus:border-[#1a1a1a]"
+                    class="w-full px-3.5 py-2 text-xs bg-[#fafafa] border border-[#e4e4e7] rounded-md focus:bg-white focus:outline-none focus:ring-3 focus:ring-[#18181b]/10 focus:border-[#18181b]"
                     required 
                   />
                   <p v-if="createForm.errors.name" class="text-[11px] text-rose-600 mt-1">{{ createForm.errors.name }}</p>
@@ -762,7 +762,7 @@ const toggleCategoryActive = (category) => {
                 <!-- Slug & Hindi Title in 2 Cols -->
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
-                    <label class="block text-xs font-semibold text-[#1d1d1f] mb-1">
+                    <label class="block text-xs font-semibold text-[#09090b] mb-1">
                       URL Slug
                     </label>
                     <input 
@@ -770,20 +770,20 @@ const toggleCategoryActive = (category) => {
                       @input="createSlugManual = true"
                       type="text" 
                       placeholder="e.g. organic-ghee" 
-                      class="w-full px-3.5 py-2 text-xs font-mono bg-[#fbf9f5] border border-[#e0d9cc] rounded-xl focus:bg-white focus:outline-none focus:ring-3 focus:ring-[#1a1a1a]/10 focus:border-[#1a1a1a]"
+                      class="w-full px-3.5 py-2 text-xs font-mono bg-[#fafafa] border border-[#e4e4e7] rounded-md focus:bg-white focus:outline-none focus:ring-3 focus:ring-[#18181b]/10 focus:border-[#18181b]"
                     />
                     <p v-if="createForm.errors.slug" class="text-[11px] text-rose-600 mt-1">{{ createForm.errors.slug }}</p>
                   </div>
 
                   <div>
-                    <label class="block text-xs font-semibold text-[#1d1d1f] mb-1">
+                    <label class="block text-xs font-semibold text-[#09090b] mb-1">
                       Hindi Label
                     </label>
                     <input 
                       v-model="createForm.hindi_title" 
                       type="text" 
                       placeholder="e.g. देसी घी व तेल" 
-                      class="w-full px-3.5 py-2 text-xs bg-[#fbf9f5] border border-[#e0d9cc] rounded-xl focus:bg-white focus:outline-none focus:ring-3 focus:ring-[#1a1a1a]/10 focus:border-[#1a1a1a]"
+                      class="w-full px-3.5 py-2 text-xs bg-[#fafafa] border border-[#e4e4e7] rounded-md focus:bg-white focus:outline-none focus:ring-3 focus:ring-[#18181b]/10 focus:border-[#18181b]"
                     />
                     <p v-if="createForm.errors.hindi_title" class="text-[11px] text-rose-600 mt-1">{{ createForm.errors.hindi_title }}</p>
                   </div>
@@ -791,21 +791,21 @@ const toggleCategoryActive = (category) => {
 
                 <!-- Description -->
                 <div>
-                  <label class="block text-xs font-semibold text-[#1d1d1f] mb-1">
+                  <label class="block text-xs font-semibold text-[#09090b] mb-1">
                     Storefront Description
                   </label>
                   <textarea 
                     v-model="createForm.description" 
                     rows="2"
                     placeholder="Short summary displayed on category header and SEO..." 
-                    class="w-full px-3.5 py-2 text-xs bg-[#fbf9f5] border border-[#e0d9cc] rounded-xl focus:bg-white focus:outline-none focus:ring-3 focus:ring-[#1a1a1a]/10 focus:border-[#1a1a1a] resize-none"
+                    class="w-full px-3.5 py-2 text-xs bg-[#fafafa] border border-[#e4e4e7] rounded-md focus:bg-white focus:outline-none focus:ring-3 focus:ring-[#18181b]/10 focus:border-[#18181b] resize-none"
                   ></textarea>
                   <p v-if="createForm.errors.description" class="text-[11px] text-rose-600 mt-1">{{ createForm.errors.description }}</p>
                 </div>
 
                 <!-- Icon Selector -->
                 <div>
-                  <label class="block text-xs font-semibold text-[#1d1d1f] mb-1.5">
+                  <label class="block text-xs font-semibold text-[#09090b] mb-1.5">
                     Category Icon
                   </label>
                   <div class="grid grid-cols-4 sm:grid-cols-6 gap-2">
@@ -815,10 +815,10 @@ const toggleCategoryActive = (category) => {
                       type="button"
                       @click="createForm.icon = item.name"
                       :class="[
-                        'p-2 rounded-xl border flex flex-col items-center justify-center gap-1 transition-all cursor-pointer text-center',
+                        'p-2 rounded-md border flex flex-col items-center justify-center gap-1 transition-all cursor-pointer text-center',
                         createForm.icon === item.name
-                          ? 'border-[#1a1a1a] bg-[#1a1a1a] text-white shadow-2xs'
-                          : 'border-[#e0d9cc] bg-[#fbf9f5] text-[#6e6e73] hover:border-[#a47a3c] hover:bg-white'
+                          ? 'border-[#18181b] bg-[#18181b] text-white shadow-2xs'
+                          : 'border-[#e4e4e7] bg-[#fafafa] text-[#52525b] hover:border-[#18181b] hover:bg-white'
                       ]"
                     >
                       <component :is="item.icon" class="w-4 h-4" />
@@ -830,27 +830,27 @@ const toggleCategoryActive = (category) => {
                 <!-- Image URL or File Upload -->
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
                   <div>
-                    <label class="block text-xs font-semibold text-[#1d1d1f] mb-1">
+                    <label class="block text-xs font-semibold text-[#09090b] mb-1">
                       Banner Image URL
                     </label>
                     <div class="relative">
-                      <LinkIcon class="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-[#86868b]" />
+                      <LinkIcon class="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-[#71717a]" />
                       <input 
                         v-model="createForm.image_url" 
                         type="text" 
                         placeholder="/images/products/ghee.jpg" 
-                        class="w-full pl-8 pr-3 py-2 text-xs bg-[#fbf9f5] border border-[#e0d9cc] rounded-xl focus:bg-white focus:outline-none focus:ring-3 focus:ring-[#1a1a1a]/10 focus:border-[#1a1a1a]"
+                        class="w-full pl-8 pr-3 py-2 text-xs bg-[#fafafa] border border-[#e4e4e7] rounded-md focus:bg-white focus:outline-none focus:ring-3 focus:ring-[#18181b]/10 focus:border-[#18181b]"
                       />
                     </div>
                   </div>
 
                   <div>
-                    <label class="block text-xs font-semibold text-[#1d1d1f] mb-1">
+                    <label class="block text-xs font-semibold text-[#09090b] mb-1">
                       Or Upload Image File
                     </label>
-                    <label class="flex items-center gap-2 px-3 py-2 text-xs bg-[#fbf9f5] border border-[#e0d9cc] rounded-xl cursor-pointer hover:bg-white transition-colors truncate">
-                      <Upload class="w-3.5 h-3.5 text-[#86868b] shrink-0" />
-                      <span class="truncate text-[#6e6e73]">
+                    <label class="flex items-center gap-2 px-3 py-2 text-xs bg-[#fafafa] border border-[#e4e4e7] rounded-md cursor-pointer hover:bg-white transition-colors truncate">
+                      <Upload class="w-3.5 h-3.5 text-[#71717a] shrink-0" />
+                      <span class="truncate text-[#52525b]">
                         {{ createForm.image_file ? createForm.image_file.name : 'Choose file...' }}
                       </span>
                       <input 
@@ -864,16 +864,16 @@ const toggleCategoryActive = (category) => {
                 </div>
 
                 <!-- Priority & Active Checkbox -->
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2 border-t border-[#e0d9cc]/60 items-center">
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2 border-t border-[#e4e4e7]/60 items-center">
                   <div>
-                    <label class="block text-xs font-semibold text-[#1d1d1f] mb-1">
+                    <label class="block text-xs font-semibold text-[#09090b] mb-1">
                       Display Priority (Sort Order)
                     </label>
                     <input 
                       v-model="createForm.sort_order" 
                       type="number" 
                       min="0"
-                      class="w-full px-3.5 py-1.5 text-xs bg-[#fbf9f5] border border-[#e0d9cc] rounded-xl focus:bg-white focus:outline-none focus:ring-3 focus:ring-[#1a1a1a]/10 focus:border-[#1a1a1a]"
+                      class="w-full px-3.5 py-1.5 text-xs bg-[#fafafa] border border-[#e4e4e7] rounded-md focus:bg-white focus:outline-none focus:ring-3 focus:ring-[#18181b]/10 focus:border-[#18181b]"
                     />
                   </div>
 
@@ -882,27 +882,27 @@ const toggleCategoryActive = (category) => {
                       v-model="createForm.is_active" 
                       type="checkbox" 
                       id="create_is_active" 
-                      class="w-4 h-4 rounded text-[#1a1a1a] focus:ring-[#1a1a1a] border-[#e0d9cc]" 
+                      class="w-4 h-4 rounded text-[#18181b] focus:ring-[#18181b] border-[#e4e4e7]" 
                     />
-                    <label for="create_is_active" class="text-xs text-[#1d1d1f] font-medium cursor-pointer">
+                    <label for="create_is_active" class="text-xs text-[#09090b] font-medium cursor-pointer">
                       Visible in Storefront navigation
                     </label>
                   </div>
                 </div>
 
                 <!-- Actions -->
-                <div class="flex items-center justify-end gap-2 pt-3 border-t border-[#e0d9cc]">
+                <div class="flex items-center justify-end gap-2 pt-3 border-t border-[#e4e4e7]">
                   <button 
                     type="button" 
                     @click="showCreateModal = false" 
-                    class="px-4 py-2 text-xs font-medium text-[#6e6e73] hover:text-[#1d1d1f] hover:bg-[#f0ebe1] rounded-full transition-colors cursor-pointer"
+                    class="px-4 py-2 text-xs font-medium text-[#52525b] hover:text-[#09090b] hover:bg-[#f4f4f5] rounded-md transition-colors cursor-pointer"
                   >
                     Cancel
                   </button>
                   <button 
                     type="submit" 
                     :disabled="createForm.processing"
-                    class="px-5 py-2 text-xs font-semibold bg-[#1a1a1a] hover:bg-black text-white rounded-full transition-all shadow-2xs hover:scale-[1.02] cursor-pointer disabled:opacity-50"
+                    class="px-5 py-2 text-xs font-semibold bg-[#18181b] hover:bg-black text-white rounded-md transition-all shadow-2xs hover:scale-[1.02] cursor-pointer disabled:opacity-50"
                   >
                     {{ createForm.processing ? 'Creating...' : 'Create Category' }}
                   </button>
@@ -942,17 +942,17 @@ const toggleCategoryActive = (category) => {
           >
             <div 
               v-if="showEditModal"
-              class="bg-white rounded-3xl max-w-lg w-full p-6 sm:p-7 shadow-2xl border border-[#e0d9cc] space-y-5"
+              class="bg-white rounded-lg max-w-lg w-full p-6 sm:p-7 shadow-2xl border border-[#e4e4e7] space-y-5"
             >
               <div class="flex items-center justify-between">
                 <div>
-                  <h3 class="font-serif font-medium text-xl text-[#1d1d1f]">Edit Category</h3>
-                  <p class="text-xs text-[#6e6e73] mt-0.5">Modify aisle parameters and store settings</p>
+                  <h3 class="font-semibold text-xl text-[#09090b]">Edit Category</h3>
+                  <p class="text-xs text-[#52525b] mt-0.5">Modify aisle parameters and store settings</p>
                 </div>
                 <button 
                   type="button" 
                   @click="showEditModal = false" 
-                  class="text-[#86868b] hover:text-[#1d1d1f] cursor-pointer"
+                  class="text-[#71717a] hover:text-[#09090b] cursor-pointer"
                 >
                   <X class="w-5 h-5" />
                 </button>
@@ -961,13 +961,13 @@ const toggleCategoryActive = (category) => {
               <form @submit.prevent="submitEdit" class="space-y-4">
                 <!-- Name -->
                 <div>
-                  <label class="block text-xs font-semibold text-[#1d1d1f] mb-1">
+                  <label class="block text-xs font-semibold text-[#09090b] mb-1">
                     Category Name <span class="text-rose-500">*</span>
                   </label>
                   <input 
                     v-model="editForm.name" 
                     type="text" 
-                    class="w-full px-3.5 py-2 text-xs bg-[#fbf9f5] border border-[#e0d9cc] rounded-xl focus:bg-white focus:outline-none focus:ring-3 focus:ring-[#1a1a1a]/10 focus:border-[#1a1a1a]"
+                    class="w-full px-3.5 py-2 text-xs bg-[#fafafa] border border-[#e4e4e7] rounded-md focus:bg-white focus:outline-none focus:ring-3 focus:ring-[#18181b]/10 focus:border-[#18181b]"
                     required 
                   />
                   <p v-if="editForm.errors.name" class="text-[11px] text-rose-600 mt-1">{{ editForm.errors.name }}</p>
@@ -976,27 +976,27 @@ const toggleCategoryActive = (category) => {
                 <!-- Slug & Hindi Title in 2 Cols -->
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
-                    <label class="block text-xs font-semibold text-[#1d1d1f] mb-1">
+                    <label class="block text-xs font-semibold text-[#09090b] mb-1">
                       URL Slug <span class="text-rose-500">*</span>
                     </label>
                     <input 
                       v-model="editForm.slug" 
                       type="text" 
-                      class="w-full px-3.5 py-2 text-xs font-mono bg-[#fbf9f5] border border-[#e0d9cc] rounded-xl focus:bg-white focus:outline-none focus:ring-3 focus:ring-[#1a1a1a]/10 focus:border-[#1a1a1a]"
+                      class="w-full px-3.5 py-2 text-xs font-mono bg-[#fafafa] border border-[#e4e4e7] rounded-md focus:bg-white focus:outline-none focus:ring-3 focus:ring-[#18181b]/10 focus:border-[#18181b]"
                       required
                     />
                     <p v-if="editForm.errors.slug" class="text-[11px] text-rose-600 mt-1">{{ editForm.errors.slug }}</p>
                   </div>
 
                   <div>
-                    <label class="block text-xs font-semibold text-[#1d1d1f] mb-1">
+                    <label class="block text-xs font-semibold text-[#09090b] mb-1">
                       Hindi Label
                     </label>
                     <input 
                       v-model="editForm.hindi_title" 
                       type="text" 
                       placeholder="e.g. देसी घी" 
-                      class="w-full px-3.5 py-2 text-xs bg-[#fbf9f5] border border-[#e0d9cc] rounded-xl focus:bg-white focus:outline-none focus:ring-3 focus:ring-[#1a1a1a]/10 focus:border-[#1a1a1a]"
+                      class="w-full px-3.5 py-2 text-xs bg-[#fafafa] border border-[#e4e4e7] rounded-md focus:bg-white focus:outline-none focus:ring-3 focus:ring-[#18181b]/10 focus:border-[#18181b]"
                     />
                     <p v-if="editForm.errors.hindi_title" class="text-[11px] text-rose-600 mt-1">{{ editForm.errors.hindi_title }}</p>
                   </div>
@@ -1004,21 +1004,21 @@ const toggleCategoryActive = (category) => {
 
                 <!-- Description -->
                 <div>
-                  <label class="block text-xs font-semibold text-[#1d1d1f] mb-1">
+                  <label class="block text-xs font-semibold text-[#09090b] mb-1">
                     Storefront Description
                   </label>
                   <textarea 
                     v-model="editForm.description" 
                     rows="2"
                     placeholder="Short summary displayed on category header and SEO..." 
-                    class="w-full px-3.5 py-2 text-xs bg-[#fbf9f5] border border-[#e0d9cc] rounded-xl focus:bg-white focus:outline-none focus:ring-3 focus:ring-[#1a1a1a]/10 focus:border-[#1a1a1a] resize-none"
+                    class="w-full px-3.5 py-2 text-xs bg-[#fafafa] border border-[#e4e4e7] rounded-md focus:bg-white focus:outline-none focus:ring-3 focus:ring-[#18181b]/10 focus:border-[#18181b] resize-none"
                   ></textarea>
                   <p v-if="editForm.errors.description" class="text-[11px] text-rose-600 mt-1">{{ editForm.errors.description }}</p>
                 </div>
 
                 <!-- Icon Selector -->
                 <div>
-                  <label class="block text-xs font-semibold text-[#1d1d1f] mb-1.5">
+                  <label class="block text-xs font-semibold text-[#09090b] mb-1.5">
                     Category Icon
                   </label>
                   <div class="grid grid-cols-4 sm:grid-cols-6 gap-2">
@@ -1028,10 +1028,10 @@ const toggleCategoryActive = (category) => {
                       type="button"
                       @click="editForm.icon = item.name"
                       :class="[
-                        'p-2 rounded-xl border flex flex-col items-center justify-center gap-1 transition-all cursor-pointer text-center',
+                        'p-2 rounded-md border flex flex-col items-center justify-center gap-1 transition-all cursor-pointer text-center',
                         editForm.icon === item.name
-                          ? 'border-[#1a1a1a] bg-[#1a1a1a] text-white shadow-2xs'
-                          : 'border-[#e0d9cc] bg-[#fbf9f5] text-[#6e6e73] hover:border-[#a47a3c] hover:bg-white'
+                          ? 'border-[#18181b] bg-[#18181b] text-white shadow-2xs'
+                          : 'border-[#e4e4e7] bg-[#fafafa] text-[#52525b] hover:border-[#18181b] hover:bg-white'
                       ]"
                     >
                       <component :is="item.icon" class="w-4 h-4" />
@@ -1045,29 +1045,29 @@ const toggleCategoryActive = (category) => {
                   <div class="flex items-center gap-3">
                     <div 
                       v-if="editForm.image_url" 
-                      class="w-12 h-12 rounded-xl border border-[#e0d9cc] overflow-hidden bg-[#f5eee2] shrink-0"
+                      class="w-12 h-12 rounded-md border border-[#e4e4e7] overflow-hidden bg-[#f4f4f5] shrink-0"
                     >
                       <img :src="editForm.image_url" alt="Current image" class="w-full h-full object-cover" />
                     </div>
                     <div class="flex-1">
-                      <label class="block text-xs font-semibold text-[#1d1d1f] mb-1">
+                      <label class="block text-xs font-semibold text-[#09090b] mb-1">
                         Image URL
                       </label>
                       <input 
                         v-model="editForm.image_url" 
                         type="text" 
-                        class="w-full px-3.5 py-1.5 text-xs bg-[#fbf9f5] border border-[#e0d9cc] rounded-xl focus:bg-white focus:outline-none focus:ring-3 focus:ring-[#1a1a1a]/10 focus:border-[#1a1a1a]"
+                        class="w-full px-3.5 py-1.5 text-xs bg-[#fafafa] border border-[#e4e4e7] rounded-md focus:bg-white focus:outline-none focus:ring-3 focus:ring-[#18181b]/10 focus:border-[#18181b]"
                       />
                     </div>
                   </div>
 
                   <div>
-                    <label class="block text-xs font-semibold text-[#1d1d1f] mb-1">
+                    <label class="block text-xs font-semibold text-[#09090b] mb-1">
                       Or Upload New File
                     </label>
-                    <label class="flex items-center gap-2 px-3 py-2 text-xs bg-[#fbf9f5] border border-[#e0d9cc] rounded-xl cursor-pointer hover:bg-white transition-colors truncate">
-                      <Upload class="w-3.5 h-3.5 text-[#86868b] shrink-0" />
-                      <span class="truncate text-[#6e6e73]">
+                    <label class="flex items-center gap-2 px-3 py-2 text-xs bg-[#fafafa] border border-[#e4e4e7] rounded-md cursor-pointer hover:bg-white transition-colors truncate">
+                      <Upload class="w-3.5 h-3.5 text-[#71717a] shrink-0" />
+                      <span class="truncate text-[#52525b]">
                         {{ editForm.image_file ? editForm.image_file.name : 'Choose replacement image...' }}
                       </span>
                       <input 
@@ -1081,16 +1081,16 @@ const toggleCategoryActive = (category) => {
                 </div>
 
                 <!-- Priority & Active Checkbox -->
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2 border-t border-[#e0d9cc]/60 items-center">
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2 border-t border-[#e4e4e7]/60 items-center">
                   <div>
-                    <label class="block text-xs font-semibold text-[#1d1d1f] mb-1">
+                    <label class="block text-xs font-semibold text-[#09090b] mb-1">
                       Display Priority (Sort Order)
                     </label>
                     <input 
                       v-model="editForm.sort_order" 
                       type="number" 
                       min="0"
-                      class="w-full px-3.5 py-1.5 text-xs bg-[#fbf9f5] border border-[#e0d9cc] rounded-xl focus:bg-white focus:outline-none focus:ring-3 focus:ring-[#1a1a1a]/10 focus:border-[#1a1a1a]"
+                      class="w-full px-3.5 py-1.5 text-xs bg-[#fafafa] border border-[#e4e4e7] rounded-md focus:bg-white focus:outline-none focus:ring-3 focus:ring-[#18181b]/10 focus:border-[#18181b]"
                     />
                   </div>
 
@@ -1099,27 +1099,27 @@ const toggleCategoryActive = (category) => {
                       v-model="editForm.is_active" 
                       type="checkbox" 
                       id="edit_is_active" 
-                      class="w-4 h-4 rounded text-[#1a1a1a] focus:ring-[#1a1a1a] border-[#e0d9cc]" 
+                      class="w-4 h-4 rounded text-[#18181b] focus:ring-[#18181b] border-[#e4e4e7]" 
                     />
-                    <label for="edit_is_active" class="text-xs text-[#1d1d1f] font-medium cursor-pointer">
+                    <label for="edit_is_active" class="text-xs text-[#09090b] font-medium cursor-pointer">
                       Visible in Storefront navigation
                     </label>
                   </div>
                 </div>
 
                 <!-- Actions -->
-                <div class="flex items-center justify-end gap-2 pt-3 border-t border-[#e0d9cc]">
+                <div class="flex items-center justify-end gap-2 pt-3 border-t border-[#e4e4e7]">
                   <button 
                     type="button" 
                     @click="showEditModal = false" 
-                    class="px-4 py-2 text-xs font-medium text-[#6e6e73] hover:text-[#1d1d1f] hover:bg-[#f0ebe1] rounded-full transition-colors cursor-pointer"
+                    class="px-4 py-2 text-xs font-medium text-[#52525b] hover:text-[#09090b] hover:bg-[#f4f4f5] rounded-md transition-colors cursor-pointer"
                   >
                     Cancel
                   </button>
                   <button 
                     type="submit" 
                     :disabled="editForm.processing"
-                    class="px-5 py-2 text-xs font-semibold bg-[#1a1a1a] hover:bg-black text-white rounded-full transition-all shadow-2xs hover:scale-[1.02] cursor-pointer disabled:opacity-50"
+                    class="px-5 py-2 text-xs font-semibold bg-[#18181b] hover:bg-black text-white rounded-md transition-all shadow-2xs hover:scale-[1.02] cursor-pointer disabled:opacity-50"
                   >
                     {{ editForm.processing ? 'Saving...' : 'Save Changes' }}
                   </button>
@@ -1159,22 +1159,22 @@ const toggleCategoryActive = (category) => {
           >
             <div 
               v-if="showDeleteModal && categoryToDelete"
-              class="bg-white rounded-3xl max-w-sm w-full p-6 shadow-2xl border border-[#e0d9cc] space-y-4"
+              class="bg-white rounded-lg max-w-sm w-full p-6 shadow-2xl border border-[#e4e4e7] space-y-4"
             >
-              <div class="w-12 h-12 rounded-full bg-rose-50 text-rose-600 flex items-center justify-center mx-auto">
+              <div class="w-12 h-12 rounded-md bg-rose-50 text-rose-600 flex items-center justify-center mx-auto">
                 <Trash2 class="w-6 h-6" />
               </div>
 
               <div class="text-center">
-                <h3 class="font-serif font-medium text-lg text-[#1d1d1f]">
+                <h3 class="font-semibold text-lg text-[#09090b]">
                   Delete Category?
                 </h3>
-                <p class="text-xs text-[#6e6e73] mt-1.5 leading-relaxed">
-                  Are you sure you want to delete <strong class="text-[#1d1d1f]">{{ categoryToDelete.name }}</strong>?
+                <p class="text-xs text-[#52525b] mt-1.5 leading-relaxed">
+                  Are you sure you want to delete <strong class="text-[#09090b]">{{ categoryToDelete.name }}</strong>?
                 </p>
-                <div class="mt-3 p-3 bg-[#fbf9f5] border border-[#e0d9cc] rounded-xl text-left text-[11px] text-[#6e6e73] space-y-1">
-                  <p class="font-medium text-[#1d1d1f]">Automatic Safety Protection:</p>
-                  <p>Any items in this category will be smoothly reassigned to the default <strong class="text-[#1a1a1a]">Pantry & Groceries</strong> collection so no products become orphaned.</p>
+                <div class="mt-3 p-3 bg-[#fafafa] border border-[#e4e4e7] rounded-md text-left text-[11px] text-[#52525b] space-y-1">
+                  <p class="font-medium text-[#09090b]">Automatic Safety Protection:</p>
+                  <p>Any items in this category will be smoothly reassigned to the default <strong class="text-[#18181b]">Pantry & Groceries</strong> collection so no products become orphaned.</p>
                 </div>
               </div>
 
@@ -1182,7 +1182,7 @@ const toggleCategoryActive = (category) => {
                 <button 
                   type="button" 
                   @click="showDeleteModal = false" 
-                  class="flex-1 py-2 text-xs font-medium text-[#6e6e73] hover:text-[#1d1d1f] hover:bg-[#f0ebe1] rounded-full transition-colors cursor-pointer"
+                  class="flex-1 py-2 text-xs font-medium text-[#52525b] hover:text-[#09090b] hover:bg-[#f4f4f5] rounded-md transition-colors cursor-pointer"
                 >
                   Cancel
                 </button>
@@ -1190,7 +1190,7 @@ const toggleCategoryActive = (category) => {
                   type="button" 
                   @click="confirmDelete" 
                   :disabled="isDeleting"
-                  class="flex-1 py-2 text-xs font-semibold bg-rose-600 hover:bg-rose-700 text-white rounded-full transition-all shadow-2xs cursor-pointer disabled:opacity-50"
+                  class="flex-1 py-2 text-xs font-semibold bg-rose-600 hover:bg-rose-700 text-white rounded-md transition-all shadow-2xs cursor-pointer disabled:opacity-50"
                 >
                   {{ isDeleting ? 'Deleting...' : 'Confirm Delete' }}
                 </button>

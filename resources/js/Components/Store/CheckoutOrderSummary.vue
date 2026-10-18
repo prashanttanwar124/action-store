@@ -11,12 +11,12 @@ defineProps({
 
 <template>
   <div class="hidden lg:block lg:col-span-5 lg:sticky lg:top-6 self-start space-y-4">
-    <div class="bg-white rounded-3xl border border-[#e0d9cc] p-6 space-y-4 shadow-xs">
+    <div class="bg-white rounded-lg border border-[#e0d9cc] p-6 space-y-4 shadow-xs">
       <div class="border-b border-[#e0d9cc] pb-3.5 flex items-center justify-between">
         <h2 class="text-base font-serif font-semibold text-[#1d1d1f] tracking-tight leading-none">
           Order Review
         </h2>
-        <span class="text-xs font-semibold text-stone-700 bg-[#f4efe6] border border-[#dfd6c8] px-2.5 py-0.5 rounded-full">
+        <span class="text-xs font-semibold text-stone-700 bg-[#f4efe6] border border-[#dfd6c8] px-2.5 py-0.5 rounded-md">
           {{ itemCount }} {{ itemCount === 1 ? 'item' : 'items' }}
         </span>
       </div>
@@ -29,7 +29,7 @@ defineProps({
           class="py-3 flex items-center justify-between gap-3 text-xs"
         >
           <div class="flex items-center gap-3">
-            <div class="w-12 h-12 rounded-xl bg-[#f3efe7] border border-[#e0d9cc] overflow-hidden shrink-0 relative">
+            <div class="w-12 h-12 rounded-md bg-[#f3efe7] border border-[#e0d9cc] overflow-hidden shrink-0 relative">
               <img
                 :src="item.image || (item.name.toLowerCase().includes('atta') ? '/images/products/atta.jpg' : (item.name.toLowerCase().includes('ghee') ? '/images/products/ghee.jpg' : (item.name.toLowerCase().includes('paneer') ? '/images/products/paneer.jpg' : (item.name.toLowerCase().includes('rice') ? '/images/products/rice.jpg' : (item.name.toLowerCase().includes('biscuit') ? '/images/products/biscuits.jpg' : (item.name.toLowerCase().includes('masala') ? '/images/products/garam_masala.jpg' : '/images/products/sweets.jpg'))))))"
                 :alt="item.name"

@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Events\OrderItemsPackedUpdated;
 use App\Events\OrderPlaced;
 use App\Events\OrderStatusUpdated;
 use App\Models\Admin;
@@ -195,5 +196,61 @@ class AdminOrderTest extends TestCase
         $response->assertStatus(200);
         $this->assertEquals('cancelled', $order->fresh()->status);
         $this->assertEquals(7, $product->fresh()->stock);
+    }
+
+    public function test_admin_can_toggle_and_bulk_update_packed_items_with_reverb_broadcast(): void
+    {
+        Event::fake([OrderItemsPackedUpdated::class]);
+
+        $admin = Admin::where('email', 'admin@masalamart.com')->first();
+        $product1 = Product::factory()->create(['name' => 'Haldi']);
+        $product2 = Product::factory()->create(['name' => 'Jeera']);
+
+        $order = Order::factory()->create(['status' => 'packing']);
+        $item1 = $order->items()->create([
+            'product_id' => $product1->id,
+            'name' => $product1->name,
+            'unit_price' => 3.49,
+            'quantity' => 1,
+            'total_price' => 3.49,
+        ]);
+        $item2 = $order->items()->create([
+            'product_id' => $product2->id,
+            'name' => $product2->name,
+            'unit_price' => 4.29,
+            'quantity' => 2,
+            'total_price' => 8.58,
+        ]);
+
+        // 1. Toggle single item packed
+        $response = $this->actingAs($admin, 'admin')
+            ->patchJson(route('admin.orders.items.packed', $order->id), [
+                'item_id' => $item1->id,
+                'is_packed' => true,
+            ]);
+
+        $response->assertOk()
+            ->assertJsonPath('success', true)
+            ->assertJsonPath('packed_item_ids', [$item1->id]);
+
+        $this->assertTrue($item1->fresh()->is_packed);
+        $this->assertFalse($item2->fresh()->is_packed);
+
+        Event::assertDispatched(OrderItemsPackedUpdated::class, function ($event) use ($order, $item1) {
+            return $event->order->id === $order->id
+                && $event->broadcastWith()['packed_item_ids'] === [$item1->id];
+        });
+
+        // 2. Bulk mark all items packed
+        $bulkResponse = $this->actingAs($admin, 'admin')
+            ->patchJson(route('admin.orders.items.packed', $order->id), [
+                'is_packed' => true,
+            ]);
+
+        $bulkResponse->assertOk()
+            ->assertJsonPath('packed_item_ids', [$item1->id, $item2->id]);
+
+        $this->assertTrue($item1->fresh()->is_packed);
+        $this->assertTrue($item2->fresh()->is_packed);
     }
 }

@@ -238,7 +238,10 @@ function handleAddKitToCart(kit) {
     });
   } else {
     store.addToCart({
-      id: kit.id || kit.slug,
+      id: kit.slug || kit.id,
+      slug: kit.slug,
+      type: 'recipe-kit',
+      isRecipeKit: true,
       name: kit.name,
       price: kit.price,
       image: kit.image,
@@ -305,17 +308,17 @@ watch([() => props.products?.current_page, () => props.recipeKits?.current_page]
       <!-- ========================================== -->
       <!-- UNIFIED COMMAND CENTER: SEARCH & AISLES    -->
       <!-- ========================================== -->
-      <div class="bg-white border border-[#dfd6c8] rounded-2xl sm:rounded-3xl p-3 sm:p-6 shadow-2xs space-y-2.5 sm:space-y-4">
+      <div class="bg-white border border-[#dfd6c8] rounded-lg sm:rounded-lg p-3 sm:p-6 shadow-2xs space-y-2.5 sm:space-y-4">
         
         <!-- ROW 1: HEADER & COMPACT SEGMENTED MODE SWITCHER -->
         <div class="flex items-center justify-between gap-3 sm:border-b sm:border-[#e0d9cc]/60 sm:pb-4">
           <div>
             <!-- Eyebrow Badges: Desktop only to prevent mobile bloat -->
             <div class="hidden sm:flex items-center gap-2 mb-1.5">
-              <span class="text-[11px] font-mono uppercase bg-stone-900 text-white px-2.5 py-0.5 rounded-full font-bold tracking-wider">
+              <span class="text-[11px] font-mono uppercase bg-stone-900 text-white px-2.5 py-0.5 rounded-md font-bold tracking-wider">
                 Storefront Catalogue
               </span>
-              <span class="text-[11px] text-amber-900 bg-amber-50 border border-amber-200/80 px-2.5 py-0.5 rounded-full font-bold font-devanagari">
+              <span class="text-[11px] text-amber-900 bg-amber-50 border border-amber-200/80 px-2.5 py-0.5 rounded-md font-bold font-devanagari">
                 {{ activeTab === 'products' ? 'किराना व रोज़मर्रा सामान' : 'कारीगरी रेसिपी किट' }}
               </span>
             </div>
@@ -331,12 +334,12 @@ watch([() => props.products?.current_page, () => props.recipeKits?.current_page]
           </div>
 
           <!-- Segmented Tab Switcher (Tight on mobile, rich on desktop) -->
-          <div class="inline-flex items-center p-0.5 sm:p-1 bg-stone-100 border border-stone-200/90 rounded-full shadow-2xs shrink-0">
+          <div class="inline-flex items-center p-0.5 sm:p-1 bg-stone-100 border border-stone-200/90 rounded-md shadow-2xs shrink-0">
             <button
               type="button"
               @click="onTabSelect('products')"
               :class="[
-                'inline-flex items-center gap-1.5 px-2.5 sm:px-4 py-1 sm:py-2 rounded-full text-xs font-bold transition-all cursor-pointer',
+                'inline-flex items-center gap-1.5 px-2.5 sm:px-4 py-1 sm:py-2 rounded-md text-xs font-bold transition-all cursor-pointer',
                 activeTab === 'products'
                   ? 'bg-stone-900 text-white shadow-xs'
                   : 'text-stone-700 hover:text-stone-950 font-semibold'
@@ -349,7 +352,7 @@ watch([() => props.products?.current_page, () => props.recipeKits?.current_page]
               type="button"
               @click="onTabSelect('kits')"
               :class="[
-                'inline-flex items-center gap-1.5 px-2.5 sm:px-4 py-1 sm:py-2 rounded-full text-xs font-bold transition-all cursor-pointer',
+                'inline-flex items-center gap-1.5 px-2.5 sm:px-4 py-1 sm:py-2 rounded-md text-xs font-bold transition-all cursor-pointer',
                 activeTab === 'kits'
                   ? 'bg-stone-900 text-white shadow-xs'
                   : 'text-stone-700 hover:text-stone-950 font-semibold'
@@ -373,7 +376,7 @@ watch([() => props.products?.current_page, () => props.recipeKits?.current_page]
               @input="onSearchInput"
               type="text" 
               placeholder="Search paneer, atta, bilona ghee, chai masala, recipe kits…"
-              class="w-full h-10 sm:h-12 pl-10 sm:pl-11 pr-20 sm:pr-24 bg-stone-50 hover:bg-white focus:bg-white border border-[#e0d9cc] focus:border-[#1a1a1a] focus:ring-3 focus:ring-[#1a1a1a]/10 focus:outline-none rounded-xl sm:rounded-2xl text-xs sm:text-sm text-stone-900 placeholder:text-stone-500 shadow-2xs font-medium transition-all"
+              class="w-full h-10 sm:h-12 pl-10 sm:pl-11 pr-20 sm:pr-24 bg-stone-50 hover:bg-white focus:bg-white border border-[#e0d9cc] focus:border-[#1a1a1a] focus:ring-3 focus:ring-[#1a1a1a]/10 focus:outline-none rounded-md sm:rounded-lg text-xs sm:text-sm text-stone-900 placeholder:text-stone-500 shadow-2xs font-medium transition-all"
             />
 
             <!-- Right action: Clear Button or Keyboard Shortcut hint -->
@@ -382,7 +385,7 @@ watch([() => props.products?.current_page, () => props.recipeKits?.current_page]
                 v-if="searchQuery" 
                 type="button"
                 @click="clearSearch"
-                class="p-1 text-stone-500 hover:text-stone-900 rounded-full hover:bg-stone-200 transition-colors cursor-pointer"
+                class="p-1 text-stone-500 hover:text-stone-900 rounded-md hover:bg-stone-200 transition-colors cursor-pointer"
                 title="Clear search"
               >
                 <X class="w-4 h-4" />
@@ -401,7 +404,7 @@ watch([() => props.products?.current_page, () => props.recipeKits?.current_page]
               :key="tag"
               type="button"
               @click="selectQuickTag(tag)"
-              class="inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-bold bg-stone-100 hover:bg-stone-200 text-stone-800 border border-stone-200 transition-colors shrink-0 cursor-pointer"
+              class="inline-flex items-center px-2.5 py-1 rounded-md text-[11px] font-bold bg-stone-100 hover:bg-stone-200 text-stone-800 border border-stone-200 transition-colors shrink-0 cursor-pointer"
             >
               {{ tag }}
             </button>
@@ -422,7 +425,7 @@ watch([() => props.products?.current_page, () => props.recipeKits?.current_page]
               type="button"
               @click="onCategorySelect(cat.id)"
               :class="[
-                'inline-flex items-center gap-1.5 sm:gap-2 px-3 sm:px-3.5 py-1.5 sm:py-2 rounded-xl text-xs whitespace-nowrap transition-all cursor-pointer border shrink-0 shadow-2xs',
+                'inline-flex items-center gap-1.5 sm:gap-2 px-3 sm:px-3.5 py-1.5 sm:py-2 rounded-md text-xs whitespace-nowrap transition-all cursor-pointer border shrink-0 shadow-2xs',
                 activeCategory === cat.id 
                   ? 'bg-stone-900 text-white border-stone-900 font-bold shadow-xs scale-[1.01]' 
                   : 'bg-white text-stone-900 hover:text-black font-semibold border-stone-300 hover:border-stone-900 hover:bg-stone-50'
@@ -463,7 +466,7 @@ watch([() => props.products?.current_page, () => props.recipeKits?.current_page]
             <!-- Active Filter Badges (Desktop) -->
             <span 
               v-if="searchQuery" 
-              class="hidden sm:inline-flex items-center gap-1 bg-stone-100 text-stone-900 border border-stone-300 px-2.5 py-0.5 rounded-full text-[11px] font-bold"
+              class="hidden sm:inline-flex items-center gap-1 bg-stone-100 text-stone-900 border border-stone-300 px-2.5 py-0.5 rounded-md text-[11px] font-bold"
             >
               "{{ searchQuery }}"
               <button type="button" @click="clearSearch" class="hover:text-black cursor-pointer"><X class="w-3 h-3" /></button>
@@ -471,7 +474,7 @@ watch([() => props.products?.current_page, () => props.recipeKits?.current_page]
 
             <span 
               v-if="activeCategory !== 'all'" 
-              class="hidden sm:inline-flex items-center gap-1 bg-stone-100 text-stone-900 border border-stone-300 px-2.5 py-0.5 rounded-full text-[11px] font-bold"
+              class="hidden sm:inline-flex items-center gap-1 bg-stone-100 text-stone-900 border border-stone-300 px-2.5 py-0.5 rounded-md text-[11px] font-bold"
             >
               Aisle: {{ activeCategory }}
               <button type="button" @click="onCategorySelect('all')" class="hover:text-black cursor-pointer"><X class="w-3 h-3" /></button>
@@ -496,7 +499,7 @@ watch([() => props.products?.current_page, () => props.recipeKits?.current_page]
               type="button"
               @click="toggleInStock"
               :class="[
-                'inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-full text-xs font-bold border transition-all cursor-pointer shadow-2xs whitespace-nowrap',
+                'inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-md text-xs font-bold border transition-all cursor-pointer shadow-2xs whitespace-nowrap',
                 inStockOnly 
                   ? 'bg-stone-900 text-white border-stone-900 shadow-xs' 
                   : 'bg-white text-stone-800 border-stone-300 hover:text-black hover:border-stone-400 hover:bg-stone-50'
@@ -508,18 +511,18 @@ watch([() => props.products?.current_page, () => props.recipeKits?.current_page]
 
             <!-- Sort Dropdown -->
             <Select :model-value="activeSort" @update:model-value="onSortChange">
-              <SelectTrigger class="h-7 sm:h-8 w-auto rounded-full border border-stone-300 bg-white hover:bg-stone-50 px-2.5 sm:px-3 text-xs font-bold text-stone-900 shadow-2xs gap-1 sm:gap-1.5 focus:border-[#1a1a1a] focus:ring-3 focus:ring-[#1a1a1a]/10 whitespace-nowrap">
+              <SelectTrigger class="h-7 sm:h-8 w-auto rounded-md border border-stone-300 bg-white hover:bg-stone-50 px-2.5 sm:px-3 text-xs font-bold text-stone-900 shadow-2xs gap-1 sm:gap-1.5 focus:border-[#1a1a1a] focus:ring-3 focus:ring-[#1a1a1a]/10 whitespace-nowrap">
                 <div class="flex items-center gap-1 sm:gap-1.5 mr-0.5">
                   <ArrowUpDown class="w-3 h-3 sm:w-3.5 sm:h-3.5 text-stone-500 shrink-0" />
                   <SelectValue placeholder="Sort" />
                 </div>
               </SelectTrigger>
-              <SelectContent class="rounded-2xl border border-stone-200 bg-white shadow-xl min-w-[210px] p-1.5 z-50">
-                <SelectItem value="featured" class="rounded-xl text-xs py-2 font-semibold text-stone-900">Featured / Recommended</SelectItem>
-                <SelectItem value="price_asc" class="rounded-xl text-xs py-2 font-semibold text-stone-900">Price: Low to High</SelectItem>
-                <SelectItem value="price_desc" class="rounded-xl text-xs py-2 font-semibold text-stone-900">Price: High to Low</SelectItem>
-                <SelectItem value="name_asc" class="rounded-xl text-xs py-2 font-semibold text-stone-900">Name: A to Z</SelectItem>
-                <SelectItem value="name_desc" class="rounded-xl text-xs py-2 font-semibold text-stone-900">Name: Z to A</SelectItem>
+              <SelectContent class="rounded-lg border border-stone-200 bg-white shadow-xl min-w-[210px] p-1.5 z-50">
+                <SelectItem value="featured" class="rounded-md text-xs py-2 font-semibold text-stone-900">Featured / Recommended</SelectItem>
+                <SelectItem value="price_asc" class="rounded-md text-xs py-2 font-semibold text-stone-900">Price: Low to High</SelectItem>
+                <SelectItem value="price_desc" class="rounded-md text-xs py-2 font-semibold text-stone-900">Price: High to Low</SelectItem>
+                <SelectItem value="name_asc" class="rounded-md text-xs py-2 font-semibold text-stone-900">Name: A to Z</SelectItem>
+                <SelectItem value="name_desc" class="rounded-md text-xs py-2 font-semibold text-stone-900">Name: Z to A</SelectItem>
               </SelectContent>
             </Select>
 
@@ -539,7 +542,7 @@ watch([() => props.products?.current_page, () => props.recipeKits?.current_page]
             class="relative block flex flex-col group text-left cursor-pointer transition-transform duration-200"
           >
             <!-- Card Image Tile -->
-            <div class="relative w-full aspect-square bg-[#f3efe7] rounded-[22px] sm:rounded-3xl overflow-hidden img-zoom-container shrink-0 border border-[#e0d9cc]/60 shadow-2xs group-hover:border-[#a47a3c]/60 transition-colors">
+            <div class="relative w-full aspect-square bg-[#f3efe7] rounded-lg overflow-hidden img-zoom-container shrink-0 border border-[#e0d9cc]/60 shadow-2xs group-hover:border-[#a47a3c]/60 transition-colors">
               <img 
                 :src="item.image || '/images/products/atta.jpg'" 
                 :alt="item.name" 
@@ -547,14 +550,14 @@ watch([() => props.products?.current_page, () => props.recipeKits?.current_page]
               />
               
               <!-- Photo label badge -->
-              <span class="photo-label absolute top-2.5 left-2.5 text-[11px] text-[#1d1d1f] font-mono bg-white/85 backdrop-blur-xs px-2 py-0.5 rounded-lg z-10 shadow-2xs">
+              <span class="photo-label absolute top-2.5 left-2.5 text-[11px] text-[#1d1d1f] font-mono bg-white/85 backdrop-blur-xs px-2 py-0.5 rounded-md z-10 shadow-2xs">
                 {{ item.photo_label || item.photoLabel || item.category || 'grocery' }}
               </span>
 
               <!-- In-cart Stepper or Add to cart button -->
               <div 
                 v-if="store.getItemQuantity(item.id || item.slug) > 0"
-                class="absolute bottom-2.5 inset-x-2.5 bg-[#1a1a1a] text-white h-8 sm:h-9 rounded-full flex items-center justify-between px-2.5 shadow-md z-10"
+                class="absolute bottom-2.5 inset-x-2.5 bg-[#1a1a1a] text-white h-8 sm:h-9 rounded-md flex items-center justify-between px-2.5 shadow-md z-10"
                 @click.stop.prevent
               >
                 <button 
@@ -580,7 +583,7 @@ watch([() => props.products?.current_page, () => props.recipeKits?.current_page]
                 v-else
                 type="button"
                 @click.stop.prevent="store.addToCart(item)"
-                class="absolute bottom-2.5 right-2.5 w-8 h-8 sm:w-9 sm:h-9 bg-[#1a1a1a] hover:bg-black text-white rounded-full flex items-center justify-center font-bold cursor-pointer active:scale-95 shadow-md z-10 transition-transform group-hover:scale-105"
+                class="absolute bottom-2.5 right-2.5 w-8 h-8 sm:w-9 sm:h-9 bg-[#1a1a1a] hover:bg-black text-white rounded-md flex items-center justify-center font-bold cursor-pointer active:scale-95 shadow-md z-10 transition-transform group-hover:scale-105"
                 :aria-label="'Add ' + item.name + ' to cart'"
               >
                 <Plus class="w-4 h-4 stroke-[2.5]" />
@@ -603,8 +606,8 @@ watch([() => props.products?.current_page, () => props.recipeKits?.current_page]
         </div>
 
         <!-- Empty Products State -->
-        <div v-else class="p-8 sm:p-14 rounded-3xl border border-[#e0d9cc] bg-white text-center space-y-3 shadow-2xs">
-          <div class="w-14 h-14 rounded-full bg-[#f3efe7] border border-[#e0d9cc] flex items-center justify-center mx-auto text-[#7a5620]">
+        <div v-else class="p-8 sm:p-14 rounded-lg border border-[#e0d9cc] bg-white text-center space-y-3 shadow-2xs">
+          <div class="w-14 h-14 rounded-md bg-[#f3efe7] border border-[#e0d9cc] flex items-center justify-center mx-auto text-[#7a5620]">
             <SearchIcon class="w-6 h-6 stroke-[2]" />
           </div>
           <h3 class="text-lg sm:text-xl font-serif font-medium text-[#1d1d1f]">
@@ -617,7 +620,7 @@ watch([() => props.products?.current_page, () => props.recipeKits?.current_page]
             <button 
               type="button"
               @click="resetAllFilters"
-              class="px-6 py-2.5 bg-[#1a1a1a] hover:bg-black text-white rounded-full text-xs font-semibold shadow-xs cursor-pointer"
+              class="px-6 py-2.5 bg-[#1a1a1a] hover:bg-black text-white rounded-md text-xs font-semibold shadow-xs cursor-pointer"
             >
               Reset All Filters
             </button>
@@ -631,10 +634,10 @@ watch([() => props.products?.current_page, () => props.recipeKits?.current_page]
           <div 
             v-for="kit in recipeKits.data"
             :key="kit.slug || kit.id"
-            class="bg-[#f3efe7] border border-[#e0d9cc] rounded-3xl p-4 flex flex-col justify-between hover:border-[#a47a3c]/60 transition-colors shadow-2xs group"
+            class="bg-[#f3efe7] border border-[#e0d9cc] rounded-lg p-4 flex flex-col justify-between hover:border-[#a47a3c]/60 transition-colors shadow-2xs group"
           >
             <div>
-              <Link :href="'/recipe-kits/' + kit.slug" class="block relative w-full aspect-[4/3] bg-white rounded-2xl overflow-hidden img-zoom-container border border-[#e0d9cc]/60">
+              <Link :href="'/recipe-kits/' + kit.slug" class="block relative w-full aspect-[4/3] bg-white rounded-lg overflow-hidden img-zoom-container border border-[#e0d9cc]/60">
                 <img 
                   :src="kit.image || '/images/products/paneer_curry.jpg'" 
                   :alt="kit.name" 
@@ -665,7 +668,7 @@ watch([() => props.products?.current_page, () => props.recipeKits?.current_page]
                   <span v-if="kit.original_price" class="text-xs text-[#86868b] line-through font-normal">
                     ${{ Number(kit.original_price).toFixed(2) }}
                   </span>
-                  <span v-if="kit.original_price && kit.original_price > kit.price" class="text-[11px] font-bold text-[#7a5620] bg-[#f5eee2] border border-[#e0d9cc] px-2 py-0.5 rounded-full">
+                  <span v-if="kit.original_price && kit.original_price > kit.price" class="text-[11px] font-bold text-[#7a5620] bg-[#f5eee2] border border-[#e0d9cc] px-2 py-0.5 rounded-md">
                     Save ${{ (Number(kit.original_price) - Number(kit.price)).toFixed(2) }}
                   </span>
                 </div>
@@ -675,7 +678,7 @@ watch([() => props.products?.current_page, () => props.recipeKits?.current_page]
             <button 
               type="button"
               @click.stop.prevent="handleAddKitToCart(kit)"
-              class="w-full mt-3.5 py-2.5 sm:py-3 bg-[#1a1a1a] hover:bg-black text-white font-semibold text-xs rounded-full flex items-center justify-center gap-1.5 transition-colors cursor-pointer active:scale-98 shadow-xs"
+              class="w-full mt-3.5 py-2.5 sm:py-3 bg-[#1a1a1a] hover:bg-black text-white font-semibold text-xs rounded-md flex items-center justify-center gap-1.5 transition-colors cursor-pointer active:scale-98 shadow-xs"
             >
               <Plus class="w-3.5 h-3.5 stroke-[2.5]" />
               <span>Add all {{ kit.products ? kit.products.length : 3 }} to cart</span>
@@ -684,8 +687,8 @@ watch([() => props.products?.current_page, () => props.recipeKits?.current_page]
         </div>
 
         <!-- Empty Kits State -->
-        <div v-else class="p-8 sm:p-14 rounded-3xl border border-[#e0d9cc] bg-white text-center space-y-3 shadow-2xs">
-          <div class="w-14 h-14 rounded-full bg-[#f3efe7] border border-[#e0d9cc] flex items-center justify-center mx-auto text-[#7a5620]">
+        <div v-else class="p-8 sm:p-14 rounded-lg border border-[#e0d9cc] bg-white text-center space-y-3 shadow-2xs">
+          <div class="w-14 h-14 rounded-md bg-[#f3efe7] border border-[#e0d9cc] flex items-center justify-center mx-auto text-[#7a5620]">
             <UtensilsCrossed class="w-6 h-6 stroke-[2]" />
           </div>
           <h3 class="text-lg sm:text-xl font-serif font-medium text-[#1d1d1f]">
@@ -698,7 +701,7 @@ watch([() => props.products?.current_page, () => props.recipeKits?.current_page]
             <button 
               type="button"
               @click="resetAllFilters"
-              class="px-6 py-2.5 bg-[#1a1a1a] hover:bg-black text-white rounded-full text-xs font-semibold shadow-xs cursor-pointer"
+              class="px-6 py-2.5 bg-[#1a1a1a] hover:bg-black text-white rounded-md text-xs font-semibold shadow-xs cursor-pointer"
             >
               Reset Filters
             </button>
@@ -716,7 +719,7 @@ watch([() => props.products?.current_page, () => props.recipeKits?.current_page]
           v-if="activeTab === 'products' ? products.prev_page_url : recipeKits.prev_page_url"
           :href="activeTab === 'products' ? products.prev_page_url : recipeKits.prev_page_url"
           @click.prevent="changePage(activeTab === 'products' ? products.prev_page_url : recipeKits.prev_page_url)"
-          class="h-10 px-4 rounded-full border border-[#e0d9cc] bg-white text-xs font-semibold text-[#1d1d1f] hover:bg-[#f3efe7] transition-colors flex items-center gap-1.5 cursor-pointer shadow-2xs active:scale-[0.98]"
+          class="h-10 px-4 rounded-md border border-[#e0d9cc] bg-white text-xs font-semibold text-[#1d1d1f] hover:bg-[#f3efe7] transition-colors flex items-center gap-1.5 cursor-pointer shadow-2xs active:scale-[0.98]"
         >
           <ChevronLeft class="w-4 h-4 stroke-[2.2]" />
           <span>Previous</span>
@@ -724,7 +727,7 @@ watch([() => props.products?.current_page, () => props.recipeKits?.current_page]
         <button 
           v-else
           disabled
-          class="h-10 px-4 rounded-full border border-[#e0d9cc] bg-stone-100 text-xs font-semibold text-[#86868b] opacity-40 cursor-not-allowed flex items-center gap-1.5"
+          class="h-10 px-4 rounded-md border border-[#e0d9cc] bg-stone-100 text-xs font-semibold text-[#86868b] opacity-40 cursor-not-allowed flex items-center gap-1.5"
         >
           <ChevronLeft class="w-4 h-4" />
           <span>Previous</span>
@@ -738,7 +741,7 @@ watch([() => props.products?.current_page, () => props.recipeKits?.current_page]
               :href="link.url"
               @click.prevent="changePage(link.url)"
               :class="[
-                'w-10 h-10 rounded-full text-xs font-semibold transition-all cursor-pointer flex items-center justify-center',
+                'w-10 h-10 rounded-md text-xs font-semibold transition-all cursor-pointer flex items-center justify-center',
                 link.active 
                   ? 'bg-[#1a1a1a] text-white shadow-xs scale-105 pointer-events-none' 
                   : 'bg-white border border-[#e0d9cc] text-[#1d1d1f] hover:bg-[#f3efe7]'
@@ -760,7 +763,7 @@ watch([() => props.products?.current_page, () => props.recipeKits?.current_page]
           v-if="activeTab === 'products' ? products.next_page_url : recipeKits.next_page_url"
           :href="activeTab === 'products' ? products.next_page_url : recipeKits.next_page_url"
           @click.prevent="changePage(activeTab === 'products' ? products.next_page_url : recipeKits.next_page_url)"
-          class="h-10 px-4 rounded-full border border-[#e0d9cc] bg-white text-xs font-semibold text-[#1d1d1f] hover:bg-[#f3efe7] transition-colors flex items-center gap-1.5 cursor-pointer shadow-2xs active:scale-[0.98]"
+          class="h-10 px-4 rounded-md border border-[#e0d9cc] bg-white text-xs font-semibold text-[#1d1d1f] hover:bg-[#f3efe7] transition-colors flex items-center gap-1.5 cursor-pointer shadow-2xs active:scale-[0.98]"
         >
           <span>Next</span>
           <ChevronRight class="w-4 h-4 stroke-[2.2]" />
@@ -768,7 +771,7 @@ watch([() => props.products?.current_page, () => props.recipeKits?.current_page]
         <button 
           v-else
           disabled
-          class="h-10 px-4 rounded-full border border-[#e0d9cc] bg-stone-100 text-xs font-semibold text-[#86868b] opacity-40 cursor-not-allowed flex items-center gap-1.5"
+          class="h-10 px-4 rounded-md border border-[#e0d9cc] bg-stone-100 text-xs font-semibold text-[#86868b] opacity-40 cursor-not-allowed flex items-center gap-1.5"
         >
           <span>Next</span>
           <ChevronRight class="w-4 h-4" />

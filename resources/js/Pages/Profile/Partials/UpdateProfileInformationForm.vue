@@ -40,7 +40,7 @@ const form = useForm({
           required
           autocomplete="name"
           placeholder="e.g. Priya Sharma"
-          class="w-full pl-10 pr-3.5 h-11 bg-[#fbf9f5] border border-[#dfd6c8] focus:border-[#1a1a1a] rounded-xl text-xs sm:text-sm text-[#1d1d1f] placeholder-[#86868b] focus:outline-none focus:bg-white focus:ring-3 focus:ring-[#1a1a1a]/10 transition-all font-normal"
+          class="w-full pl-10 pr-3.5 h-11 bg-[#fbf9f5] border border-[#dfd6c8] focus:border-[#1a1a1a] rounded-md text-xs sm:text-sm text-[#1d1d1f] placeholder-[#86868b] focus:outline-none focus:bg-white focus:ring-3 focus:ring-[#1a1a1a]/10 transition-all font-normal"
           :class="{ 'border-rose-400 ring-rose-100': form.errors.name }"
         />
       </div>
@@ -65,7 +65,7 @@ const form = useForm({
           required
           autocomplete="username"
           placeholder="priya@example.com"
-          class="w-full pl-10 pr-3.5 h-11 bg-[#fbf9f5] border border-[#dfd6c8] focus:border-[#1a1a1a] rounded-xl text-xs sm:text-sm text-[#1d1d1f] placeholder-[#86868b] focus:outline-none focus:bg-white focus:ring-3 focus:ring-[#1a1a1a]/10 transition-all font-normal"
+          class="w-full pl-10 pr-3.5 h-11 bg-[#fbf9f5] border border-[#dfd6c8] focus:border-[#1a1a1a] rounded-md text-xs sm:text-sm text-[#1d1d1f] placeholder-[#86868b] focus:outline-none focus:bg-white focus:ring-3 focus:ring-[#1a1a1a]/10 transition-all font-normal"
           :class="{ 'border-rose-400 ring-rose-100': form.errors.email }"
         />
       </div>
@@ -75,7 +75,7 @@ const form = useForm({
     </div>
 
     <!-- Email Verification Alert -->
-    <div v-if="mustVerifyEmail && user.email_verified_at === null" class="p-3.5 rounded-2xl bg-amber-50 border border-amber-200 text-xs text-amber-900 space-y-1.5">
+    <div v-if="mustVerifyEmail && user.email_verified_at === null" class="p-3.5 rounded-lg bg-amber-50 border border-amber-200 text-xs text-amber-900 space-y-1.5">
       <div class="flex items-center gap-2 font-semibold">
         <AlertCircle class="w-4 h-4 text-amber-600 shrink-0" />
         <span>Your email address is unverified.</span>
@@ -93,7 +93,7 @@ const form = useForm({
 
       <div
         v-show="status === 'verification-link-sent'"
-        class="mt-2 text-xs font-semibold text-emerald-700 bg-emerald-50 p-2 rounded-xl border border-emerald-200"
+        class="mt-2 text-xs font-semibold text-emerald-700 bg-emerald-50 p-2 rounded-md border border-emerald-200"
       >
         A new verification link has been sent to your email address.
       </div>
@@ -104,7 +104,7 @@ const form = useForm({
       <button
         type="submit"
         :disabled="form.processing"
-        class="h-10 px-5 bg-[#1a1a1a] hover:bg-black text-white font-semibold text-xs rounded-full flex items-center justify-center gap-2 transition-all active:scale-[0.99] shadow-xs cursor-pointer disabled:opacity-50"
+        class="h-10 px-5 bg-[#1a1a1a] hover:bg-black text-white font-semibold text-xs rounded-md flex items-center justify-center gap-2 transition-all active:scale-[0.99] shadow-xs cursor-pointer disabled:opacity-50"
       >
         <Check class="w-3.5 h-3.5" />
         <span v-if="form.processing">Saving Changes...</span>
@@ -121,7 +121,7 @@ const form = useForm({
       >
         <span
           v-if="form.recentlySuccessful"
-          class="inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 px-3 py-1.5 rounded-full"
+          class="inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 px-3 py-1.5 rounded-md"
         >
           <CheckCircle2 class="w-3.5 h-3.5 text-emerald-600" />
           <span>Profile updated successfully!</span>

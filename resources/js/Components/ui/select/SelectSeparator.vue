@@ -10,5 +10,5 @@ const props = defineProps({
 </script>
 
 <template>
-  <SelectSeparator :class="cn('-mx-1 my-1 h-px bg-[#e0d9cc]', props.class)" />
+  <SelectSeparator :class="cn('-mx-1 my-1 h-px bg-border', props.class)" />
 </template>

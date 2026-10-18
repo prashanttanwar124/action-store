@@ -142,13 +142,13 @@ const bannerSlides = computed(() => {
 
 // Masala Dabba (Spice-Box) Essential Staples
 const masalaDabbaSpices = [
-  { id: 101, slug: 'haldi', name: 'Haldi', english: 'Turmeric Powder', size: '200g', price: 3.49, image: '/images/products/garam_masala.jpg', photoLabel: 'haldi' },
-  { id: 102, slug: 'jeera', name: 'Jeera', english: 'Whole Cumin', size: '200g', price: 4.29, image: '/images/products/garam_masala.jpg', photoLabel: 'jeera' },
-  { id: 103, slug: 'rai', name: 'Rai', english: 'Mustard Seeds', size: '200g', price: 2.99, image: '/images/products/garam_masala.jpg', photoLabel: 'rai' },
-  { id: 104, slug: 'dhaniya', name: 'Dhaniya', english: 'Coriander Powder', size: '200g', price: 3.49, image: '/images/products/garam_masala.jpg', photoLabel: 'dhaniya' },
-  { id: 105, slug: 'mirch', name: 'Lal Mirch', english: 'Kashmiri Chilli', size: '200g', price: 4.49, image: '/images/products/garam_masala.jpg', photoLabel: 'mirch' },
+  { id: 'haldi', slug: 'haldi', name: 'Haldi', english: 'Turmeric Powder', size: '200g', price: 3.49, image: '/images/products/garam_masala.jpg', photoLabel: 'haldi' },
+  { id: 'jeera', slug: 'jeera', name: 'Jeera', english: 'Whole Cumin', size: '200g', price: 4.29, image: '/images/products/garam_masala.jpg', photoLabel: 'jeera' },
+  { id: 'rai', slug: 'rai', name: 'Rai', english: 'Mustard Seeds', size: '200g', price: 2.99, image: '/images/products/garam_masala.jpg', photoLabel: 'rai' },
+  { id: 'dhaniya', slug: 'dhaniya', name: 'Dhaniya', english: 'Coriander Powder', size: '200g', price: 3.49, image: '/images/products/garam_masala.jpg', photoLabel: 'dhaniya' },
+  { id: 'mirch', slug: 'mirch', name: 'Lal Mirch', english: 'Kashmiri Chilli', size: '200g', price: 4.49, image: '/images/products/garam_masala.jpg', photoLabel: 'mirch' },
   { id: 'garam-masala', slug: 'garam-masala', name: 'Garam Masala', english: 'Royal 12-Spice', size: '100g', price: 3.49, image: '/images/products/garam_masala.jpg', photoLabel: 'garam masala' },
-  { id: 107, slug: 'hing', name: 'Hing', english: 'Asafoetida', size: '50g', price: 3.99, image: '/images/products/garam_masala.jpg', photoLabel: 'hing' },
+  { id: 'hing', slug: 'hing', name: 'Hing', english: 'Asafoetida', size: '50g', price: 3.99, image: '/images/products/garam_masala.jpg', photoLabel: 'hing' },
 ];
 
 const getSpiceLink = (spice) => {
@@ -455,7 +455,10 @@ const handleAddKitToCart = (kit) => {
     });
   } else {
     store.addToCart({
-      id: kit.id || kit.slug,
+      id: kit.slug || kit.id,
+      slug: kit.slug,
+      type: 'recipe-kit',
+      isRecipeKit: true,
       name: kit.name,
       price: kit.price,
       image: kit.image,
@@ -477,7 +480,7 @@ const handleAddKitToCart = (kit) => {
             <h2 class="text-xl sm:text-2xl font-serif font-medium text-[#1d1d1f] tracking-tight">
               Search results for "{{ store.searchQuery.trim() }}"
             </h2>
-            <span class="text-xs text-[#7a5620] bg-[#f5eee2] px-2.5 py-0.5 rounded-full border border-[#e0d9cc] font-semibold">
+            <span class="text-xs text-[#7a5620] bg-[#f5eee2] px-2.5 py-0.5 rounded-md border border-[#e0d9cc] font-semibold">
               {{ searchFilteredProducts.length }} item{{ searchFilteredProducts.length === 1 ? '' : 's' }}
             </span>
           </div>
@@ -498,20 +501,20 @@ const handleAddKitToCart = (kit) => {
             :href="'/products/' + item.slug"
             class="relative block flex flex-col group text-left cursor-pointer transition-transform duration-200"
           >
-            <div class="relative w-full aspect-square bg-[#f3efe7] rounded-[22px] sm:rounded-3xl overflow-hidden img-zoom-container shrink-0 border border-[#e0d9cc]/60 shadow-2xs">
+            <div class="relative w-full aspect-square bg-[#f3efe7] rounded-lg overflow-hidden img-zoom-container shrink-0 border border-[#e0d9cc]/60 shadow-2xs">
               <img 
                 :src="item.image || '/images/products/atta.jpg'" 
                 :alt="item.name" 
                 class="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-300"
               />
-              <span class="photo-label absolute top-2.5 left-2.5 text-[11px] text-[#1d1d1f] font-mono bg-white/80 backdrop-blur-xs px-2 py-0.5 rounded-lg z-10 shadow-2xs">
+              <span class="photo-label absolute top-2.5 left-2.5 text-[11px] text-[#1d1d1f] font-mono bg-white/80 backdrop-blur-xs px-2 py-0.5 rounded-md z-10 shadow-2xs">
                 {{ item.photoLabel || item.photo_label || 'item' }}
               </span>
               
               <!-- Stepper or Add button -->
               <div 
                 v-if="store.getItemQuantity(item.id || item.slug) > 0"
-                class="absolute bottom-2.5 inset-x-2.5 bg-[#1a1a1a] text-white h-8 sm:h-9 rounded-full flex items-center justify-between px-2.5 shadow-md z-10"
+                class="absolute bottom-2.5 inset-x-2.5 bg-[#1a1a1a] text-white h-8 sm:h-9 rounded-md flex items-center justify-between px-2.5 shadow-md z-10"
                 @click.stop.prevent
               >
                 <button 
@@ -536,7 +539,7 @@ const handleAddKitToCart = (kit) => {
                 v-else
                 type="button"
                 @click.stop.prevent="store.addToCart(item)"
-                class="absolute bottom-2.5 right-2.5 w-8 h-8 sm:w-9 sm:h-9 bg-[#1a1a1a] hover:bg-black text-white rounded-full flex items-center justify-center font-bold cursor-pointer active:scale-95 shadow-md z-10 transition-transform group-hover:scale-105"
+                class="absolute bottom-2.5 right-2.5 w-8 h-8 sm:w-9 sm:h-9 bg-[#1a1a1a] hover:bg-black text-white rounded-md flex items-center justify-center font-bold cursor-pointer active:scale-95 shadow-md z-10 transition-transform group-hover:scale-105"
                 :aria-label="'Add ' + item.name + ' to cart'"
               >
                 <Plus class="w-4 h-4 stroke-[2.5]" />
@@ -558,8 +561,8 @@ const handleAddKitToCart = (kit) => {
         </div>
 
         <!-- No Results Empty State -->
-        <div v-else class="p-8 sm:p-12 rounded-3xl border border-[#e0d9cc] bg-white text-center space-y-3 shadow-2xs">
-          <div class="w-12 h-12 rounded-full bg-[#f3efe7] border border-[#e0d9cc] flex items-center justify-center mx-auto text-[#7a5620]">
+        <div v-else class="p-8 sm:p-12 rounded-lg border border-[#e0d9cc] bg-white text-center space-y-3 shadow-2xs">
+          <div class="w-12 h-12 rounded-md bg-[#f3efe7] border border-[#e0d9cc] flex items-center justify-center mx-auto text-[#7a5620]">
             <Search class="w-5 h-5" />
           </div>
           <h3 class="text-base sm:text-lg font-serif font-medium text-[#1d1d1f]">
@@ -572,7 +575,7 @@ const handleAddKitToCart = (kit) => {
             <button 
               type="button"
               @click="store.searchQuery = ''"
-              class="px-5 py-2 bg-[#1a1a1a] hover:bg-black text-white rounded-full text-xs font-semibold shadow-xs cursor-pointer"
+              class="px-5 py-2 bg-[#1a1a1a] hover:bg-black text-white rounded-md text-xs font-semibold shadow-xs cursor-pointer"
             >
               Browse All Groceries
             </button>
@@ -588,7 +591,7 @@ const handleAddKitToCart = (kit) => {
         <!-- Main Festival Pre-Order Banner (Interactive Sliding Carousel with Drag & Swipe) -->
         <div class="lg:col-span-8 flex flex-col justify-between">
           <div 
-            class="relative overflow-hidden rounded-2xl sm:rounded-3xl shadow-sm h-[205px] xs:h-[215px] sm:h-[265px] md:h-[295px] lg:h-[345px] group bg-[#16120e] select-none cursor-grab active:cursor-grabbing touch-pan-y border border-black/10"
+            class="relative overflow-hidden rounded-lg sm:rounded-lg shadow-sm h-[205px] xs:h-[215px] sm:h-[265px] md:h-[295px] lg:h-[345px] group bg-[#16120e] select-none cursor-grab active:cursor-grabbing touch-pan-y border border-black/10"
             @mouseenter="pauseAutoplay"
             @mousedown="handleDragStart"
             @mousemove="handleDragMove"
@@ -632,7 +635,7 @@ const handleAddKitToCart = (kit) => {
 
                   <!-- Photo Category Tag Badge in Bottom Right (Clean desktop/tablet only) -->
                   <div v-if="slide.photoLabel" class="hidden sm:inline-flex absolute bottom-3.5 right-3.5 sm:bottom-4 sm:right-4 z-10 pointer-events-none">
-                    <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-black/60 backdrop-blur-md text-[10px] text-white/90 font-medium border border-white/15 shadow-sm">
+                    <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-md bg-black/60 backdrop-blur-md text-[10px] text-white/90 font-medium border border-white/15 shadow-sm">
                       <span class="w-1.5 h-1.5 rounded-full bg-[#e4b97a]"></span>
                       <span class="capitalize">{{ slide.photoLabel }}</span>
                     </span>
@@ -648,7 +651,7 @@ const handleAddKitToCart = (kit) => {
                 >
                   <div class="space-y-1.5 xs:space-y-2 sm:space-y-2.5">
                     <!-- Crisp Category Pill Badge -->
-                    <div class="inline-flex items-center gap-1.5 px-2.5 py-0.5 sm:px-3 sm:py-1 rounded-full bg-white/10 backdrop-blur-md border border-white/15 text-[#f5d8a8] text-[8.5px] xs:text-[9.5px] sm:text-[10.5px] font-bold tracking-wider uppercase shadow-xs w-fit">
+                    <div class="inline-flex items-center gap-1.5 px-2.5 py-0.5 sm:px-3 sm:py-1 rounded-md bg-white/10 backdrop-blur-md border border-white/15 text-[#f5d8a8] text-[8.5px] xs:text-[9.5px] sm:text-[10.5px] font-bold tracking-wider uppercase shadow-xs w-fit">
                       <Sparkles class="w-2.5 h-2.5 sm:w-3 sm:h-3 text-[#e4b97a] shrink-0" />
                       <span class="truncate max-w-[170px] sm:max-w-none">{{ slide.tag }}</span>
                     </div>
@@ -666,12 +669,12 @@ const handleAddKitToCart = (kit) => {
 
                   <!-- CTA Button & Highlight Pill -->
                   <div class="pt-2 xs:pt-2.5 sm:pt-3.5 flex flex-wrap items-center gap-2 sm:gap-3">
-                    <span class="inline-flex items-center gap-1.5 sm:gap-2 px-3.5 py-1.5 xs:px-4 xs:py-2 sm:px-4.5 sm:py-2.5 rounded-full bg-white text-[#1a1a1a] hover:bg-[#f5eee2] text-[11px] xs:text-xs font-bold shadow-sm hover:shadow-md transition-all duration-300 group-hover:scale-[1.02] shrink-0">
+                    <span class="inline-flex items-center gap-1.5 sm:gap-2 px-3.5 py-1.5 xs:px-4 xs:py-2 sm:px-4.5 sm:py-2.5 rounded-md bg-white text-[#1a1a1a] hover:bg-[#f5eee2] text-[11px] xs:text-xs font-bold shadow-sm hover:shadow-md transition-all duration-300 group-hover:scale-[1.02] shrink-0">
                       <span>{{ slide.cta }}</span>
                       <ChevronRight class="w-3.5 h-3.5 stroke-[2.5] text-[#1a1a1a] transition-transform group-hover:translate-x-0.5" />
                     </span>
 
-                    <span v-if="slide.highlight" class="hidden md:inline-flex items-center gap-1.5 text-xs text-stone-300 font-normal px-2.5 py-0.5 rounded-full bg-black/40 backdrop-blur-xs border border-white/10">
+                    <span v-if="slide.highlight" class="hidden md:inline-flex items-center gap-1.5 text-xs text-stone-300 font-normal px-2.5 py-0.5 rounded-md bg-black/40 backdrop-blur-xs border border-white/10">
                       <span class="w-1.5 h-1.5 rounded-full bg-[#e4b97a]"></span>
                       <span>{{ slide.highlight }}</span>
                     </span>
@@ -684,7 +687,7 @@ const handleAddKitToCart = (kit) => {
             <button 
               type="button"
               @click.stop.prevent="prevSlide"
-              class="hidden sm:flex absolute left-3 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-black/40 hover:bg-black/85 text-white items-center justify-center backdrop-blur-md border border-white/15 opacity-0 group-hover:opacity-100 transition-all duration-200 cursor-pointer z-30 shadow-lg active:scale-95"
+              class="hidden sm:flex absolute left-3 top-1/2 -translate-y-1/2 w-9 h-9 rounded-md bg-black/40 hover:bg-black/85 text-white items-center justify-center backdrop-blur-md border border-white/15 opacity-0 group-hover:opacity-100 transition-all duration-200 cursor-pointer z-30 shadow-lg active:scale-95"
               aria-label="Previous slide"
             >
               <ChevronLeft class="w-4 h-4 stroke-[2.5]" />
@@ -692,7 +695,7 @@ const handleAddKitToCart = (kit) => {
             <button 
               type="button"
               @click.stop.prevent="nextSlide"
-              class="hidden sm:flex absolute right-3 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-black/40 hover:bg-black/85 text-white items-center justify-center backdrop-blur-md border border-white/15 opacity-0 group-hover:opacity-100 transition-all duration-200 cursor-pointer z-30 shadow-lg active:scale-95"
+              class="hidden sm:flex absolute right-3 top-1/2 -translate-y-1/2 w-9 h-9 rounded-md bg-black/40 hover:bg-black/85 text-white items-center justify-center backdrop-blur-md border border-white/15 opacity-0 group-hover:opacity-100 transition-all duration-200 cursor-pointer z-30 shadow-lg active:scale-95"
               aria-label="Next slide"
             >
               <ChevronRight class="w-4 h-4 stroke-[2.5]" />
@@ -719,7 +722,7 @@ const handleAddKitToCart = (kit) => {
               </button>
             </div>
 
-            <div class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-[#f5eee2] border border-[#e0d9cc] text-[10px] sm:text-[11px] font-semibold text-stone-600 tracking-wider">
+            <div class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md bg-[#f5eee2] border border-[#e0d9cc] text-[10px] sm:text-[11px] font-semibold text-stone-600 tracking-wider">
               <span class="text-stone-900 font-bold">0{{ currentSlideIndex + 1 }}</span>
               <span class="text-stone-300 font-normal">/</span>
               <span>0{{ bannerSlides.length }}</span>
@@ -728,14 +731,14 @@ const handleAddKitToCart = (kit) => {
         </div>
 
         <!-- Desktop Click & Collect Guarantee Card (Matching Elevation & Height) -->
-        <div class="hidden lg:flex lg:col-span-4 bg-[#f5eee2] rounded-3xl border border-[#e0d9cc] p-6 lg:p-7 flex-col justify-between shadow-xs h-[345px]">
+        <div class="hidden lg:flex lg:col-span-4 bg-[#f5eee2] rounded-lg border border-[#e0d9cc] p-6 lg:p-7 flex-col justify-between shadow-xs h-[345px]">
           <div class="space-y-3">
             <div class="flex items-center justify-between text-[10px] font-bold uppercase tracking-wider text-[#7a5620]">
-              <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-white/70 border border-[#e0d9cc]">
+              <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md bg-white/70 border border-[#e0d9cc]">
                 <Store class="w-3 h-3 text-[#a47a3c]" />
                 EXPRESS STORE PICKUP
               </span>
-              <span class="text-[#7a5620] font-bold bg-[#a47a3c]/15 px-2 py-0.5 rounded-full">1 HR READY</span>
+              <span class="text-[#7a5620] font-bold bg-[#a47a3c]/15 px-2 py-0.5 rounded-md">1 HR READY</span>
             </div>
             <h3 class="text-2xl font-serif font-medium text-[#1d1d1f] tracking-tight leading-snug">
               Order online, pull up, pop the trunk.
@@ -746,11 +749,11 @@ const handleAddKitToCart = (kit) => {
 
             <div class="space-y-2 pt-2 text-xs text-[#1d1d1f] font-medium">
               <div class="flex items-center gap-2 text-[11px] text-stone-700">
-                <span class="w-4 h-4 rounded-full bg-[#1a1a1a] text-white flex items-center justify-center text-[9px]">✓</span>
+                <span class="w-4 h-4 rounded-md bg-[#1a1a1a] text-white flex items-center justify-center text-[9px]">✓</span>
                 <span>Thermal insulated bags for fresh dairy & paneer</span>
               </div>
               <div class="flex items-center gap-2 text-[11px] text-stone-700">
-                <span class="w-4 h-4 rounded-full bg-[#1a1a1a] text-white flex items-center justify-center text-[9px]">✓</span>
+                <span class="w-4 h-4 rounded-md bg-[#1a1a1a] text-white flex items-center justify-center text-[9px]">✓</span>
                 <span>Zero convenience fees · Always 100% free</span>
               </div>
             </div>
@@ -763,7 +766,7 @@ const handleAddKitToCart = (kit) => {
             </div>
             <Link 
               href="/cart" 
-              class="px-4 py-2.5 bg-[#1a1a1a] hover:bg-black text-xs font-semibold text-white rounded-full inline-flex items-center gap-1.5 transition-colors shadow-xs"
+              class="px-4 py-2.5 bg-[#1a1a1a] hover:bg-black text-xs font-semibold text-white rounded-md inline-flex items-center gap-1.5 transition-colors shadow-xs"
             >
               <span>Pickup Order</span>
               <ChevronRight class="w-3.5 h-3.5" />
@@ -777,7 +780,7 @@ const handleAddKitToCart = (kit) => {
         <div class="flex items-center justify-between">
           <div class="flex items-center gap-2">
             <h2 class="text-xl sm:text-2xl font-serif font-medium text-[#1d1d1f] tracking-tight">Buy it again</h2>
-            <span class="font-devanagari text-xs text-[#7a5620] bg-[#f5eee2] px-2 py-0.5 rounded-full border border-[#e0d9cc]">फिर से</span>
+            <span class="font-devanagari text-xs text-[#7a5620] bg-[#f5eee2] px-2 py-0.5 rounded-md border border-[#e0d9cc]">फिर से</span>
           </div>
           <Link 
             href="/reorder" 
@@ -797,20 +800,20 @@ const handleAddKitToCart = (kit) => {
             class="relative block w-[155px] sm:w-auto shrink-0 snap-start flex flex-col group text-left cursor-pointer transition-transform duration-200"
           >
             <!-- Card Image Tile -->
-            <div class="relative w-full aspect-square bg-[#f3efe7] rounded-[22px] sm:rounded-3xl overflow-hidden img-zoom-container shrink-0 border border-[#e0d9cc]/60 shadow-2xs">
+            <div class="relative w-full aspect-square bg-[#f3efe7] rounded-lg overflow-hidden img-zoom-container shrink-0 border border-[#e0d9cc]/60 shadow-2xs">
               <img 
                 :src="item.image" 
                 :alt="item.name" 
                 class="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-300"
               />
-              <span class="photo-label absolute top-2.5 left-2.5 text-[11px] text-[#1d1d1f] font-mono bg-white/80 backdrop-blur-xs px-2 py-0.5 rounded-lg z-10 shadow-2xs">
+              <span class="photo-label absolute top-2.5 left-2.5 text-[11px] text-[#1d1d1f] font-mono bg-white/80 backdrop-blur-xs px-2 py-0.5 rounded-md z-10 shadow-2xs">
                 {{ item.photoLabel || item.photo_label || item.label || 'product' }}
               </span>
               
               <!-- When item is in cart: show Primary [- qty +] stepper pill -->
               <div 
                 v-if="store.getItemQuantity(item.id || item.slug) > 0"
-                class="absolute bottom-2.5 inset-x-2.5 bg-[#1a1a1a] text-white h-8 sm:h-9 rounded-full flex items-center justify-between px-2.5 shadow-md z-10"
+                class="absolute bottom-2.5 inset-x-2.5 bg-[#1a1a1a] text-white h-8 sm:h-9 rounded-md flex items-center justify-between px-2.5 shadow-md z-10"
                 @click.stop.prevent
               >
                 <button 
@@ -837,7 +840,7 @@ const handleAddKitToCart = (kit) => {
                 v-else
                 type="button"
                 @click.stop.prevent="store.addToCart(item)"
-                class="absolute bottom-2.5 right-2.5 w-8 h-8 sm:w-9 sm:h-9 bg-[#1a1a1a] hover:bg-black text-white rounded-full flex items-center justify-center font-bold cursor-pointer active:scale-95 shadow-md z-10 transition-transform group-hover:scale-105"
+                class="absolute bottom-2.5 right-2.5 w-8 h-8 sm:w-9 sm:h-9 bg-[#1a1a1a] hover:bg-black text-white rounded-md flex items-center justify-center font-bold cursor-pointer active:scale-95 shadow-md z-10 transition-transform group-hover:scale-105"
                 :aria-label="'Add ' + item.name + ' to cart'"
               >
                 <Plus class="w-4 h-4 stroke-[2.5]" />
@@ -866,7 +869,7 @@ const handleAddKitToCart = (kit) => {
         <div class="flex items-center justify-between">
           <div class="flex items-center gap-2">
             <h2 class="text-xl sm:text-2xl font-serif font-medium text-[#1d1d1f] tracking-tight">Masala Dabba Staples</h2>
-            <span class="font-devanagari text-xs text-[#7a5620] bg-[#f5eee2] px-2 py-0.5 rounded-full border border-[#e0d9cc]">मसाला डब्बा</span>
+            <span class="font-devanagari text-xs text-[#7a5620] bg-[#f5eee2] px-2 py-0.5 rounded-md border border-[#e0d9cc]">मसाला डब्बा</span>
           </div>
           <span class="text-xs text-[#6e6e73]">7 Daily Kitchen Spices</span>
         </div>
@@ -879,20 +882,20 @@ const handleAddKitToCart = (kit) => {
             class="relative block w-[140px] sm:w-auto shrink-0 snap-start flex flex-col group text-left cursor-pointer transition-transform duration-200"
           >
             <!-- Card Image Tile with Modern Classic v3 styling -->
-            <div class="relative w-full aspect-square bg-[#f3efe7] rounded-[22px] sm:rounded-3xl overflow-hidden img-zoom-container shrink-0 border border-[#e0d9cc]/70 shadow-2xs group-hover:border-[#a47a3c]/60 transition-all group-hover:shadow-xs">
+            <div class="relative w-full aspect-square bg-[#f3efe7] rounded-lg overflow-hidden img-zoom-container shrink-0 border border-[#e0d9cc]/70 shadow-2xs group-hover:border-[#a47a3c]/60 transition-all group-hover:shadow-xs">
               <img 
                 :src="spice.image" 
                 :alt="spice.name" 
                 class="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-300"
               />
-              <span class="photo-label absolute top-2.5 left-2.5 text-[10px] sm:text-[11px] text-[#1d1d1f] font-mono bg-white/85 backdrop-blur-xs px-2 py-0.5 rounded-lg z-10 shadow-2xs">
+              <span class="photo-label absolute top-2.5 left-2.5 text-[10px] sm:text-[11px] text-[#1d1d1f] font-mono bg-white/85 backdrop-blur-xs px-2 py-0.5 rounded-md z-10 shadow-2xs">
                 {{ spice.photoLabel }}
               </span>
 
               <!-- When item is in cart: show Primary [- qty +] stepper pill -->
               <div 
                 v-if="store.getItemQuantity(spice.id) > 0"
-                class="absolute bottom-2.5 inset-x-2.5 bg-[#1a1a1a] text-white h-8 sm:h-9 rounded-full flex items-center justify-between px-2 sm:px-2.5 shadow-md z-10"
+                class="absolute bottom-2.5 inset-x-2.5 bg-[#1a1a1a] text-white h-8 sm:h-9 rounded-md flex items-center justify-between px-2 sm:px-2.5 shadow-md z-10"
                 @click.stop.prevent
               >
                 <button 
@@ -919,7 +922,7 @@ const handleAddKitToCart = (kit) => {
                 v-else
                 type="button"
                 @click.stop.prevent="store.addToCart({ id: spice.id, name: spice.name + ' (' + spice.english + ')', price: spice.price, weight: spice.size, image: spice.image, label: spice.photoLabel })"
-                class="absolute bottom-2.5 right-2.5 w-8 h-8 sm:w-8.5 sm:h-8.5 bg-[#1a1a1a] hover:bg-black text-white rounded-full flex items-center justify-center font-bold cursor-pointer active:scale-95 shadow-md z-10 transition-transform group-hover:scale-105"
+                class="absolute bottom-2.5 right-2.5 w-8 h-8 sm:w-8.5 sm:h-8.5 bg-[#1a1a1a] hover:bg-black text-white rounded-md flex items-center justify-center font-bold cursor-pointer active:scale-95 shadow-md z-10 transition-transform group-hover:scale-105"
                 :aria-label="'Add ' + spice.name + ' to cart'"
               >
                 <Plus class="w-4 h-4 stroke-[2.5]" />
@@ -948,7 +951,7 @@ const handleAddKitToCart = (kit) => {
           <div>
             <div class="flex items-center gap-2">
               <h2 class="text-xl sm:text-2xl font-serif font-medium text-[#1d1d1f] tracking-tight">Curated Staples & Groceries</h2>
-              <span class="font-devanagari text-xs text-[#7a5620] bg-[#f5eee2] px-2.5 py-0.5 rounded-full border border-[#e0d9cc]">ताज़ा किराना</span>
+              <span class="font-devanagari text-xs text-[#7a5620] bg-[#f5eee2] px-2.5 py-0.5 rounded-md border border-[#e0d9cc]">ताज़ा किराना</span>
             </div>
             <p class="text-xs text-[#6e6e73] font-normal mt-0.5">
               Hand-picked pantry staples, fresh dairy, and authentic Indian essentials.
@@ -972,20 +975,20 @@ const handleAddKitToCart = (kit) => {
             class="relative block flex flex-col group text-left cursor-pointer transition-transform duration-200"
           >
             <!-- Card Image Tile -->
-            <div class="relative w-full aspect-square bg-[#f3efe7] rounded-[22px] sm:rounded-3xl overflow-hidden img-zoom-container shrink-0 border border-[#e0d9cc]/60 shadow-2xs group-hover:border-[#a47a3c]/60 transition-colors">
+            <div class="relative w-full aspect-square bg-[#f3efe7] rounded-lg overflow-hidden img-zoom-container shrink-0 border border-[#e0d9cc]/60 shadow-2xs group-hover:border-[#a47a3c]/60 transition-colors">
               <img 
                 :src="item.image || '/images/products/atta.jpg'" 
                 :alt="item.name" 
                 class="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-300"
               />
-              <span class="photo-label absolute top-2.5 left-2.5 text-[11px] text-[#1d1d1f] font-mono bg-white/80 backdrop-blur-xs px-2 py-0.5 rounded-lg z-10 shadow-2xs">
+              <span class="photo-label absolute top-2.5 left-2.5 text-[11px] text-[#1d1d1f] font-mono bg-white/80 backdrop-blur-xs px-2 py-0.5 rounded-md z-10 shadow-2xs">
                 {{ item.photo_label || item.photoLabel || item.category || 'product' }}
               </span>
 
               <!-- Stepper or Add button -->
               <div 
                 v-if="store.getItemQuantity(item.id || item.slug) > 0"
-                class="absolute bottom-2.5 inset-x-2.5 bg-[#1a1a1a] text-white h-8 sm:h-9 rounded-full flex items-center justify-between px-2.5 shadow-md z-10"
+                class="absolute bottom-2.5 inset-x-2.5 bg-[#1a1a1a] text-white h-8 sm:h-9 rounded-md flex items-center justify-between px-2.5 shadow-md z-10"
                 @click.stop.prevent
               >
                 <button 
@@ -1011,7 +1014,7 @@ const handleAddKitToCart = (kit) => {
                 v-else
                 type="button"
                 @click.stop.prevent="store.addToCart(item)"
-                class="absolute bottom-2.5 right-2.5 w-8 h-8 sm:w-9 sm:h-9 bg-[#1a1a1a] hover:bg-black text-white rounded-full flex items-center justify-center font-bold cursor-pointer active:scale-95 shadow-md z-10 transition-transform group-hover:scale-105"
+                class="absolute bottom-2.5 right-2.5 w-8 h-8 sm:w-9 sm:h-9 bg-[#1a1a1a] hover:bg-black text-white rounded-md flex items-center justify-center font-bold cursor-pointer active:scale-95 shadow-md z-10 transition-transform group-hover:scale-105"
                 :aria-label="'Add ' + item.name + ' to cart'"
               >
                 <Plus class="w-4 h-4 stroke-[2.5]" />
@@ -1037,7 +1040,7 @@ const handleAddKitToCart = (kit) => {
         <div class="pt-4 text-center">
           <Link 
             href="/search"
-            class="inline-flex items-center gap-2.5 px-8 py-3.5 bg-[#1a1a1a] hover:bg-black text-white font-semibold text-xs sm:text-sm rounded-full transition-all duration-200 shadow-sm hover:shadow-md cursor-pointer group active:scale-[0.99]"
+            class="inline-flex items-center gap-2.5 px-8 py-3.5 bg-[#1a1a1a] hover:bg-black text-white font-semibold text-xs sm:text-sm rounded-md transition-all duration-200 shadow-sm hover:shadow-md cursor-pointer group active:scale-[0.99]"
           >
             <span>View All Products ({{ totalProductCount || 14 }})</span>
             <ChevronRight class="w-4 h-4 stroke-[2.5] text-stone-300 group-hover:translate-x-0.5 transition-transform" />
@@ -1051,7 +1054,7 @@ const handleAddKitToCart = (kit) => {
           <div>
             <div class="flex items-center gap-2">
               <h2 class="text-xl sm:text-2xl font-serif font-medium text-[#1d1d1f] tracking-tight">Recipe kits</h2>
-              <span class="font-devanagari text-xs text-[#7a5620] bg-[#f5eee2] px-2.5 py-0.5 rounded-full border border-[#e0d9cc]">एक टैप में रसोई</span>
+              <span class="font-devanagari text-xs text-[#7a5620] bg-[#f5eee2] px-2.5 py-0.5 rounded-md border border-[#e0d9cc]">एक टैप में रसोई</span>
             </div>
             <p class="text-xs text-[#6e6e73] font-normal mt-0.5">
               Every ingredient for one dish, added in one tap.
@@ -1072,11 +1075,11 @@ const handleAddKitToCart = (kit) => {
           <div 
             v-for="kit in recipeKitItems"
             :key="kit.slug || kit.id"
-            class="bg-[#f3efe7] border border-[#e0d9cc] rounded-3xl p-4 flex flex-col justify-between hover:border-[#a47a3c]/60 transition-colors shadow-2xs group"
+            class="bg-[#f3efe7] border border-[#e0d9cc] rounded-lg p-4 flex flex-col justify-between hover:border-[#a47a3c]/60 transition-colors shadow-2xs group"
           >
             <div>
               <!-- Kit Photo Tile -->
-              <Link :href="'/recipe-kits/' + kit.slug" class="block relative w-full aspect-[4/3] bg-white rounded-2xl overflow-hidden img-zoom-container border border-[#e0d9cc]/60">
+              <Link :href="'/recipe-kits/' + kit.slug" class="block relative w-full aspect-[4/3] bg-white rounded-lg overflow-hidden img-zoom-container border border-[#e0d9cc]/60">
                 <img 
                   :src="kit.image || (kit.slug === 'veg-manchurian' ? '/images/products/sweets.jpg' : '/images/products/paneer_curry.jpg')" 
                   :alt="kit.name" 
@@ -1112,7 +1115,7 @@ const handleAddKitToCart = (kit) => {
                   <span class="text-xs text-[#86868b] line-through font-normal">
                     ${{ Number(kit.originalPrice || kit.original_price || (Number(kit.price) + 2.45)).toFixed(2) }}
                   </span>
-                  <span class="text-[11px] font-bold text-[#7a5620] bg-[#f5eee2] border border-[#e0d9cc] px-2 py-0.5 rounded-full">
+                  <span class="text-[11px] font-bold text-[#7a5620] bg-[#f5eee2] border border-[#e0d9cc] px-2 py-0.5 rounded-md">
                     Save ${{ (Number(kit.originalPrice || kit.original_price || (Number(kit.price) + 2.45)) - Number(kit.price)).toFixed(2) }}
                   </span>
                 </div>
@@ -1122,7 +1125,7 @@ const handleAddKitToCart = (kit) => {
             <button 
               type="button"
               @click.stop.prevent="handleAddKitToCart(kit)"
-              class="w-full mt-3.5 py-2.5 sm:py-3 bg-[#1a1a1a] hover:bg-black text-white font-semibold text-xs rounded-full flex items-center justify-center gap-1.5 transition-colors cursor-pointer active:scale-98 shadow-xs"
+              class="w-full mt-3.5 py-2.5 sm:py-3 bg-[#1a1a1a] hover:bg-black text-white font-semibold text-xs rounded-md flex items-center justify-center gap-1.5 transition-colors cursor-pointer active:scale-98 shadow-xs"
               :aria-label="'Add all ' + (kit.productsCount || 3) + ' to cart for ' + kit.name"
             >
               <Plus class="w-3.5 h-3.5 stroke-[2.5]" />
@@ -1135,7 +1138,7 @@ const handleAddKitToCart = (kit) => {
         <div class="pt-2 text-center">
           <Link 
             href="/recipe-kits"
-            class="inline-flex items-center gap-2 px-6 py-3 bg-[#f5eee2] hover:bg-[#ede6da] border border-[#e0d9cc] text-[#7a5620] font-semibold text-xs rounded-full transition-all cursor-pointer group shadow-2xs"
+            class="inline-flex items-center gap-2 px-6 py-3 bg-[#f5eee2] hover:bg-[#ede6da] border border-[#e0d9cc] text-[#7a5620] font-semibold text-xs rounded-md transition-all cursor-pointer group shadow-2xs"
           >
             <span>Explore All Recipe Kits ({{ totalRecipeKitCount || recipeKitItems.length }})</span>
             <ChevronRight class="w-3.5 h-3.5 stroke-[2.5] text-[#7a5620] group-hover:translate-x-0.5 transition-transform" />

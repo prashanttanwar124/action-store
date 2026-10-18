@@ -109,7 +109,7 @@ const popularAisles = [
     <header class="bg-white/95 border-b border-[#e0d9cc] sticky top-0 z-40 backdrop-blur-md">
       <div class="max-w-5xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
         <Link href="/" class="flex items-center gap-2 group">
-          <span class="w-8 h-8 rounded-full bg-[#1a1a1a] text-white flex items-center justify-center font-serif font-bold text-sm tracking-tighter group-hover:scale-105 transition-transform">
+          <span class="w-8 h-8 rounded-md bg-[#1a1a1a] text-white flex items-center justify-center font-serif font-bold text-sm tracking-tighter group-hover:scale-105 transition-transform">
             M
           </span>
           <span class="font-serif font-semibold text-lg text-[#1d1d1f] tracking-tight">
@@ -120,14 +120,14 @@ const popularAisles = [
         <div class="flex items-center gap-3">
           <Link 
             href="/cart"
-            class="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold bg-[#f5eee2] text-[#7a5620] border border-[#e0d9cc] hover:bg-[#ede2d1] transition-colors"
+            class="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-md text-xs font-semibold bg-[#f5eee2] text-[#7a5620] border border-[#e0d9cc] hover:bg-[#ede2d1] transition-colors"
           >
             <ShoppingBag class="w-3.5 h-3.5" />
             <span>Store Cart</span>
           </Link>
           <Link 
             href="/"
-            class="hidden sm:inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold bg-[#1a1a1a] text-white hover:bg-black transition-colors shadow-xs"
+            class="hidden sm:inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-md text-xs font-semibold bg-[#1a1a1a] text-white hover:bg-black transition-colors shadow-xs"
           >
             <Home class="w-3.5 h-3.5" />
             <span>Storefront</span>
@@ -142,11 +142,11 @@ const popularAisles = [
         
         <!-- Animated Badge & Icon -->
         <div class="inline-flex flex-col items-center">
-          <div class="w-20 h-20 sm:w-24 sm:h-24 rounded-3xl bg-[#f5eee2] border-2 border-[#e0d9cc] text-[#7a5620] flex items-center justify-center shadow-xs mx-auto mb-4 transition-transform hover:scale-105">
+          <div class="w-20 h-20 sm:w-24 sm:h-24 rounded-lg bg-[#f5eee2] border-2 border-[#e0d9cc] text-[#7a5620] flex items-center justify-center shadow-xs mx-auto mb-4 transition-transform hover:scale-105">
             <component :is="errorDetails.icon" class="w-10 h-10 sm:w-12 sm:h-12 stroke-[1.8]" />
           </div>
 
-          <span class="text-[10px] sm:text-xs font-bold uppercase tracking-widest text-[#7a5620] bg-[#f5eee2] px-3.5 py-1 rounded-full border border-[#e0d9cc]">
+          <span class="text-[10px] sm:text-xs font-bold uppercase tracking-widest text-[#7a5620] bg-[#f5eee2] px-3.5 py-1 rounded-md border border-[#e0d9cc]">
             {{ errorDetails.badge }}
           </span>
         </div>
@@ -168,7 +168,7 @@ const popularAisles = [
         <div class="flex flex-col sm:flex-row items-center justify-center gap-3 pt-3">
           <Link 
             :href="errorDetails.actionHref"
-            class="w-full sm:w-auto px-7 py-3.5 bg-[#1a1a1a] hover:bg-black text-white text-xs sm:text-sm font-semibold rounded-full shadow-md transition-all active:scale-[0.99] flex items-center justify-center gap-2"
+            class="w-full sm:w-auto px-7 py-3.5 bg-[#1a1a1a] hover:bg-black text-white text-xs sm:text-sm font-semibold rounded-md shadow-md transition-all active:scale-[0.99] flex items-center justify-center gap-2"
           >
             <ArrowLeft class="w-4 h-4 stroke-[2.2]" />
             <span>{{ errorDetails.actionLabel }}</span>
@@ -176,7 +176,7 @@ const popularAisles = [
 
           <Link 
             href="/cart"
-            class="w-full sm:w-auto px-6 py-3.5 bg-white hover:bg-[#f3efe7] text-[#1d1d1f] text-xs sm:text-sm font-semibold rounded-full border border-[#e0d9cc] transition-colors flex items-center justify-center gap-2 shadow-xs"
+            class="w-full sm:w-auto px-6 py-3.5 bg-white hover:bg-[#f3efe7] text-[#1d1d1f] text-xs sm:text-sm font-semibold rounded-md border border-[#e0d9cc] transition-colors flex items-center justify-center gap-2 shadow-xs"
           >
             <Store class="w-4 h-4 stroke-[2] text-[#a47a3c]" />
             <span>Check Store Pickup</span>
@@ -184,7 +184,7 @@ const popularAisles = [
         </div>
 
         <!-- Popular Aisles Quick Help Card -->
-        <div class="bg-white rounded-3xl border border-[#e0d9cc] p-5 sm:p-6 text-left shadow-xs space-y-3.5 mt-8">
+        <div class="bg-white rounded-lg border border-[#e0d9cc] p-5 sm:p-6 text-left shadow-xs space-y-3.5 mt-8">
           <div class="flex items-center justify-between border-b border-[#e0d9cc]/60 pb-2.5">
             <span class="text-xs font-semibold uppercase tracking-wider text-[#7a5620] flex items-center gap-1.5">
               <Sparkles class="w-3.5 h-3.5 text-[#a47a3c]" />
@@ -198,7 +198,7 @@ const popularAisles = [
               v-for="aisle in popularAisles"
               :key="aisle.name"
               :href="aisle.href"
-              class="group flex items-center justify-between p-3 rounded-2xl bg-[#fbf9f5] hover:bg-[#f5eee2] border border-[#e0d9cc] transition-colors text-xs"
+              class="group flex items-center justify-between p-3 rounded-lg bg-[#fbf9f5] hover:bg-[#f5eee2] border border-[#e0d9cc] transition-colors text-xs"
             >
               <div>
                 <div class="font-semibold text-[#1d1d1f] group-hover:text-[#7a5620] transition-colors">

@@ -28,7 +28,7 @@ const submit = () => {
       
       <!-- Card Title & Subtitle -->
       <div class="space-y-1">
-        <div class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#f5eee2] border border-[#e0d9cc] text-[#7a5620] text-[10.5px] font-semibold uppercase tracking-wider">
+        <div class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md bg-[#f5eee2] border border-[#e0d9cc] text-[#7a5620] text-[10.5px] font-semibold uppercase tracking-wider">
           <Sparkles class="w-3 h-3 text-[#a47a3c]" />
           <span>New Customer Registration</span>
         </div>
@@ -41,8 +41,8 @@ const submit = () => {
       </div>
 
       <!-- Welcome Perk Banner -->
-      <div class="p-3.5 rounded-2xl bg-[#f5eee2] border border-[#e0d9cc] flex items-center gap-3">
-        <div class="w-8 h-8 rounded-xl bg-white border border-[#e0d9cc] flex items-center justify-center shrink-0">
+      <div class="p-3.5 rounded-lg bg-[#f5eee2] border border-[#e0d9cc] flex items-center gap-3">
+        <div class="w-8 h-8 rounded-md bg-white border border-[#e0d9cc] flex items-center justify-center shrink-0">
           <Sparkles class="w-4 h-4 text-[#a47a3c]" />
         </div>
         <div class="text-xs">
@@ -71,7 +71,7 @@ const submit = () => {
               autofocus
               autocomplete="name"
               placeholder="e.g. Priya Sharma"
-              class="w-full pl-10 pr-3.5 h-11 bg-[#fbf9f5] border border-[#dfd6c8] focus:border-[#1a1a1a] rounded-xl text-xs sm:text-sm text-[#1d1d1f] placeholder-[#86868b] focus:outline-none focus:bg-white focus:ring-3 focus:ring-[#1a1a1a]/10 transition-all font-normal"
+              class="w-full pl-10 pr-3.5 h-11 bg-[#fbf9f5] border border-[#dfd6c8] focus:border-[#1a1a1a] rounded-md text-xs sm:text-sm text-[#1d1d1f] placeholder-[#86868b] focus:outline-none focus:bg-white focus:ring-3 focus:ring-[#1a1a1a]/10 transition-all font-normal"
               :class="{ 'border-rose-400 ring-rose-100': form.errors.name }"
             />
           </div>
@@ -96,7 +96,7 @@ const submit = () => {
               required
               autocomplete="username"
               placeholder="priya@example.com"
-              class="w-full pl-10 pr-3.5 h-11 bg-[#fbf9f5] border border-[#dfd6c8] focus:border-[#1a1a1a] rounded-xl text-xs sm:text-sm text-[#1d1d1f] placeholder-[#86868b] focus:outline-none focus:bg-white focus:ring-3 focus:ring-[#1a1a1a]/10 transition-all font-normal"
+              class="w-full pl-10 pr-3.5 h-11 bg-[#fbf9f5] border border-[#dfd6c8] focus:border-[#1a1a1a] rounded-md text-xs sm:text-sm text-[#1d1d1f] placeholder-[#86868b] focus:outline-none focus:bg-white focus:ring-3 focus:ring-[#1a1a1a]/10 transition-all font-normal"
               :class="{ 'border-rose-400 ring-rose-100': form.errors.email }"
             />
           </div>
@@ -121,7 +121,7 @@ const submit = () => {
               required
               autocomplete="new-password"
               placeholder="At least 8 characters"
-              class="w-full pl-10 pr-10 h-11 bg-[#fbf9f5] border border-[#dfd6c8] focus:border-[#1a1a1a] rounded-xl text-xs sm:text-sm text-[#1d1d1f] placeholder-[#86868b] focus:outline-none focus:bg-white focus:ring-3 focus:ring-[#1a1a1a]/10 transition-all font-normal"
+              class="w-full pl-10 pr-10 h-11 bg-[#fbf9f5] border border-[#dfd6c8] focus:border-[#1a1a1a] rounded-md text-xs sm:text-sm text-[#1d1d1f] placeholder-[#86868b] focus:outline-none focus:bg-white focus:ring-3 focus:ring-[#1a1a1a]/10 transition-all font-normal"
               :class="{ 'border-rose-400 ring-rose-100': form.errors.password }"
             />
             <button
@@ -155,7 +155,7 @@ const submit = () => {
               required
               autocomplete="new-password"
               placeholder="Re-enter your password"
-              class="w-full pl-10 pr-3.5 h-11 bg-[#fbf9f5] border border-[#dfd6c8] focus:border-[#1a1a1a] rounded-xl text-xs sm:text-sm text-[#1d1d1f] placeholder-[#86868b] focus:outline-none focus:bg-white focus:ring-3 focus:ring-[#1a1a1a]/10 transition-all font-normal"
+              class="w-full pl-10 pr-3.5 h-11 bg-[#fbf9f5] border border-[#dfd6c8] focus:border-[#1a1a1a] rounded-md text-xs sm:text-sm text-[#1d1d1f] placeholder-[#86868b] focus:outline-none focus:bg-white focus:ring-3 focus:ring-[#1a1a1a]/10 transition-all font-normal"
               :class="{ 'border-rose-400 ring-rose-100': form.errors.password_confirmation }"
             />
           </div>
@@ -168,7 +168,7 @@ const submit = () => {
         <button
           type="submit"
           :disabled="form.processing"
-          class="w-full h-11 bg-[#1a1a1a] hover:bg-black text-white font-semibold text-xs rounded-full flex items-center justify-center gap-2 transition-all active:scale-[0.99] shadow-sm cursor-pointer disabled:opacity-50 mt-2"
+          class="w-full h-11 bg-[#1a1a1a] hover:bg-black text-white font-semibold text-xs rounded-md flex items-center justify-center gap-2 transition-all active:scale-[0.99] shadow-sm cursor-pointer disabled:opacity-50 mt-2"
         >
           <span v-if="form.processing">Creating Account...</span>
           <template v-else>

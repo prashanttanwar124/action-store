@@ -103,8 +103,8 @@ onUnmounted(() => {
     <div class="max-w-3xl mx-auto py-6 space-y-6 pb-28">
 
       <!-- HERO STATUS BANNER -->
-      <div class="p-6 sm:p-8 rounded-3xl bg-[#f3efe7] border border-[#e0d9cc] text-center space-y-3 relative overflow-hidden shadow-xs">
-        <div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-white border border-[#e0d9cc] shadow-2xs">
+      <div class="p-6 sm:p-8 rounded-lg bg-[#f3efe7] border border-[#e0d9cc] text-center space-y-3 relative overflow-hidden shadow-xs">
+        <div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-semibold bg-white border border-[#e0d9cc] shadow-2xs">
           <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
           <span>Live Order Tracking · Auto-Updates</span>
         </div>
@@ -133,7 +133,7 @@ onUnmounted(() => {
       </div>
 
       <!-- VISUAL STEPPER TRACKER -->
-      <Card class="bg-white border-[#e0d9cc] rounded-3xl shadow-xs p-6">
+      <Card class="bg-white border-[#e0d9cc] rounded-lg shadow-xs p-6">
         <CardContent class="p-0">
           <div class="relative">
             
@@ -148,7 +148,7 @@ onUnmounted(() => {
               >
                 <!-- Step Circle -->
                 <div 
-                  class="w-12 h-12 rounded-full flex items-center justify-center shrink-0 border-2 transition-all duration-300 z-10 shadow-xs"
+                  class="w-12 h-12 rounded-md flex items-center justify-center shrink-0 border-2 transition-all duration-300 z-10 shadow-xs"
                   :class="[
                     idx < currentStepIndex 
                       ? 'bg-[#1a1a1a] border-[#1a1a1a] text-white' 
@@ -191,8 +191,8 @@ onUnmounted(() => {
       </Card>
 
       <!-- FULFILLMENT INSTRUCTIONS BOX -->
-      <div v-if="isDelivery" class="p-5 rounded-3xl bg-[#fbfaf8] border border-[#e0d9cc] flex items-start gap-4 shadow-2xs">
-        <div class="w-10 h-10 rounded-2xl bg-[#f5eee2] text-[#7a5620] flex items-center justify-center shrink-0 border border-[#e0d9cc]">
+      <div v-if="isDelivery" class="p-5 rounded-lg bg-[#fbfaf8] border border-[#e0d9cc] flex items-start gap-4 shadow-2xs">
+        <div class="w-10 h-10 rounded-lg bg-[#f5eee2] text-[#7a5620] flex items-center justify-center shrink-0 border border-[#e0d9cc]">
           <Truck class="w-5 h-5" />
         </div>
         <div class="space-y-1 text-xs">
@@ -203,8 +203,8 @@ onUnmounted(() => {
         </div>
       </div>
 
-      <div v-else class="p-5 rounded-3xl bg-[#fbfaf8] border border-[#e0d9cc] flex items-start gap-4 shadow-2xs">
-        <div class="w-10 h-10 rounded-2xl bg-[#f5eee2] text-[#7a5620] flex items-center justify-center shrink-0 border border-[#e0d9cc]">
+      <div v-else class="p-5 rounded-lg bg-[#fbfaf8] border border-[#e0d9cc] flex items-start gap-4 shadow-2xs">
+        <div class="w-10 h-10 rounded-lg bg-[#f5eee2] text-[#7a5620] flex items-center justify-center shrink-0 border border-[#e0d9cc]">
           <Car class="w-5 h-5" />
         </div>
         <div class="space-y-1 text-xs">
@@ -216,7 +216,7 @@ onUnmounted(() => {
       </div>
 
       <!-- ORDER ITEMS BREAKDOWN -->
-      <Card class="bg-white border-[#e0d9cc] rounded-3xl p-6 shadow-xs space-y-4">
+      <Card class="bg-white border-[#e0d9cc] rounded-lg p-6 shadow-xs space-y-4">
         <div class="flex items-center justify-between border-b border-[#e0d9cc]/60 pb-3">
           <h2 class="text-base font-serif font-medium text-[#1d1d1f]">
             Order Items ({{ order.items.length }})
@@ -233,7 +233,7 @@ onUnmounted(() => {
             class="py-3 flex items-center justify-between gap-3 text-xs"
           >
             <div class="flex items-center gap-3">
-              <div class="w-10 h-10 rounded-xl bg-[#f3efe7] border border-[#e0d9cc] overflow-hidden shrink-0">
+              <div class="w-10 h-10 rounded-md bg-[#f3efe7] border border-[#e0d9cc] overflow-hidden shrink-0">
                 <img 
                   :src="item.image || '/images/products/atta.jpg'" 
                   :alt="item.name" 

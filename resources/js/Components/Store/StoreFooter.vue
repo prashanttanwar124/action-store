@@ -25,7 +25,7 @@ const page = usePage();
         <div class="space-y-3">
           <div class="text-2xl font-serif font-medium tracking-tight text-[#1d1d1f] flex items-center gap-1.5">
             <span>Masala Mart</span>
-            <span class="font-devanagari text-xs text-[#7a5620] font-medium bg-[#f5eee2] px-2 py-0.5 rounded-full border border-[#e0d9cc]">
+            <span class="font-devanagari text-xs text-[#7a5620] font-medium bg-[#f5eee2] px-2 py-0.5 rounded-md border border-[#e0d9cc]">
               {{ storeInfo.hindi_tagline || 'किराना' }}
             </span>
           </div>
@@ -79,7 +79,7 @@ const page = usePage();
         </div>
 
         <!-- Column 4: Rewards & Pickup -->
-        <div class="space-y-3 text-xs bg-[#f5eee2] p-4 rounded-2xl border border-[#e0d9cc]">
+        <div class="space-y-3 text-xs bg-[#f5eee2] p-4 rounded-lg border border-[#e0d9cc]">
           <div class="font-semibold uppercase text-[11px] text-[#7a5620] flex items-center gap-1.5">
             <Sparkles class="w-3.5 h-3.5 text-[#a47a3c]" />
             <span>Masala Rewards</span>

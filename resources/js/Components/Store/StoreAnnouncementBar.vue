@@ -20,7 +20,7 @@ const store = useStore();
   <div v-if="storeInfo?.announcement" class="bg-[#1a1a1a] text-white text-[11px] py-1.5 px-4 hidden sm:block">
     <div class="max-w-7xl mx-auto flex justify-between items-center">
       <div class="flex items-center gap-2">
-        <span class="bg-[#f5eee2] text-[#7a5620] border border-[#e0d9cc]/50 px-2 py-0.5 rounded-full font-semibold text-[10px] tracking-wide">
+        <span class="bg-[#f5eee2] text-[#7a5620] border border-[#e0d9cc]/50 px-2 py-0.5 rounded-md font-semibold text-[10px] tracking-wide">
           {{ storeInfo.hindi_tagline || 'किराना' }} Notice
         </span>
         <span class="text-stone-300 font-normal">{{ storeInfo.announcement }}</span>

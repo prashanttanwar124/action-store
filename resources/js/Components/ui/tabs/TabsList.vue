@@ -17,7 +17,7 @@ const forwardedProps = useForwardProps(props);
     v-bind="forwardedProps"
     :class="
       cn(
-        'inline-flex items-center justify-center rounded-full bg-[#f3efe7] p-1 text-[#6e6e73] border border-[#e0d9cc]',
+        'inline-flex items-center justify-center rounded-md bg-[#f3efe7] p-1 text-[#6e6e73] border border-[#e0d9cc]',
         props.class,
       )
     "

@@ -18,14 +18,14 @@ const forwardedProps = useForwardProps(props);
     v-bind="forwardedProps"
     :class="
       cn(
-        'flex h-10 w-full items-center justify-between rounded-xl border border-input bg-background px-3.5 py-2 text-xs transition-all placeholder:text-muted-foreground focus:outline-none focus:border-[#1a1a1a] disabled:cursor-not-allowed disabled:opacity-50 [&>span]:line-clamp-1 cursor-pointer',
+        'flex h-9 w-full items-center justify-between rounded-lg border border-input bg-card px-3 py-1.5 text-xs text-foreground shadow-2xs transition-colors placeholder:text-muted-foreground focus:outline-none focus:border-primary disabled:cursor-not-allowed disabled:opacity-50 [&>span]:line-clamp-1 cursor-pointer',
         props.class,
       )
     "
   >
     <slot />
     <SelectIcon as-child>
-      <ChevronDown class="h-4 w-4 opacity-50 shrink-0" />
+      <ChevronDown class="h-3.5 w-3.5 opacity-50 shrink-0 ml-1.5" />
     </SelectIcon>
   </SelectTrigger>
 </template>

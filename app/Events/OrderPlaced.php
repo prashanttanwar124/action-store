@@ -58,6 +58,7 @@ class OrderPlaced implements ShouldBroadcastNow
                 'total' => (float) $this->order->total,
                 'points_earned' => $this->order->points_earned,
                 'payment_method' => $this->order->payment_method,
+                'stripe_payment_id' => $this->order->stripe_payment_id,
                 'fulfillment_type' => $this->order->fulfillment_type,
                 'pickup_slot' => $this->order->pickup_slot,
                 'pickup_location' => $this->order->pickup_location,
@@ -76,6 +77,7 @@ class OrderPlaced implements ShouldBroadcastNow
                         'unit_price' => (float) $item->unit_price,
                         'quantity' => $item->quantity,
                         'total_price' => (float) $item->total_price,
+                        'is_packed' => (bool) $item->is_packed,
                         'image' => $item->image,
                     ];
                 })->all(),

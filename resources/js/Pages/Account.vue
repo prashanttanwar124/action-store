@@ -68,7 +68,7 @@ function handleReorderOrder(order) {
       <!-- Toast Feedback -->
       <div 
         v-if="reorderedNotification"
-        class="fixed top-16 left-4 right-4 sm:left-auto sm:right-6 sm:top-20 z-50 bg-[#191514] text-white p-3.5 rounded-2xl shadow-2xl flex items-center justify-between text-xs font-semibold"
+        class="fixed top-16 left-4 right-4 sm:left-auto sm:right-6 sm:top-20 z-50 bg-[#191514] text-white p-3.5 rounded-lg shadow-2xl flex items-center justify-between text-xs font-semibold"
       >
         <div class="flex items-center gap-2">
           <CheckCircle2 class="w-4 h-4 text-[#F59E0B]" />
@@ -107,7 +107,7 @@ function handleReorderOrder(order) {
             href="/logout"
             method="post"
             as="button"
-            class="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-[#e0d9cc] bg-white hover:bg-rose-50 hover:text-rose-600 hover:border-rose-200 text-xs font-semibold text-[#6e6e73] transition-colors cursor-pointer"
+            class="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md border border-[#e0d9cc] bg-white hover:bg-rose-50 hover:text-rose-600 hover:border-rose-200 text-xs font-semibold text-[#6e6e73] transition-colors cursor-pointer"
             title="Sign out of your account"
           >
             <LogOut class="w-3.5 h-3.5" />
@@ -116,13 +116,13 @@ function handleReorderOrder(order) {
 
           <Link 
             href="/cart" 
-            class="relative w-10 h-10 rounded-2xl bg-white border border-[#e0d9cc] flex items-center justify-center text-[#1d1d1f] hover:bg-[#f3efe7] transition-colors shadow-xs"
+            class="relative w-10 h-10 rounded-lg bg-white border border-[#e0d9cc] flex items-center justify-center text-[#1d1d1f] hover:bg-[#f3efe7] transition-colors shadow-xs"
             aria-label="Cart"
           >
             <ShoppingBag class="w-5 h-5 stroke-[2] text-[#1d1d1f]" />
             <span 
               v-if="store.totalItemCount > 0"
-              class="absolute -top-1.5 -right-1.5 bg-[#1a1a1a] text-white text-[11px] font-bold w-5 h-5 rounded-full flex items-center justify-center border-2 border-white shadow-xs"
+              class="absolute -top-1.5 -right-1.5 bg-[#1a1a1a] text-white text-[11px] font-bold w-5 h-5 rounded-md flex items-center justify-center border-2 border-white shadow-xs"
             >
               {{ store.totalItemCount }}
             </span>
@@ -133,7 +133,7 @@ function handleReorderOrder(order) {
       <!-- Guest Welcome Banner if not logged in -->
       <div 
         v-if="!authUser" 
-        class="bg-[#f5eee2] border border-[#e0d9cc] rounded-3xl p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3.5 shadow-xs"
+        class="bg-[#f5eee2] border border-[#e0d9cc] rounded-lg p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3.5 shadow-xs"
       >
         <div class="space-y-1">
           <div class="flex items-center gap-2">
@@ -149,13 +149,13 @@ function handleReorderOrder(order) {
         <div class="flex items-center gap-2 shrink-0">
           <Link
             href="/login"
-            class="px-4 py-2 bg-[#1a1a1a] hover:bg-black text-white text-xs font-semibold rounded-full transition-colors shadow-xs"
+            class="px-4 py-2 bg-[#1a1a1a] hover:bg-black text-white text-xs font-semibold rounded-md transition-colors shadow-xs"
           >
             Sign In
           </Link>
           <Link
             href="/register"
-            class="px-4 py-2 bg-white hover:bg-[#f3efe7] text-[#1d1d1f] border border-[#e0d9cc] text-xs font-semibold rounded-full transition-colors shadow-xs"
+            class="px-4 py-2 bg-white hover:bg-[#f3efe7] text-[#1d1d1f] border border-[#e0d9cc] text-xs font-semibold rounded-md transition-colors shadow-xs"
           >
             Create Account
           </Link>
@@ -163,7 +163,7 @@ function handleReorderOrder(order) {
       </div>
 
       <!-- SECTION 1: Masala Points Reward Meter (Screen 1f Exact Match) -->
-      <div class="bg-[#1a1a1a] text-white p-5 sm:p-6 rounded-3xl shadow-sm space-y-3.5 border border-[#e0d9cc]/20">
+      <div class="bg-[#1a1a1a] text-white p-5 sm:p-6 rounded-lg shadow-sm space-y-3.5 border border-[#e0d9cc]/20">
         <div class="flex items-center justify-between">
           <span class="text-[10px] font-semibold uppercase tracking-wider text-[#a47a3c]">
             MASALA REWARDS
@@ -186,7 +186,7 @@ function handleReorderOrder(order) {
             v-for="i in 10" 
             :key="i"
             :class="[
-              'h-2 rounded-full transition-colors',
+              'h-2 rounded-md transition-colors',
               i <= 7 ? 'bg-[#a47a3c]' : 'bg-stone-800'
             ]"
           ></div>
@@ -205,7 +205,7 @@ function handleReorderOrder(order) {
         <div class="flex items-center justify-between border-b border-[#e0d9cc]/60 pb-2">
           <div class="flex items-center gap-2">
             <h2 class="text-lg sm:text-xl font-serif font-medium text-[#1d1d1f] tracking-tight">Past orders</h2>
-            <span class="font-devanagari text-xs text-[#7a5620] bg-[#f5eee2] px-2 py-0.5 rounded-full border border-[#e0d9cc]">पिछला ऑर्डर</span>
+            <span class="font-devanagari text-xs text-[#7a5620] bg-[#f5eee2] px-2 py-0.5 rounded-md border border-[#e0d9cc]">पिछला ऑर्डर</span>
           </div>
           <span v-if="displayOrders.length > 0" class="text-xs font-normal text-[#6e6e73]">
             {{ displayOrders.length }} order{{ displayOrders.length > 1 ? 's' : '' }}
@@ -217,14 +217,14 @@ function handleReorderOrder(order) {
           <div 
             v-for="order in displayOrders" 
             :key="order.id"
-            class="rounded-3xl border border-[#e0d9cc] bg-white p-5 space-y-4 shadow-xs"
+            class="rounded-lg border border-[#e0d9cc] bg-white p-5 space-y-4 shadow-xs"
           >
             <div class="flex items-center justify-between">
               <div class="flex flex-wrap items-center gap-2">
                 <span class="font-bold text-sm text-[#1d1d1f]">{{ order.date }} · {{ order.type }}</span>
                 <span 
                   v-if="order.status"
-                  class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-semibold"
+                  class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md text-[10px] font-semibold"
                   :class="[
                     order.status === 'confirmed' ? 'bg-amber-100 text-amber-800' :
                     order.status === 'packing' ? 'bg-blue-100 text-blue-800' :
@@ -253,7 +253,7 @@ function handleReorderOrder(order) {
               <div 
                 v-for="item in order.items.slice(0, 6)" 
                 :key="item.id"
-                class="w-10 h-10 rounded-2xl bg-[#f3efe7] overflow-hidden shrink-0 border border-[#e0d9cc]"
+                class="w-10 h-10 rounded-lg bg-[#f3efe7] overflow-hidden shrink-0 border border-[#e0d9cc]"
                 :title="item.name"
               >
                 <img :src="item.image || '/images/products/atta.jpg'" :alt="item.name" class="w-full h-full object-cover" />
@@ -264,14 +264,14 @@ function handleReorderOrder(order) {
             <div class="pt-1 flex items-center gap-2">
               <Link 
                 :href="'/orders/' + encodeURIComponent(order.id)"
-                class="flex-1 h-11 bg-[#a47a3c] hover:bg-[#8a6b32] text-white font-semibold text-xs rounded-full transition-colors flex items-center justify-center gap-1.5 cursor-pointer shadow-xs active:scale-[0.99]"
+                class="flex-1 h-11 bg-[#a47a3c] hover:bg-[#8a6b32] text-white font-semibold text-xs rounded-md transition-colors flex items-center justify-center gap-1.5 cursor-pointer shadow-xs active:scale-[0.99]"
               >
                 <Sparkles class="w-3.5 h-3.5" />
                 <span>Track Live</span>
               </Link>
               <button 
                 @click="handleReorderOrder(order)"
-                class="flex-1 h-11 bg-[#1a1a1a] hover:bg-black text-white font-semibold text-xs rounded-full transition-colors flex items-center justify-center gap-2 cursor-pointer shadow-sm active:scale-[0.99]"
+                class="flex-1 h-11 bg-[#1a1a1a] hover:bg-black text-white font-semibold text-xs rounded-md transition-colors flex items-center justify-center gap-2 cursor-pointer shadow-sm active:scale-[0.99]"
               >
                 <RotateCcw class="w-3.5 h-3.5 stroke-[2.2]" />
                 <span>Reorder ({{ order.itemCount }})</span>
@@ -281,7 +281,7 @@ function handleReorderOrder(order) {
         </div>
 
         <!-- Empty Past Orders State -->
-        <div v-else class="p-6 rounded-3xl border border-[#e0d9cc] bg-white text-center space-y-2.5 shadow-2xs">
+        <div v-else class="p-6 rounded-lg border border-[#e0d9cc] bg-white text-center space-y-2.5 shadow-2xs">
           <div class="text-sm font-semibold text-[#1d1d1f]">No past orders yet</div>
           <p class="text-xs text-[#6e6e73] max-w-sm mx-auto">
             When you complete pickup orders, your order details and quick reorder buttons will appear here.
@@ -300,14 +300,14 @@ function handleReorderOrder(order) {
         <div class="flex items-center justify-between border-b border-[#e0d9cc]/60 pb-2">
           <div class="flex items-center gap-2">
             <h2 class="text-lg sm:text-xl font-serif font-medium text-[#1d1d1f] tracking-tight">Account & Security</h2>
-            <span class="font-devanagari text-xs text-[#7a5620] bg-[#f5eee2] px-2 py-0.5 rounded-full border border-[#e0d9cc]">खाता</span>
+            <span class="font-devanagari text-xs text-[#7a5620] bg-[#f5eee2] px-2 py-0.5 rounded-md border border-[#e0d9cc]">खाता</span>
           </div>
         </div>
 
-        <div class="rounded-3xl border border-[#e0d9cc] bg-white p-5 space-y-4 shadow-xs">
+        <div class="rounded-lg border border-[#e0d9cc] bg-white p-5 space-y-4 shadow-xs">
           <div class="flex items-center justify-between">
             <div class="flex items-center gap-3">
-              <div class="w-10 h-10 rounded-full bg-[#f3efe7] border border-[#e0d9cc] flex items-center justify-center text-[#1a1a1a] font-bold text-sm">
+              <div class="w-10 h-10 rounded-md bg-[#f3efe7] border border-[#e0d9cc] flex items-center justify-center text-[#1a1a1a] font-bold text-sm">
                 {{ authUser ? authUser.name.charAt(0).toUpperCase() : 'G' }}
               </div>
               <div>
@@ -322,13 +322,13 @@ function handleReorderOrder(order) {
 
             <span 
               v-if="authUser" 
-              class="text-[11px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2.5 py-0.5 rounded-full"
+              class="text-[11px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2.5 py-0.5 rounded-md"
             >
               Active Session
             </span>
             <span 
               v-else 
-              class="text-[11px] font-semibold text-amber-700 bg-amber-50 border border-amber-200 px-2.5 py-0.5 rounded-full"
+              class="text-[11px] font-semibold text-amber-700 bg-amber-50 border border-amber-200 px-2.5 py-0.5 rounded-md"
             >
               Guest Mode
             </span>
@@ -338,7 +338,7 @@ function handleReorderOrder(order) {
             <template v-if="authUser">
               <Link
                 href="/profile"
-                class="flex-1 py-2.5 bg-[#f5eee2] hover:bg-[#ede3d1] text-[#1d1d1f] text-xs font-semibold rounded-full transition-colors border border-[#e0d9cc] text-center"
+                class="flex-1 py-2.5 bg-[#f5eee2] hover:bg-[#ede3d1] text-[#1d1d1f] text-xs font-semibold rounded-md transition-colors border border-[#e0d9cc] text-center"
               >
                 Edit Profile & Password
               </Link>
@@ -346,7 +346,7 @@ function handleReorderOrder(order) {
                 href="/logout"
                 method="post"
                 as="button"
-                class="flex-1 py-2.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 text-xs font-semibold rounded-full transition-colors cursor-pointer text-center flex items-center justify-center gap-1.5"
+                class="flex-1 py-2.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 text-xs font-semibold rounded-md transition-colors cursor-pointer text-center flex items-center justify-center gap-1.5"
               >
                 <LogOut class="w-3.5 h-3.5" />
                 <span>Sign Out</span>
@@ -355,13 +355,13 @@ function handleReorderOrder(order) {
             <template v-else>
               <Link
                 href="/login"
-                class="flex-1 py-2.5 bg-[#1a1a1a] hover:bg-black text-white text-xs font-semibold rounded-full transition-colors text-center shadow-xs"
+                class="flex-1 py-2.5 bg-[#1a1a1a] hover:bg-black text-white text-xs font-semibold rounded-md transition-colors text-center shadow-xs"
               >
                 Sign In to Account
               </Link>
               <Link
                 href="/register"
-                class="flex-1 py-2.5 bg-white hover:bg-[#f3efe7] text-[#1d1d1f] border border-[#e0d9cc] text-xs font-semibold rounded-full transition-colors text-center shadow-xs"
+                class="flex-1 py-2.5 bg-white hover:bg-[#f3efe7] text-[#1d1d1f] border border-[#e0d9cc] text-xs font-semibold rounded-md transition-colors text-center shadow-xs"
               >
                 Create New Account
               </Link>

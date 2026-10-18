@@ -29,7 +29,7 @@
     <header class="bg-white/95 border-b border-[#e0d9cc] sticky top-0 z-40 backdrop-blur-md">
         <div class="max-w-5xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
             <a href="/" class="flex items-center gap-2 group text-decoration-none">
-                <span class="w-8 h-8 rounded-full bg-[#1a1a1a] text-white flex items-center justify-center font-serif font-bold text-sm tracking-tighter">
+                <span class="w-8 h-8 rounded-md bg-[#1a1a1a] text-white flex items-center justify-center font-serif font-bold text-sm tracking-tighter">
                     M
                 </span>
                 <span class="serif-font font-semibold text-lg text-[#1d1d1f] tracking-tight">
@@ -38,10 +38,10 @@
             </a>
 
             <div class="flex items-center gap-3">
-                <a href="/cart" class="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold bg-[#f5eee2] text-[#7a5620] border border-[#e0d9cc] hover:bg-[#ede2d1] transition-colors">
+                <a href="/cart" class="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-md text-xs font-semibold bg-[#f5eee2] text-[#7a5620] border border-[#e0d9cc] hover:bg-[#ede2d1] transition-colors">
                     Store Cart
                 </a>
-                <a href="/" class="hidden sm:inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold bg-[#1a1a1a] text-white hover:bg-black transition-colors">
+                <a href="/" class="hidden sm:inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-md text-xs font-semibold bg-[#1a1a1a] text-white hover:bg-black transition-colors">
                     Storefront
                 </a>
             </div>
@@ -53,11 +53,11 @@
         <div class="max-w-xl w-full text-center space-y-6">
             
             <div class="inline-flex flex-col items-center">
-                <div class="w-20 h-20 sm:w-24 sm:h-24 rounded-3xl bg-[#f5eee2] border-2 border-[#e0d9cc] text-[#7a5620] flex items-center justify-center shadow-xs mx-auto mb-4">
+                <div class="w-20 h-20 sm:w-24 sm:h-24 rounded-lg bg-[#f5eee2] border-2 border-[#e0d9cc] text-[#7a5620] flex items-center justify-center shadow-xs mx-auto mb-4">
                     @yield('icon')
                 </div>
 
-                <span class="text-[10px] sm:text-xs font-bold uppercase tracking-widest text-[#7a5620] bg-[#f5eee2] px-3.5 py-1 rounded-full border border-[#e0d9cc]">
+                <span class="text-[10px] sm:text-xs font-bold uppercase tracking-widest text-[#7a5620] bg-[#f5eee2] px-3.5 py-1 rounded-md border border-[#e0d9cc]">
                     @yield('badge', 'ERROR')
                 </span>
             </div>
@@ -75,16 +75,16 @@
             </div>
 
             <div class="flex flex-col sm:flex-row items-center justify-center gap-3 pt-3">
-                <a href="/" class="w-full sm:w-auto px-7 py-3.5 bg-[#1a1a1a] hover:bg-black text-white text-xs sm:text-sm font-semibold rounded-full shadow-md transition-all flex items-center justify-center gap-2">
+                <a href="/" class="w-full sm:w-auto px-7 py-3.5 bg-[#1a1a1a] hover:bg-black text-white text-xs sm:text-sm font-semibold rounded-md shadow-md transition-all flex items-center justify-center gap-2">
                     <span>← Return to Storefront</span>
                 </a>
-                <a href="/cart" class="w-full sm:w-auto px-6 py-3.5 bg-white hover:bg-[#f3efe7] text-[#1d1d1f] text-xs sm:text-sm font-semibold rounded-full border border-[#e0d9cc] transition-colors flex items-center justify-center gap-2 shadow-xs">
+                <a href="/cart" class="w-full sm:w-auto px-6 py-3.5 bg-white hover:bg-[#f3efe7] text-[#1d1d1f] text-xs sm:text-sm font-semibold rounded-md border border-[#e0d9cc] transition-colors flex items-center justify-center gap-2 shadow-xs">
                     <span>Check Store Pickup</span>
                 </a>
             </div>
 
             <!-- Quick Links -->
-            <div class="bg-white rounded-3xl border border-[#e0d9cc] p-5 sm:p-6 text-left shadow-xs space-y-3.5 mt-8">
+            <div class="bg-white rounded-lg border border-[#e0d9cc] p-5 sm:p-6 text-left shadow-xs space-y-3.5 mt-8">
                 <div class="flex items-center justify-between border-b border-[#e0d9cc]/60 pb-2.5">
                     <span class="text-xs font-semibold uppercase tracking-wider text-[#7a5620]">
                         Looking for these popular aisles?
@@ -93,28 +93,28 @@
                 </div>
 
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                    <a href="/products/atta" class="flex items-center justify-between p-3 rounded-2xl bg-[#fbf9f5] hover:bg-[#f5eee2] border border-[#e0d9cc] transition-colors text-xs text-[#1d1d1f]">
+                    <a href="/products/atta" class="flex items-center justify-between p-3 rounded-lg bg-[#fbf9f5] hover:bg-[#f5eee2] border border-[#e0d9cc] transition-colors text-xs text-[#1d1d1f]">
                         <div>
                             <div class="font-semibold">Chakki Atta & Flour</div>
                             <div class="text-[10px] text-[#86868b]">Staple · 20 lb</div>
                         </div>
                         <span>→</span>
                     </a>
-                    <a href="/products/desi-ghee" class="flex items-center justify-between p-3 rounded-2xl bg-[#fbf9f5] hover:bg-[#f5eee2] border border-[#e0d9cc] transition-colors text-xs text-[#1d1d1f]">
+                    <a href="/products/desi-ghee" class="flex items-center justify-between p-3 rounded-lg bg-[#fbf9f5] hover:bg-[#f5eee2] border border-[#e0d9cc] transition-colors text-xs text-[#1d1d1f]">
                         <div>
                             <div class="font-semibold">Desi Ghee & Dairy</div>
                             <div class="text-[10px] text-[#86868b]">Pure Cow Ghee</div>
                         </div>
                         <span>→</span>
                     </a>
-                    <a href="/recipe-kits/paneer-curry" class="flex items-center justify-between p-3 rounded-2xl bg-[#fbf9f5] hover:bg-[#f5eee2] border border-[#e0d9cc] transition-colors text-xs text-[#1d1d1f]">
+                    <a href="/recipe-kits/paneer-curry" class="flex items-center justify-between p-3 rounded-lg bg-[#fbf9f5] hover:bg-[#f5eee2] border border-[#e0d9cc] transition-colors text-xs text-[#1d1d1f]">
                         <div>
                             <div class="font-semibold">Chef Recipe Kits</div>
                             <div class="text-[10px] text-[#86868b]">Dinner in 20m</div>
                         </div>
                         <span>→</span>
                     </a>
-                    <a href="/products/sweets-box" class="flex items-center justify-between p-3 rounded-2xl bg-[#fbf9f5] hover:bg-[#f5eee2] border border-[#e0d9cc] transition-colors text-xs text-[#1d1d1f]">
+                    <a href="/products/sweets-box" class="flex items-center justify-between p-3 rounded-lg bg-[#fbf9f5] hover:bg-[#f5eee2] border border-[#e0d9cc] transition-colors text-xs text-[#1d1d1f]">
                         <div>
                             <div class="font-semibold">Diwali Sweets & Mithai</div>
                             <div class="text-[10px] text-[#86868b]">Luxury Gift Box</div>

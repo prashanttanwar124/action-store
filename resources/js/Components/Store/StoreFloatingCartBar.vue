@@ -20,14 +20,14 @@ const store = useStore();
   >
     <Link 
       href="/cart"
-      class="group block bg-[#1a1a1a]/95 backdrop-blur-md text-white rounded-2xl shadow-xl hover:bg-black active:scale-[0.99] transition-all border border-white/10 overflow-hidden"
+      class="group block bg-[#1a1a1a]/95 backdrop-blur-md text-white rounded-lg shadow-xl hover:bg-black active:scale-[0.99] transition-all border border-white/10 overflow-hidden"
     >
       <div class="flex items-center justify-between px-3.5 py-2 gap-2">
         <!-- Left: Shopping bag icon + item count + subtotal -->
         <div class="flex items-center gap-2.5 min-w-0">
-          <div class="relative w-8 h-8 rounded-xl bg-white/10 flex items-center justify-center shrink-0 border border-white/10 group-hover:bg-[#a47a3c]/20 transition-colors">
+          <div class="relative w-8 h-8 rounded-md bg-white/10 flex items-center justify-center shrink-0 border border-white/10 group-hover:bg-[#a47a3c]/20 transition-colors">
             <ShoppingBag class="w-4 h-4 text-white group-hover:text-[#e4b97a] transition-colors stroke-[2.2]" />
-            <span class="absolute -top-1 -right-1 bg-[#a47a3c] text-white text-[9px] font-bold w-4 h-4 rounded-full flex items-center justify-center border-2 border-[#1a1a1a]">
+            <span class="absolute -top-1 -right-1 bg-[#a47a3c] text-white text-[9px] font-bold w-4 h-4 rounded-md flex items-center justify-center border-2 border-[#1a1a1a]">
               {{ store.totalItemCount }}
             </span>
           </div>
@@ -51,7 +51,7 @@ const store = useStore();
         </div>
 
         <!-- Right: Arrow Button -->
-        <div class="flex items-center gap-1 text-[11px] font-bold text-stone-200 bg-white/10 group-hover:bg-white/20 group-hover:text-white px-2.5 py-1.5 rounded-xl border border-white/10 shrink-0 transition-colors">
+        <div class="flex items-center gap-1 text-[11px] font-bold text-stone-200 bg-white/10 group-hover:bg-white/20 group-hover:text-white px-2.5 py-1.5 rounded-md border border-white/10 shrink-0 transition-colors">
           <span>Checkout</span>
           <ChevronRight class="w-3.5 h-3.5 stroke-[2.5]" />
         </div>

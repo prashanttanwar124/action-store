@@ -17,7 +17,7 @@ const props = defineProps({
     :as="as"
     :class="
       cn(
-        'text-xs font-semibold uppercase tracking-wider text-stone-700 peer-disabled:cursor-not-allowed peer-disabled:opacity-70 select-none',
+        'text-xs font-medium text-foreground/90 peer-disabled:cursor-not-allowed peer-disabled:opacity-70 select-none',
         props.class,
       )
     "

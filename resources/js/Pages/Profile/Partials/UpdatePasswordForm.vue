@@ -53,7 +53,7 @@ const updatePassword = () => {
           :type="showCurrent ? 'text' : 'password'"
           autocomplete="current-password"
           placeholder="Enter current password"
-          class="w-full pl-10 pr-10 h-11 bg-[#fbf9f5] border border-[#dfd6c8] focus:border-[#1a1a1a] rounded-xl text-xs sm:text-sm text-[#1d1d1f] placeholder-[#86868b] focus:outline-none focus:bg-white focus:ring-3 focus:ring-[#1a1a1a]/10 transition-all font-normal"
+          class="w-full pl-10 pr-10 h-11 bg-[#fbf9f5] border border-[#dfd6c8] focus:border-[#1a1a1a] rounded-md text-xs sm:text-sm text-[#1d1d1f] placeholder-[#86868b] focus:outline-none focus:bg-white focus:ring-3 focus:ring-[#1a1a1a]/10 transition-all font-normal"
           :class="{ 'border-rose-400 ring-rose-100': form.errors.current_password }"
         />
         <button
@@ -87,7 +87,7 @@ const updatePassword = () => {
           :type="showNew ? 'text' : 'password'"
           autocomplete="new-password"
           placeholder="At least 8 characters"
-          class="w-full pl-10 pr-10 h-11 bg-[#fbf9f5] border border-[#dfd6c8] focus:border-[#1a1a1a] rounded-xl text-xs sm:text-sm text-[#1d1d1f] placeholder-[#86868b] focus:outline-none focus:bg-white focus:ring-3 focus:ring-[#1a1a1a]/10 transition-all font-normal"
+          class="w-full pl-10 pr-10 h-11 bg-[#fbf9f5] border border-[#dfd6c8] focus:border-[#1a1a1a] rounded-md text-xs sm:text-sm text-[#1d1d1f] placeholder-[#86868b] focus:outline-none focus:bg-white focus:ring-3 focus:ring-[#1a1a1a]/10 transition-all font-normal"
           :class="{ 'border-rose-400 ring-rose-100': form.errors.password }"
         />
         <button
@@ -120,7 +120,7 @@ const updatePassword = () => {
           :type="showConfirm ? 'text' : 'password'"
           autocomplete="new-password"
           placeholder="Re-enter new password"
-          class="w-full pl-10 pr-10 h-11 bg-[#fbf9f5] border border-[#dfd6c8] focus:border-[#1a1a1a] rounded-xl text-xs sm:text-sm text-[#1d1d1f] placeholder-[#86868b] focus:outline-none focus:bg-white focus:ring-3 focus:ring-[#1a1a1a]/10 transition-all font-normal"
+          class="w-full pl-10 pr-10 h-11 bg-[#fbf9f5] border border-[#dfd6c8] focus:border-[#1a1a1a] rounded-md text-xs sm:text-sm text-[#1d1d1f] placeholder-[#86868b] focus:outline-none focus:bg-white focus:ring-3 focus:ring-[#1a1a1a]/10 transition-all font-normal"
           :class="{ 'border-rose-400 ring-rose-100': form.errors.password_confirmation }"
         />
         <button
@@ -143,7 +143,7 @@ const updatePassword = () => {
       <button
         type="submit"
         :disabled="form.processing"
-        class="h-10 px-5 bg-[#1a1a1a] hover:bg-black text-white font-semibold text-xs rounded-full flex items-center justify-center gap-2 transition-all active:scale-[0.99] shadow-xs cursor-pointer disabled:opacity-50"
+        class="h-10 px-5 bg-[#1a1a1a] hover:bg-black text-white font-semibold text-xs rounded-md flex items-center justify-center gap-2 transition-all active:scale-[0.99] shadow-xs cursor-pointer disabled:opacity-50"
       >
         <KeyRound class="w-3.5 h-3.5" />
         <span v-if="form.processing">Updating Password...</span>
@@ -160,7 +160,7 @@ const updatePassword = () => {
       >
         <span
           v-if="form.recentlySuccessful"
-          class="inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 px-3 py-1.5 rounded-full"
+          class="inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 px-3 py-1.5 rounded-md"
         >
           <CheckCircle2 class="w-3.5 h-3.5 text-emerald-600" />
           <span>Password changed successfully!</span>

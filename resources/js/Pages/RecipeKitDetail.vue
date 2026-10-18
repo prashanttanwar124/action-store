@@ -15,7 +15,9 @@ import {
   Check, 
   TrendingDown, 
   PackageCheck,
-  ShieldCheck
+  ShieldCheck,
+  ChevronRight,
+  X
 } from 'lucide-vue-next';
 
 const props = defineProps({
@@ -29,6 +31,8 @@ const store = useStore();
 
 const activeImage = ref(props.kit.image || (props.kit.images?.[0]) || '/images/products/paneer_curry.jpg');
 const addedNotification = ref(false);
+const lastAddedSummary = ref('');
+let addedToastTimeout = null;
 
 // State for which linked ingredients are checked for Group Buy
 const checkedProducts = ref({});
@@ -70,6 +74,9 @@ const kitPrice = computed(() => {
   if (allChecked.value) {
     return Number(props.kit.price);
   }
+  if ((props.kit.products || []).length === 0) {
+    return Number(props.kit.price || 0);
+  }
   // If some products were unchecked, calculate prorated sum
   return Number(standaloneSum.value.toFixed(2));
 });
@@ -83,23 +90,37 @@ const bundleSavings = computed(() => {
 });
 
 function handleAddKitToCart() {
-  // Add all selected group buy ingredients into the cart
-  selectedProducts.value.forEach(p => {
-    const qty = p.pivot?.quantity || 1;
+  if (allChecked.value || (props.kit.products || []).length === 0) {
     store.addToCart({
-      id: p.id,
-      name: p.name,
-      price: Number(p.price),
-      weight: p.size_main,
-      quantity: qty,
-      image: p.image,
+      id: `kit-${props.kit.id}`,
+      name: `${props.kit.name} (Recipe Kit)`,
+      price: Number(props.kit.price),
+      weight: props.kit.servings || 'Recipe Kit',
+      quantity: 1,
+      image: activeImage.value,
     });
-  });
+    lastAddedSummary.value = `${props.kit.name} Kit`;
+  } else {
+    if (selectedProducts.value.length === 0) return;
+    selectedProducts.value.forEach(p => {
+      const qty = p.pivot?.quantity || 1;
+      store.addToCart({
+        id: p.id,
+        name: p.name,
+        price: Number(p.price),
+        weight: p.size_main,
+        quantity: qty,
+        image: p.image,
+      });
+    });
+    lastAddedSummary.value = `${selectedProducts.value.length} Kit Ingredients`;
+  }
 
   addedNotification.value = true;
-  setTimeout(() => {
+  if (addedToastTimeout) clearTimeout(addedToastTimeout);
+  addedToastTimeout = setTimeout(() => {
     addedNotification.value = false;
-  }, 2500);
+  }, 4000);
 }
 </script>
 
@@ -134,7 +155,7 @@ function handleAddKitToCart() {
         
         <!-- LEFT: Photo Gallery -->
         <div class="lg:col-span-6 space-y-4">
-          <div class="relative w-full aspect-[4/3] bg-[#F4F5F7] rounded-3xl overflow-hidden shadow-xs border border-[#e0d9cc]/80 flex flex-col justify-between p-4 group img-zoom-container">
+          <div class="relative w-full aspect-[4/3] bg-[#F4F5F7] rounded-lg overflow-hidden shadow-xs border border-[#e0d9cc]/80 flex flex-col justify-between p-4 group img-zoom-container">
             <img 
               :src="activeImage" 
               :alt="kit.name" 
@@ -144,25 +165,25 @@ function handleAddKitToCart() {
 
             <!-- Top Badge Row -->
             <div class="relative z-10 flex items-center justify-between">
-              <span class="bg-white/90 backdrop-blur-xs text-stone-800 border border-stone-200 px-3 py-1 text-xs font-semibold rounded-full shadow-xs">
+              <span class="bg-white/90 backdrop-blur-xs text-stone-800 border border-stone-200 px-3 py-1 text-xs font-semibold rounded-md shadow-xs">
                 Group Buy Bundle
               </span>
-              <span class="font-devanagari text-[11px] text-white/90 bg-black/60 backdrop-blur-xs px-2.5 py-0.5 rounded-full">
+              <span class="font-devanagari text-[11px] text-white/90 bg-black/60 backdrop-blur-xs px-2.5 py-0.5 rounded-md">
                 एक टैप में रसोई
               </span>
             </div>
 
             <!-- Bottom Specs Overlay -->
             <div class="relative z-10 flex items-center gap-2 text-xs text-white">
-              <span class="bg-black/60 backdrop-blur-xs px-2.5 py-1 rounded-full flex items-center gap-1">
+              <span class="bg-black/60 backdrop-blur-xs px-2.5 py-1 rounded-md flex items-center gap-1">
                 <Clock class="w-3.5 h-3.5 text-[#e4b97a]" />
                 <span>{{ kit.cooking_time || '20 mins' }}</span>
               </span>
-              <span class="bg-black/60 backdrop-blur-xs px-2.5 py-1 rounded-full flex items-center gap-1">
+              <span class="bg-black/60 backdrop-blur-xs px-2.5 py-1 rounded-md flex items-center gap-1">
                 <Users class="w-3.5 h-3.5 text-[#e4b97a]" />
                 <span>{{ kit.servings || 'Serves 4' }}</span>
               </span>
-              <span class="bg-black/60 backdrop-blur-xs px-2.5 py-1 rounded-full flex items-center gap-1">
+              <span class="bg-black/60 backdrop-blur-xs px-2.5 py-1 rounded-md flex items-center gap-1">
                 <UtensilsCrossed class="w-3.5 h-3.5 text-[#e4b97a]" />
                 <span>{{ kit.difficulty || 'Easy' }}</span>
               </span>
@@ -176,7 +197,7 @@ function handleAddKitToCart() {
               :key="idx"
               type="button"
               @click="activeImage = img"
-              class="w-16 h-16 rounded-xl overflow-hidden border-2 transition-all shrink-0 cursor-pointer"
+              class="w-16 h-16 rounded-md overflow-hidden border-2 transition-all shrink-0 cursor-pointer"
               :class="activeImage === img ? 'border-[#a47a3c] ring-2 ring-[#a47a3c]/30' : 'border-transparent opacity-70 hover:opacity-100'"
             >
               <img :src="img" :alt="kit.name" class="w-full h-full object-cover" />
@@ -199,7 +220,7 @@ function handleAddKitToCart() {
           </div>
 
           <!-- Pricing Row with Group Buy Savings -->
-          <div class="bg-[#f3efe7] border border-[#e0d9cc] rounded-3xl p-5 sm:p-6 space-y-3">
+          <div class="bg-[#f3efe7] border border-[#e0d9cc] rounded-lg p-5 sm:p-6 space-y-3">
             <div class="flex items-baseline justify-between">
               <div>
                 <div class="text-[10px] font-mono uppercase text-stone-500 font-semibold">
@@ -217,7 +238,7 @@ function handleAddKitToCart() {
 
               <!-- Savings Pill -->
               <div v-if="bundleSavings > 0" class="text-right">
-                <span class="inline-flex items-center gap-1 text-xs font-bold text-[#7a5620] bg-[#f5eee2] border border-[#e0d9cc] px-2.5 py-1 rounded-full">
+                <span class="inline-flex items-center gap-1 text-xs font-bold text-[#7a5620] bg-[#f5eee2] border border-[#e0d9cc] px-2.5 py-1 rounded-md">
                   <TrendingDown class="w-3.5 h-3.5" />
                   <span>Save ${{ bundleSavings }} Bundle Discount</span>
                 </span>
@@ -228,31 +249,58 @@ function handleAddKitToCart() {
             <button
               type="button"
               @click="handleAddKitToCart"
-              class="w-full py-3.5 bg-[#1a1a1a] hover:bg-black text-white font-semibold text-xs sm:text-sm rounded-full flex items-center justify-center gap-2 transition-all active:scale-98 shadow-md cursor-pointer"
+              class="w-full py-3.5 bg-[#1a1a1a] hover:bg-black text-white font-semibold text-xs sm:text-sm rounded-md flex items-center justify-center gap-2 transition-all active:scale-98 shadow-md cursor-pointer"
             >
               <Plus class="w-4 h-4 stroke-[2.5]" />
               <span>Add All {{ selectedProducts.length }} Ingredients to Cart</span>
             </button>
 
             <!-- Notification Toast -->
-            <div 
-              v-if="addedNotification"
-              class="p-2.5 rounded-xl bg-emerald-800 text-emerald-100 text-xs font-semibold text-center flex items-center justify-center gap-1.5 transition-all animate-fade-in"
+            <transition
+              enter-active-class="transition duration-200 ease-out"
+              enter-from-class="opacity-0 -translate-y-1 scale-98"
+              enter-to-class="opacity-100 translate-y-0 scale-100"
+              leave-active-class="transition duration-150 ease-in"
+              leave-from-class="opacity-100 translate-y-0 scale-100"
+              leave-to-class="opacity-0 -translate-y-1 scale-98"
             >
-              <CheckCircle2 class="w-4 h-4 text-emerald-300" />
-              <span>All {{ selectedProducts.length }} recipe kit ingredients added to cart!</span>
-            </div>
+              <div
+                v-if="addedNotification"
+                class="p-3 rounded-lg bg-[#141413] text-white border border-[#a47a3c]/40 shadow-md flex items-center justify-between gap-3"
+              >
+                <div class="flex items-center gap-2.5 min-w-0">
+                  <div class="w-8 h-8 rounded-md bg-emerald-500/20 border border-emerald-400/30 flex items-center justify-center shrink-0">
+                    <CheckCircle2 class="w-4 h-4 text-emerald-400" />
+                  </div>
+                  <div class="min-w-0">
+                    <div class="text-xs font-bold text-white truncate">
+                      Added {{ lastAddedSummary }}
+                    </div>
+                    <div class="text-[11px] text-stone-300 font-mono">
+                      Cart ({{ store.cartCount }} items) · ${{ store.cartSubtotal.toFixed(2) }}
+                    </div>
+                  </div>
+                </div>
+                <Link
+                  href="/cart"
+                  class="shrink-0 bg-[#e4b97a] hover:bg-[#d8a75e] text-[#1a1a1a] px-3.5 py-1.5 rounded-md text-xs font-bold flex items-center gap-1 transition-colors"
+                >
+                  <span>View Cart</span>
+                  <ChevronRight class="w-3.5 h-3.5 stroke-[2.5]" />
+                </Link>
+              </div>
+            </transition>
           </div>
         </div>
 
       </div>
 
       <!-- SECTION: Interactive Linked Products for Group Buy -->
-      <div class="bg-white border border-[#e0d9cc] rounded-3xl p-6 sm:p-8 shadow-2xs space-y-5">
+      <div class="bg-white border border-[#e0d9cc] rounded-lg p-6 sm:p-8 shadow-2xs space-y-5">
         <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-[#e0d9cc]/60 pb-4">
           <div>
             <div class="flex items-center gap-2">
-              <span class="text-[11px] font-mono uppercase bg-[#1a1a1a] text-white px-2.5 py-0.5 rounded-full font-semibold">
+              <span class="text-[11px] font-mono uppercase bg-[#1a1a1a] text-white px-2.5 py-0.5 rounded-md font-semibold">
                 Included in Kit
               </span>
               <span class="text-xs font-semibold text-stone-700">
@@ -274,14 +322,14 @@ function handleAddKitToCart() {
             v-for="p in kit.products"
             :key="p.id"
             @click="toggleProduct(p.id)"
-            class="p-3.5 rounded-2xl border transition-all cursor-pointer flex items-center justify-between gap-3 group select-none"
+            class="p-3.5 rounded-lg border transition-all cursor-pointer flex items-center justify-between gap-3 group select-none"
             :class="checkedProducts[p.id] ? 'bg-[#fbfaf8] border-[#a47a3c]/80 shadow-2xs' : 'bg-stone-50/50 border-stone-200 opacity-60'"
           >
             <div class="flex items-center gap-3 min-w-0">
               <img 
                 :src="p.image || '/images/products/paneer_curry.jpg'" 
                 :alt="p.name"
-                class="w-12 h-12 rounded-xl object-cover border border-[#e0d9cc]/60 shrink-0" 
+                class="w-12 h-12 rounded-md object-cover border border-[#e0d9cc]/60 shrink-0" 
               />
               <div class="min-w-0">
                 <div class="text-xs font-semibold text-[#1d1d1f] truncate group-hover:text-[#a47a3c] transition-colors">
@@ -311,9 +359,9 @@ function handleAddKitToCart() {
       </div>
 
       <!-- SECTION: Step-by-Step Cooking Guide -->
-      <div v-if="kit.recipe_steps && kit.recipe_steps.length > 0" class="bg-white border border-[#e0d9cc] rounded-3xl p-6 sm:p-8 shadow-2xs space-y-4">
+      <div v-if="kit.recipe_steps && kit.recipe_steps.length > 0" class="bg-white border border-[#e0d9cc] rounded-lg p-6 sm:p-8 shadow-2xs space-y-4">
         <div class="border-b border-[#e0d9cc]/60 pb-3">
-          <span class="text-[11px] font-mono uppercase bg-[#f5eee2] text-[#7a5620] border border-[#e0d9cc] px-2.5 py-0.5 rounded-full font-semibold">
+          <span class="text-[11px] font-mono uppercase bg-[#f5eee2] text-[#7a5620] border border-[#e0d9cc] px-2.5 py-0.5 rounded-md font-semibold">
             Chef Recipe Card
           </span>
           <h2 class="text-xl font-serif font-medium text-[#1d1d1f] mt-1.5">
@@ -325,9 +373,9 @@ function handleAddKitToCart() {
           <div 
             v-for="(step, idx) in kit.recipe_steps" 
             :key="idx"
-            class="flex items-start gap-3.5 p-3 rounded-2xl bg-[#fbfaf8] border border-[#e0d9cc]/60"
+            class="flex items-start gap-3.5 p-3 rounded-lg bg-[#fbfaf8] border border-[#e0d9cc]/60"
           >
-            <span class="w-7 h-7 rounded-full bg-[#1a1a1a] text-white flex items-center justify-center font-mono font-bold text-xs shrink-0 mt-0.5 shadow-2xs">
+            <span class="w-7 h-7 rounded-md bg-[#1a1a1a] text-white flex items-center justify-center font-mono font-bold text-xs shrink-0 mt-0.5 shadow-2xs">
               {{ idx + 1 }}
             </span>
             <p class="text-xs sm:text-sm text-[#1d1d1f] font-normal leading-relaxed pt-0.5">

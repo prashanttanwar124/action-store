@@ -49,10 +49,10 @@ const store = useStore();
       </nav>
 
       <!-- Store Pickup Header & Fulfillment Guarantee -->
-      <div class="bg-[#1a1a1a] text-white p-5 sm:p-6 rounded-3xl shadow-sm border border-[#e0d9cc]/20">
+      <div class="bg-[#1a1a1a] text-white p-5 sm:p-6 rounded-lg shadow-sm border border-[#e0d9cc]/20">
         <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div class="flex items-start sm:items-center gap-3.5">
-            <div class="w-11 h-11 rounded-2xl bg-white/10 flex items-center justify-center shrink-0 border border-white/10 text-[#e4b97a]">
+            <div class="w-11 h-11 rounded-lg bg-white/10 flex items-center justify-center shrink-0 border border-white/10 text-[#e4b97a]">
               <Store class="w-5 h-5 stroke-[2]" />
             </div>
             <div>
@@ -60,7 +60,7 @@ const store = useStore();
                 <span class="text-[10px] sm:text-xs font-semibold uppercase tracking-wider text-[#a47a3c]">
                   FULFILLMENT METHOD
                 </span>
-                <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-[#a47a3c]/20 text-[#e4b97a] text-[10px] font-bold border border-[#a47a3c]/30">
+                <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-[#a47a3c]/20 text-[#e4b97a] text-[10px] font-bold border border-[#a47a3c]/30">
                   <Clock class="w-3 h-3" />
                   Ready in 1 hr
                 </span>
@@ -87,8 +87,8 @@ const store = useStore();
         <div class="lg:col-span-8 space-y-6">
           
           <!-- Empty State -->
-          <div v-if="store.cartItems.length === 0" class="bg-white rounded-3xl border border-[#e0d9cc] p-12 text-center space-y-4 shadow-xs">
-            <div class="w-16 h-16 rounded-full bg-[#f3efe7] flex items-center justify-center mx-auto text-[#6e6e73]">
+          <div v-if="store.cartItems.length === 0" class="bg-white rounded-lg border border-[#e0d9cc] p-12 text-center space-y-4 shadow-xs">
+            <div class="w-16 h-16 rounded-md bg-[#f3efe7] flex items-center justify-center mx-auto text-[#6e6e73]">
               <ShoppingBag class="w-8 h-8 stroke-[1.8]" />
             </div>
             <h2 class="text-xl font-serif font-medium text-[#1d1d1f]">Your cart is empty</h2>
@@ -97,7 +97,7 @@ const store = useStore();
             </p>
             <Link 
               href="/"
-              class="inline-flex items-center gap-2 px-6 py-3 bg-[#1a1a1a] hover:bg-black text-white text-xs font-semibold rounded-full shadow-sm transition-colors"
+              class="inline-flex items-center gap-2 px-6 py-3 bg-[#1a1a1a] hover:bg-black text-white text-xs font-semibold rounded-md shadow-sm transition-colors"
             >
               <span>Start Shopping</span>
               <ArrowRight class="w-3.5 h-3.5" />
@@ -105,7 +105,7 @@ const store = useStore();
           </div>
 
           <!-- Items Table / List -->
-          <div v-else class="bg-white rounded-3xl border border-[#e0d9cc] divide-y divide-[#e0d9cc]/60 overflow-hidden shadow-xs">
+          <div v-else class="bg-white rounded-lg border border-[#e0d9cc] divide-y divide-[#e0d9cc]/60 overflow-hidden shadow-xs">
             <div 
               v-for="item in store.cartItems" 
               :key="item.id"
@@ -113,7 +113,7 @@ const store = useStore();
             >
               <!-- Item Details -->
               <div class="flex items-center gap-3 sm:gap-4 w-full sm:w-auto">
-                <div class="w-16 h-16 rounded-2xl bg-[#f3efe7] border border-[#e0d9cc] overflow-hidden shrink-0 relative">
+                <div class="w-16 h-16 rounded-lg bg-[#f3efe7] border border-[#e0d9cc] overflow-hidden shrink-0 relative">
                   <img 
                     :src="item.image || (item.name.toLowerCase().includes('atta') ? '/images/products/atta.jpg' : (item.name.toLowerCase().includes('ghee') ? '/images/products/ghee.jpg' : (item.name.toLowerCase().includes('paneer') ? '/images/products/paneer.jpg' : (item.name.toLowerCase().includes('rice') ? '/images/products/rice.jpg' : (item.name.toLowerCase().includes('biscuit') ? '/images/products/biscuits.jpg' : (item.name.toLowerCase().includes('masala') ? '/images/products/garam_masala.jpg' : '/images/products/sweets.jpg'))))))" 
                     :alt="item.name" 
@@ -137,7 +137,7 @@ const store = useStore();
 
               <!-- Quantity Controls & Delete -->
               <div class="flex items-center justify-between sm:justify-end gap-3 w-full sm:w-auto pt-2 sm:pt-0 border-t sm:border-t-0 border-[#e0d9cc]/60">
-                <div class="w-24 sm:w-28 h-9 bg-[#ece7de] rounded-full flex items-center justify-between px-2.5 border border-[#e0d9cc]">
+                <div class="w-24 sm:w-28 h-9 bg-[#ece7de] rounded-md flex items-center justify-between px-2.5 border border-[#e0d9cc]">
                   <button 
                     @click="store.removeFromCart(item.id)" 
                     class="p-1 hover:text-[#1a1a1a] cursor-pointer flex items-center justify-center text-[#1d1d1f]"
@@ -173,20 +173,20 @@ const store = useStore();
           </div>
 
           <!-- Impulse Items (<$2 One-Tap Add Row) -->
-          <div class="bg-white rounded-3xl border border-[#e0d9cc] p-5 space-y-3 shadow-xs">
+          <div class="bg-white rounded-lg border border-[#e0d9cc] p-5 space-y-3 shadow-xs">
             <div class="flex items-center justify-between">
               <div>
                 <h3 class="font-serif font-medium text-base text-[#1d1d1f]">Quick pantry add-ons</h3>
                 <p class="text-xs text-[#6e6e73] font-normal">Popular staples under $2 to add to your pickup basket.</p>
               </div>
-              <span class="text-[10px] font-semibold text-[#7a5620] bg-[#f5eee2] border border-[#e0d9cc] px-2 py-0.5 rounded-full">&lt;$2 ITEMS</span>
+              <span class="text-[10px] font-semibold text-[#7a5620] bg-[#f5eee2] border border-[#e0d9cc] px-2 py-0.5 rounded-md">&lt;$2 ITEMS</span>
             </div>
 
             <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
               <div 
                 v-for="impulse in (props.impulseItems.length ? props.impulseItems : store.impulseItems)" 
                 :key="impulse.id"
-                class="border border-[#e0d9cc] rounded-2xl p-3 bg-[#f3efe7] flex items-center justify-between gap-2"
+                class="border border-[#e0d9cc] rounded-lg p-3 bg-[#f3efe7] flex items-center justify-between gap-2"
               >
                 <div>
                   <div class="font-semibold text-xs text-[#1d1d1f] line-clamp-1">{{ impulse.name }}</div>
@@ -194,7 +194,7 @@ const store = useStore();
                 </div>
                 <button 
                   @click="store.addToCart({ id: impulse.id, name: impulse.name, price: Number(impulse.price), size: impulse.size_main || impulse.size, image: impulse.image }, 1)"
-                  class="w-7 h-7 bg-[#1a1a1a] hover:bg-black text-white rounded-full flex items-center justify-center transition-colors shrink-0 active:scale-95 cursor-pointer shadow-xs"
+                  class="w-7 h-7 bg-[#1a1a1a] hover:bg-black text-white rounded-md flex items-center justify-center transition-colors shrink-0 active:scale-95 cursor-pointer shadow-xs"
                   aria-label="Add impulse item"
                 >
                   <Plus class="w-3.5 h-3.5 stroke-[2.5]" />
@@ -208,7 +208,7 @@ const store = useStore();
         <!-- RIGHT COLUMN: Order Summary & Checkout CTA (Desktop) -->
         <div class="lg:col-span-4 space-y-4">
           
-          <div class="bg-white rounded-3xl border border-[#e0d9cc] p-6 space-y-5 shadow-xs">
+          <div class="bg-white rounded-lg border border-[#e0d9cc] p-6 space-y-5 shadow-xs">
             <h2 class="text-base font-serif font-medium text-[#1d1d1f] tracking-tight border-b border-[#e0d9cc]/60 pb-3">
               Order Summary
             </h2>
@@ -237,7 +237,7 @@ const store = useStore();
             </div>
 
             <!-- Masala Points Box -->
-            <div class="bg-[#f5eee2] border border-[#e0d9cc] rounded-2xl p-3 text-xs text-[#7a5620] flex items-center gap-2">
+            <div class="bg-[#f5eee2] border border-[#e0d9cc] rounded-lg p-3 text-xs text-[#7a5620] flex items-center gap-2">
               <Sparkles class="w-4 h-4 shrink-0 text-[#a47a3c]" />
               <span class="font-normal">You will earn <strong class="font-bold text-[#7a5620]">+{{ Math.floor(store.subtotal) }} Masala Points</strong> on this order.</span>
             </div>
@@ -245,7 +245,7 @@ const store = useStore();
             <!-- Desktop Checkout CTA Button -->
             <Link 
               href="/checkout"
-              class="hidden sm:flex w-full py-4 bg-[#1a1a1a] hover:bg-black text-white font-semibold text-center text-sm rounded-full transition-colors shadow-md cursor-pointer items-center justify-between px-6"
+              class="hidden sm:flex w-full py-4 bg-[#1a1a1a] hover:bg-black text-white font-semibold text-center text-sm rounded-md transition-colors shadow-md cursor-pointer items-center justify-between px-6"
             >
               <span>Go to checkout</span>
               <div class="flex items-center gap-1.5 font-serif font-medium">
@@ -261,7 +261,7 @@ const store = useStore();
           </div>
 
           <!-- Pickup Instructions Card -->
-          <div class="bg-[#f3efe7] rounded-2xl border border-[#e0d9cc] p-4 space-y-2 text-xs">
+          <div class="bg-[#f3efe7] rounded-lg border border-[#e0d9cc] p-4 space-y-2 text-xs">
             <div class="font-bold text-[#1d1d1f] flex items-center gap-1.5">
               <Clock class="w-3.5 h-3.5 text-[#a47a3c]" />
               <span>Click & Collect Guarantee</span>
@@ -289,7 +289,7 @@ const store = useStore();
 
         <Link 
           href="/checkout"
-          class="flex-1 py-3 bg-[#1a1a1a] active:bg-black text-white font-semibold text-xs rounded-full text-center cursor-pointer flex items-center justify-between px-5 shadow-md"
+          class="flex-1 py-3 bg-[#1a1a1a] active:bg-black text-white font-semibold text-xs rounded-md text-center cursor-pointer flex items-center justify-between px-5 shadow-md"
         >
           <span>Go to checkout</span>
           <div class="flex items-center gap-1 font-serif font-medium text-sm">

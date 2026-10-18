@@ -32,6 +32,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
         // Real-Time Live Orders (KDS) powered by Laravel Reverb
         Route::get('/orders', [AdminOrderController::class, 'index'])->name('orders.index');
         Route::patch('/orders/{order}/status', [AdminOrderController::class, 'updateStatus'])->name('orders.status.update');
+        Route::patch('/orders/{order}/items/packed', [AdminOrderController::class, 'updateItemsPacked'])->name('orders.items.packed');
 
         // Product Management (with Multi-Image Uploads)
         Route::middleware('permission:manage products,admin')->group(function () {

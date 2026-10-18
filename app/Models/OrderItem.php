@@ -22,6 +22,7 @@ class OrderItem extends Model
         'quantity',
         'total_price',
         'is_subscribed',
+        'is_packed',
         'image',
     ];
 
@@ -33,6 +34,7 @@ class OrderItem extends Model
         'total_price' => 'decimal:2',
         'quantity' => 'integer',
         'is_subscribed' => 'boolean',
+        'is_packed' => 'boolean',
     ];
 
     /**

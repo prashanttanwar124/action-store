@@ -328,6 +328,45 @@ class CheckoutValidationTest extends TestCase
         $this->assertEquals('slot_expired', $response->json('errors.error_code.0'));
     }
 
+    public function test_asap_pickup_near_midnight_when_prep_crosses_into_next_day_is_rejected(): void
+    {
+        StoreSetting::current()->update([
+            'pickup_slot_start_time' => '09:00',
+            'pickup_slot_end_time' => '23:55',
+            'prep_time_minutes' => 15,
+        ]);
+
+        // At 23:50, ready time is 00:05 the next day, which must not pass string comparison '00:05' <= '23:55'
+        $this->travelTo(now()->setTime(23, 50));
+        $product = Product::factory()->create(['price' => 10]);
+
+        $response = $this->postJson('/checkout', [
+            'items' => [['id' => $product->id, 'name' => $product->name, 'price' => 10, 'quantity' => 1]],
+            'fulfillment_type' => 'Store Pickup',
+            'pickup_timing_mode' => 'asap',
+        ]);
+
+        $response->assertUnprocessable()
+            ->assertJsonValidationErrors(['pickup_timing_mode']);
+        $this->assertEquals('slot_expired', $response->json('errors.error_code.0'));
+        $this->assertDatabaseCount('orders', 0);
+    }
+
+    public function test_recipe_kit_slug_with_default_product_type_still_resolves_recipe_kit(): void
+    {
+        $product = Product::factory()->create(['stock' => 10]);
+        $kit = RecipeKit::create(['name' => 'Masala Chai Kit', 'slug' => 'masala-chai-kit', 'price' => 18, 'is_active' => true]);
+        $kit->products()->attach($product, ['quantity' => 2]);
+
+        $this->postJson('/checkout', ['items' => [
+            ['id' => $kit->slug, 'type' => 'product', 'name' => 'Masala Chai Kit', 'price' => 18, 'quantity' => 1],
+        ]])->assertCreated();
+
+        $this->assertDatabaseHas('orders', ['total' => 18]);
+        $this->assertDatabaseHas('order_items', ['name' => 'Masala Chai Kit', 'unit_price' => 18]);
+        $this->assertDatabaseHas('products', ['id' => $product->id, 'stock' => 8]);
+    }
+
     /**
      * @param  array<string, mixed>  $overrides
      * @return array<string, mixed>

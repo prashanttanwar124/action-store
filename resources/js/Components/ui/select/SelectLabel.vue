@@ -11,7 +11,7 @@ const props = defineProps({
 
 <template>
   <SelectLabel
-    :class="cn('py-1.5 pl-8 pr-2 text-[10px] font-mono uppercase tracking-wider text-stone-500 font-semibold', props.class)"
+    :class="cn('py-1.5 pl-8 pr-2 text-[10px] font-mono uppercase tracking-wider text-muted-foreground font-semibold', props.class)"
   >
     <slot />
   </SelectLabel>

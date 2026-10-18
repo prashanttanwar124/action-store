@@ -3,7 +3,7 @@ import { ref, computed, watch } from 'vue';
 import { Head, Link } from '@inertiajs/vue3';
 import StoreLayout from '../Layouts/StoreLayout.vue';
 import { useStore } from '../stores/cart';
-import { ChevronLeft, ChevronRight, Clock, Plus, Minus, Sparkles, RefreshCw, CheckCircle2, ShieldCheck, Snowflake, Check } from 'lucide-vue-next';
+import { ChevronLeft, ChevronRight, Clock, Plus, Minus, Sparkles, RefreshCw, CheckCircle2, ShieldCheck, Snowflake, Check, ShoppingBag, X } from 'lucide-vue-next';
 
 const props = defineProps({
   slug: {
@@ -90,6 +90,25 @@ watch(() => product.value.image, (newImg) => {
 const quantity = ref(1);
 const addedNotification = ref(false);
 const notificationMessage = ref('');
+const notificationSubtext = ref('');
+const notificationImage = ref('');
+const notificationKey = ref(0);
+let notificationTimeoutId = null;
+
+function triggerAddedNotification({ title, subtext, image }) {
+  if (notificationTimeoutId) {
+    clearTimeout(notificationTimeoutId);
+  }
+  notificationMessage.value = title;
+  notificationSubtext.value = subtext || `${store.totalItemCount} ${store.totalItemCount === 1 ? 'item' : 'items'} in cart · $${store.subtotal.toFixed(2)}`;
+  notificationImage.value = image || activeImage.value || product.value.image || '/images/products/atta.jpg';
+  notificationKey.value += 1;
+  addedNotification.value = true;
+
+  notificationTimeoutId = setTimeout(() => {
+    addedNotification.value = false;
+  }, 3800);
+}
 
 const fbtSelected = ref({});
 
@@ -179,11 +198,29 @@ function handleAction() {
     image: product.value.image,
   });
 
-  notificationMessage.value = `Added ${quantity.value}x ${product.value.name} to cart!`;
-  addedNotification.value = true;
-  setTimeout(() => {
-    addedNotification.value = false;
-  }, 3000);
+  triggerAddedNotification({
+    title: `${quantity.value}× ${product.value.name}`,
+    subtext: `${product.value.sizeMain ? product.value.sizeMain + ' · ' : ''}Cart subtotal $${store.subtotal.toFixed(2)}`,
+    image: activeImage.value || product.value.image,
+  });
+}
+
+function handleAddPairingItem(item) {
+  store.addToCart({
+    id: item.id,
+    slug: item.slug,
+    name: item.name,
+    weight: item.size || item.weight,
+    price: item.price,
+    originalPrice: item.price,
+    image: item.image,
+  });
+
+  triggerAddedNotification({
+    title: `1× ${item.name}`,
+    subtext: `${item.size || item.weight ? (item.size || item.weight) + ' · ' : ''}Cart subtotal $${store.subtotal.toFixed(2)}`,
+    image: item.image,
+  });
 }
 
 function handleAddAllFbt() {
@@ -214,16 +251,13 @@ function handleAddAllFbt() {
   });
 
   const count = selectedFbtCount.value;
-  if (count > 0) {
-    notificationMessage.value = `Added ${product.value.name} + ${count} companion items to cart!`;
-  } else {
-    notificationMessage.value = `Added ${quantity.value}x ${product.value.name} to cart!`;
-  }
-
-  addedNotification.value = true;
-  setTimeout(() => {
-    addedNotification.value = false;
-  }, 3000);
+  triggerAddedNotification({
+    title: count > 0
+      ? `${product.value.name} + ${count} pairing${count > 1 ? 's' : ''}`
+      : `${quantity.value}× ${product.value.name}`,
+    subtext: `${store.totalItemCount} items in cart · $${store.subtotal.toFixed(2)} subtotal`,
+    image: activeImage.value || product.value.image,
+  });
 }
 </script>
 
@@ -259,7 +293,7 @@ function handleAddAllFbt() {
         
         <!-- LEFT COLUMN: Product Visual Stage (Screens 1b & 1c) -->
         <div class="lg:col-span-6 space-y-4">
-          <div class="relative w-full aspect-square bg-[#F4F5F7] rounded-3xl overflow-hidden shadow-xs border border-stone-200/80 flex flex-col justify-between p-4 group img-zoom-container">
+          <div class="relative w-full aspect-square bg-[#F4F5F7] rounded-lg overflow-hidden shadow-xs border border-stone-200/80 flex flex-col justify-between p-4 group img-zoom-container">
             
             <!-- Real High-Res Product Image -->
             <img 
@@ -273,16 +307,16 @@ function handleAddAllFbt() {
 
             <!-- Top Row Badges (Screen 1b & 1c match) -->
             <div class="relative z-10 flex items-center justify-between">
-              <span class="bg-white/90 backdrop-blur-xs text-stone-800 border border-stone-200 px-3 py-1 text-xs font-semibold rounded-full shadow-xs">
+              <span class="bg-white/90 backdrop-blur-xs text-stone-800 border border-stone-200 px-3 py-1 text-xs font-semibold rounded-md shadow-xs">
                 {{ product.stockBadge }}
               </span>
-              <span class="photo-label text-[11px] text-white/90 bg-black/60 backdrop-blur-xs px-2.5 py-0.5 rounded-full font-normal">
+              <span class="photo-label text-[11px] text-white/90 bg-black/60 backdrop-blur-xs px-2.5 py-0.5 rounded-md font-normal">
                 {{ product.photoLabel }}
               </span>
             </div>
 
             <!-- Bottom-Left Big Rounded Size Box -->
-            <div class="relative z-10 self-start bg-[#1a1a1a] text-white p-3.5 sm:p-4 rounded-2xl shadow-lg border border-[#e0d9cc]/20">
+            <div class="relative z-10 self-start bg-[#1a1a1a] text-white p-3.5 sm:p-4 rounded-lg shadow-lg border border-[#e0d9cc]/20">
               <div class="text-2xl sm:text-3xl font-serif font-medium leading-none tracking-tight">
                 {{ product.sizeMain }}
               </div>
@@ -299,7 +333,7 @@ function handleAddAllFbt() {
               :key="idx"
               type="button"
               @click="activeImage = img"
-              class="w-16 h-16 rounded-2xl overflow-hidden border-2 transition-all cursor-pointer shrink-0 bg-stone-100"
+              class="w-16 h-16 rounded-lg overflow-hidden border-2 transition-all cursor-pointer shrink-0 bg-stone-100"
               :class="activeImage === img ? 'border-[#a47a3c] scale-102' : 'border-stone-200 opacity-70 hover:opacity-100'"
             >
               <img 
@@ -312,7 +346,7 @@ function handleAddAllFbt() {
           </div>
 
           <!-- Product Assurance Strip -->
-          <div class="grid grid-cols-3 gap-2 text-center text-xs font-normal text-[#6e6e73] bg-[#f3efe7] border border-[#e0d9cc] rounded-2xl p-3 shadow-xs">
+          <div class="grid grid-cols-3 gap-2 text-center text-xs font-normal text-[#6e6e73] bg-[#f3efe7] border border-[#e0d9cc] rounded-lg p-3 shadow-xs">
             <div class="flex flex-col items-center justify-center gap-1">
               <Snowflake class="w-4 h-4 text-sky-700 stroke-[2]" />
               <div>
@@ -341,7 +375,7 @@ function handleAddAllFbt() {
         <div class="lg:col-span-6 space-y-4 sm:space-y-5">
           
           <!-- Product Title & Price Header Card -->
-          <div class="bg-white rounded-3xl border border-[#e0d9cc] p-5 sm:p-7 space-y-4 shadow-xs">
+          <div class="bg-white rounded-lg border border-[#e0d9cc] p-5 sm:p-7 space-y-4 shadow-xs">
             <div>
               <!-- Freshness Category Tag -->
               <div class="text-[11px] font-semibold uppercase text-[#7a5620] tracking-wider mb-1">
@@ -379,7 +413,7 @@ function handleAddAllFbt() {
             <!-- Frequently Bought Together (Screen 1 Specification) -->
             <div 
               v-if="fbtItems.length > 0" 
-              class="border border-[#e0d9cc] rounded-3xl p-5 bg-[#f3efe7] space-y-3"
+              class="border border-[#e0d9cc] rounded-lg p-5 bg-[#f3efe7] space-y-3"
             >
               <div>
                 <h2 class="font-serif font-medium text-base sm:text-lg text-[#1d1d1f]">Frequently bought together</h2>
@@ -394,7 +428,7 @@ function handleAddAllFbt() {
                   class="py-3.5 first:pt-1 last:pb-1 flex items-center justify-between gap-3"
                 >
                   <Link :href="'/products/' + item.slug" class="flex items-center gap-3.5 flex-1 min-w-0 group cursor-pointer">
-                    <div class="w-14 h-14 rounded-2xl bg-white/80 overflow-hidden shrink-0 border border-[#e0d9cc] shadow-2xs group-hover:border-[#a47a3c] transition-colors">
+                    <div class="w-14 h-14 rounded-lg bg-white/80 overflow-hidden shrink-0 border border-[#e0d9cc] shadow-2xs group-hover:border-[#a47a3c] transition-colors">
                       <img :src="item.image" :alt="item.name" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
                     </div>
                     <div class="min-w-0">
@@ -410,7 +444,7 @@ function handleAddAllFbt() {
                       type="button"
                       @click="toggleFbtItem(item.id)"
                       :class="[
-                        'w-8 h-8 rounded-full flex items-center justify-center transition-all cursor-pointer active:scale-95',
+                        'w-8 h-8 rounded-md flex items-center justify-center transition-all cursor-pointer active:scale-95',
                         fbtSelected[item.id] ? 'bg-[#1a1a1a] text-white shadow-xs' : 'border-2 border-[#1a1a1a] text-[#1a1a1a] bg-transparent hover:bg-stone-200'
                       ]"
                       :aria-label="'Include ' + item.name + ' in bundle'"
@@ -427,7 +461,7 @@ function handleAddAllFbt() {
               <button 
                 type="button"
                 @click="handleAddAllFbt"
-                class="w-full py-4 px-6 bg-[#ece7de] hover:bg-[#e0d9cc] text-[#1d1d1f] font-semibold text-xs sm:text-sm rounded-full flex items-center justify-between cursor-pointer transition-colors shadow-2xs mt-3 active:scale-[0.99]"
+                class="w-full py-4 px-6 bg-[#ece7de] hover:bg-[#e0d9cc] text-[#1d1d1f] font-semibold text-xs sm:text-sm rounded-md flex items-center justify-between cursor-pointer transition-colors shadow-2xs mt-3 active:scale-[0.99]"
               >
                 <span>{{ fbtButtonText }}</span>
                 <span class="font-serif font-medium text-base sm:text-lg text-[#1d1d1f]">${{ totalFbtAll }}</span>
@@ -437,7 +471,7 @@ function handleAddAllFbt() {
             <!-- What's in the kit (For Recipe Kits) -->
             <div 
               v-if="product.recipeIngredients?.length > 0" 
-              class="border border-[#e0d9cc] rounded-2xl p-4 bg-[#f3efe7] space-y-3"
+              class="border border-[#e0d9cc] rounded-lg p-4 bg-[#f3efe7] space-y-3"
             >
               <div>
                 <h2 class="font-serif font-medium text-sm text-[#1d1d1f]">What's included in this kit</h2>
@@ -448,9 +482,9 @@ function handleAddAllFbt() {
                 <div 
                   v-for="(ingredient, idx) in product.recipeIngredients" 
                   :key="idx" 
-                  class="flex items-center gap-2.5 bg-white rounded-xl border border-[#e0d9cc] p-2.5 text-xs text-[#1d1d1f]"
+                  class="flex items-center gap-2.5 bg-white rounded-md border border-[#e0d9cc] p-2.5 text-xs text-[#1d1d1f]"
                 >
-                  <div class="w-5 h-5 rounded-full bg-[#f5eee2] text-[#7a5620] flex items-center justify-center shrink-0">
+                  <div class="w-5 h-5 rounded-md bg-[#f5eee2] text-[#7a5620] flex items-center justify-center shrink-0">
                     <Check class="w-3.5 h-3.5 stroke-[3]" />
                   </div>
                   <span class="font-medium truncate">{{ ingredient }}</span>
@@ -462,7 +496,7 @@ function handleAddAllFbt() {
             <div class="hidden sm:block pt-4 border-t border-[#e0d9cc]/60 space-y-3">
               <div class="flex items-center gap-3">
                 <!-- Stepper -->
-                <div class="w-32 h-12 bg-[#ece7de] rounded-full flex items-center justify-between px-3 border border-[#e0d9cc]">
+                <div class="w-32 h-12 bg-[#ece7de] rounded-md flex items-center justify-between px-3 border border-[#e0d9cc]">
                   <button 
                     @click="quantity = Math.max(1, quantity - 1)" 
                     class="p-1 hover:text-[#1a1a1a] cursor-pointer flex items-center justify-center text-[#1d1d1f]"
@@ -483,26 +517,48 @@ function handleAddAllFbt() {
                 <!-- Primary CTA Button -->
                 <button 
                   @click="handleAction"
-                  class="flex-1 h-12 bg-[#1a1a1a] hover:bg-black text-white font-semibold text-sm rounded-full flex items-center justify-between px-6 transition-all cursor-pointer active:scale-[0.99] shadow-md"
+                  class="flex-1 h-12 bg-[#1a1a1a] hover:bg-black text-white font-semibold text-sm rounded-md flex items-center justify-between px-6 transition-all cursor-pointer active:scale-[0.99] shadow-md"
                 >
                   <span>{{ store.getItemQuantity(product.slug) > 0 ? 'Add another' : 'Add to cart' }}</span>
                   <span class="font-serif font-medium text-base">${{ displayPrice }}</span>
                 </button>
               </div>
 
-              <div 
-                v-if="addedNotification"
-                class="bg-[#f5eee2] border border-[#e0d9cc] text-[#7a5620] p-3 rounded-2xl text-xs font-semibold flex items-center justify-between"
+              <Transition
+                enter-active-class="transition ease-out duration-200"
+                enter-from-class="opacity-0 -translate-y-1"
+                enter-to-class="opacity-100 translate-y-0"
+                leave-active-class="transition ease-in duration-150"
+                leave-from-class="opacity-100 translate-y-0"
+                leave-to-class="opacity-0 -translate-y-1"
               >
-                <div class="flex items-center gap-2">
-                  <CheckCircle2 class="w-4 h-4 text-[#7a5620]" />
-                  <span>{{ notificationMessage || (`Added ${quantity}x ${product.name} to cart!`) }}</span>
+                <div
+                  v-if="addedNotification"
+                  class="bg-[#fbf9f5] border border-[#a47a3c]/40 text-[#1d1d1f] p-3 rounded-lg text-xs flex items-center justify-between gap-3 shadow-2xs"
+                >
+                  <div class="flex items-center gap-2.5 min-w-0">
+                    <div class="w-7 h-7 rounded-md bg-emerald-100 text-emerald-800 flex items-center justify-center shrink-0">
+                      <Check class="w-4 h-4 stroke-[2.8]" />
+                    </div>
+                    <div class="min-w-0">
+                      <div class="font-bold text-[#1d1d1f] truncate">
+                        Added {{ notificationMessage || (`${quantity}× ${product.name}`) }}
+                      </div>
+                      <div class="text-[11px] text-stone-500 truncate">
+                        {{ notificationSubtext }}
+                      </div>
+                    </div>
+                  </div>
+                  <Link
+                    href="/cart"
+                    class="px-3.5 py-1.5 rounded-md bg-[#1a1a1a] hover:bg-black text-white font-semibold text-xs inline-flex items-center gap-1 shrink-0 transition-colors shadow-2xs"
+                  >
+                    <ShoppingBag class="w-3.5 h-3.5 text-[#e4b97a]" />
+                    <span>View Cart ({{ store.totalItemCount }})</span>
+                    <ChevronRight class="w-3.5 h-3.5" />
+                  </Link>
                 </div>
-                <Link href="/cart" class="underline text-[#7a5620] font-semibold inline-flex items-center gap-1">
-                  <span>View Cart</span>
-                  <ChevronRight class="w-3.5 h-3.5" />
-                </Link>
-              </div>
+              </Transition>
             </div>
 
           </div>
@@ -526,18 +582,18 @@ function handleAddAllFbt() {
             class="relative block flex flex-col group text-left cursor-pointer transition-transform duration-200"
           >
             <!-- Rounded Photo Tile -->
-            <div class="relative w-full aspect-[4/3] bg-[#f3efe7] rounded-[22px] sm:rounded-3xl overflow-hidden img-zoom-container shadow-2xs border border-[#e0d9cc]/60">
+            <div class="relative w-full aspect-[4/3] bg-[#f3efe7] rounded-lg overflow-hidden img-zoom-container shadow-2xs border border-[#e0d9cc]/60">
               <img 
                 :src="item.image || '/images/products/atta.jpg'" 
                 :alt="item.name" 
                 class="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-300"
               />
-              <span class="photo-label absolute top-2.5 left-2.5 text-[11px] text-[#1d1d1f] font-mono bg-white/80 backdrop-blur-xs px-2 py-0.5 rounded-lg z-10 shadow-2xs">{{ item.label || item.photoLabel || 'item' }}</span>
+              <span class="photo-label absolute top-2.5 left-2.5 text-[11px] text-[#1d1d1f] font-mono bg-white/80 backdrop-blur-xs px-2 py-0.5 rounded-md z-10 shadow-2xs">{{ item.label || item.photoLabel || 'item' }}</span>
 
               <!-- When item is in cart: show Primary [- qty +] stepper pill -->
               <div 
                 v-if="store.getItemQuantity(item.id) > 0"
-                class="absolute bottom-2.5 inset-x-2.5 bg-[#1a1a1a] text-white h-8 sm:h-9 rounded-full flex items-center justify-between px-2.5 shadow-md z-10"
+                class="absolute bottom-2.5 inset-x-2.5 bg-[#1a1a1a] text-white h-8 sm:h-9 rounded-md flex items-center justify-between px-2.5 shadow-md z-10"
                 @click.stop.prevent
               >
                 <button 
@@ -551,7 +607,7 @@ function handleAddAllFbt() {
                 <span class="text-xs font-bold">{{ store.getItemQuantity(item.id) }}</span>
                 <button 
                   type="button"
-                  @click.stop.prevent="store.addToCart({ id: item.id, name: item.name, weight: item.size || item.weight, price: item.price, originalPrice: item.price })" 
+                  @click.stop.prevent="handleAddPairingItem(item)" 
                   class="p-1 hover:opacity-80 cursor-pointer flex items-center justify-center"
                   aria-label="Increase quantity"
                 >
@@ -563,8 +619,8 @@ function handleAddAllFbt() {
               <button 
                 v-else
                 type="button"
-                @click.stop.prevent="store.addToCart({ id: item.id, name: item.name, weight: item.size || item.weight, price: item.price, originalPrice: item.price })"
-                class="absolute bottom-2.5 right-2.5 w-8 h-8 sm:w-9 sm:h-9 bg-[#1a1a1a] hover:bg-black text-white rounded-full flex items-center justify-center cursor-pointer active:scale-95 shadow-md z-10 transition-transform group-hover:scale-105"
+                @click.stop.prevent="handleAddPairingItem(item)"
+                class="absolute bottom-2.5 right-2.5 w-8 h-8 sm:w-9 sm:h-9 bg-[#1a1a1a] hover:bg-black text-white rounded-md flex items-center justify-center cursor-pointer active:scale-95 shadow-md z-10 transition-transform group-hover:scale-105"
                 aria-label="Add pairing item"
               >
                 <Plus class="w-4 h-4 stroke-[2.5]" />
@@ -583,7 +639,7 @@ function handleAddAllFbt() {
       <!-- Mobile Sticky Bottom Action Bar -->
       <div class="sm:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-[#e0d9cc] p-3 shadow-2xl flex items-center gap-3">
         <!-- Quantity Stepper -->
-        <div class="w-28 h-11 bg-[#ece7de] rounded-full flex items-center justify-between px-3 border border-[#e0d9cc]">
+        <div class="w-28 h-11 bg-[#ece7de] rounded-md flex items-center justify-between px-3 border border-[#e0d9cc]">
           <button 
             @click="quantity = Math.max(1, quantity - 1)" 
             class="p-1 hover:text-[#1a1a1a] flex items-center justify-center text-[#1d1d1f]"
@@ -604,27 +660,81 @@ function handleAddAllFbt() {
         <!-- Add to cart CTA -->
         <button 
           @click="handleAction"
-          class="flex-1 h-11 bg-[#1a1a1a] active:bg-black text-white font-semibold text-xs rounded-full flex items-center justify-between px-5 shadow-md"
+          class="flex-1 h-11 bg-[#1a1a1a] active:bg-black text-white font-semibold text-xs rounded-md flex items-center justify-between px-5 shadow-md"
         >
           <span>{{ store.getItemQuantity(product.slug) > 0 ? 'Add another' : 'Add to cart' }}</span>
           <span class="font-serif font-medium text-sm">${{ displayPrice }}</span>
         </button>
       </div>
 
-      <!-- Mobile Toast/Notification when added -->
-      <div 
-        v-if="addedNotification"
-        class="sm:hidden fixed top-16 left-4 right-4 z-50 bg-[#1a1a1a] text-white p-3.5 rounded-2xl shadow-2xl flex items-center justify-between text-xs font-semibold border border-[#e0d9cc]/20"
+      <!-- Rich Floating Add-to-Cart Toast (Docked cleanly above bottom bar on mobile, bottom-right on desktop; never covers product photo badges) -->
+      <Transition
+        enter-active-class="transform transition ease-out duration-250"
+        enter-from-class="translate-y-4 opacity-0 scale-95"
+        enter-to-class="translate-y-0 opacity-100 scale-100"
+        leave-active-class="transform transition ease-in duration-150"
+        leave-from-class="translate-y-0 opacity-100 scale-100"
+        leave-to-class="translate-y-3 opacity-0 scale-95"
       >
-        <div class="flex items-center gap-2">
-          <CheckCircle2 class="w-4 h-4 text-[#a47a3c]" />
-          <span>{{ notificationMessage || 'Added to cart!' }}</span>
+        <div
+          v-if="addedNotification"
+          :key="notificationKey"
+          class="fixed bottom-[74px] sm:bottom-6 left-3 right-3 sm:left-auto sm:right-6 z-50 sm:w-[390px] bg-[#1a1a1a]/95 backdrop-blur-md text-white rounded-lg shadow-2xl border border-[#a47a3c]/40 overflow-hidden"
+        >
+          <div class="p-3 sm:p-3.5 flex items-center justify-between gap-3">
+            <!-- Left: Product Thumbnail + Check Badge + Item Info -->
+            <div class="flex items-center gap-3 min-w-0">
+              <div class="relative w-11 h-11 rounded-md bg-stone-800 border border-white/15 overflow-hidden shrink-0 shadow-sm">
+                <img
+                  :src="notificationImage || activeImage || product.image || '/images/products/atta.jpg'"
+                  :alt="product.name"
+                  class="w-full h-full object-cover object-center"
+                />
+                <span class="absolute -bottom-0.5 -right-0.5 w-4.5 h-4.5 rounded-md bg-emerald-500 text-stone-950 flex items-center justify-center border-2 border-[#1a1a1a]">
+                  <Check class="w-2.5 h-2.5 stroke-[3.5]" />
+                </span>
+              </div>
+
+              <div class="min-w-0">
+                <div class="flex items-center gap-1.5">
+                  <span class="text-[10px] font-bold uppercase tracking-wider text-[#e4b97a]">Added to Cart</span>
+                </div>
+                <div class="text-xs sm:text-sm font-bold text-white truncate leading-snug">
+                  {{ notificationMessage || `${quantity}× ${product.name}` }}
+                </div>
+                <div class="text-[11px] text-stone-300 truncate mt-0.5">
+                  {{ notificationSubtext }}
+                </div>
+              </div>
+            </div>
+
+            <!-- Right: Pill CTA + Dismiss -->
+            <div class="flex items-center gap-1.5 shrink-0">
+              <Link
+                href="/cart"
+                class="px-3.5 py-2 rounded-md bg-[#e4b97a] hover:bg-[#d6a55e] text-stone-950 font-bold text-xs inline-flex items-center gap-1 shadow-xs transition-colors active:scale-95"
+              >
+                <span>View Cart</span>
+                <span class="px-1.5 py-0.2 rounded-md bg-stone-950/15 text-[10px] font-mono">{{ store.totalItemCount }}</span>
+                <ChevronRight class="w-3.5 h-3.5 stroke-[2.5]" />
+              </Link>
+              <button
+                type="button"
+                @click="addedNotification = false"
+                class="p-1.5 rounded-lg text-stone-400 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
+                aria-label="Dismiss notification"
+              >
+                <X class="w-3.5 h-3.5" />
+              </button>
+            </div>
+          </div>
+
+          <!-- Bottom Brass Accent Hairline -->
+          <div class="h-0.5 w-full bg-[#a47a3c]/25">
+            <div class="h-full bg-gradient-to-r from-[#a47a3c] to-[#e4b97a] w-full"></div>
+          </div>
         </div>
-        <Link href="/cart" class="underline text-[#a47a3c] font-semibold inline-flex items-center gap-1">
-          <span>View Cart</span>
-          <ChevronRight class="w-3.5 h-3.5" />
-        </Link>
-      </div>
+      </Transition>
 
     </div>
   </StoreLayout>

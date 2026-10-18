@@ -122,48 +122,48 @@ const minutes = [0, 15, 30, 45];
         :disabled="disabled"
         :class="
           cn(
-            'w-full flex items-center justify-between px-3.5 py-2.5 bg-stone-50 hover:bg-stone-100/80 border border-stone-200 rounded-xl text-xs font-bold text-stone-900 transition-all cursor-pointer focus:bg-white focus:border-[#1a1a1a] focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed text-left',
-            isOpen && 'border-[#1a1a1a] bg-white',
+            'w-full h-9 flex items-center justify-between px-3 py-1.5 bg-card hover:bg-zinc-50 border border-input rounded-lg text-xs font-medium text-foreground shadow-2xs transition-colors cursor-pointer focus:bg-white focus:border-primary focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed text-left',
+            isOpen && 'border-primary bg-white',
             props.class
           )
         "
       >
         <div class="flex items-center gap-2">
-          <Clock class="w-3.5 h-3.5 text-[#a47a3c] shrink-0" />
-          <span class="tracking-wide">{{ formattedDisplay }}</span>
+          <Clock class="w-3.5 h-3.5 text-zinc-500 shrink-0" />
+          <span class="tracking-wide font-semibold">{{ formattedDisplay }}</span>
         </div>
-        <span class="text-[10px] font-mono text-stone-400 uppercase font-semibold">Change</span>
+        <span class="text-[10px] font-mono text-zinc-400 uppercase font-medium">Edit</span>
       </button>
     </PopoverTrigger>
 
-    <PopoverContent class="w-80 p-4 rounded-2xl bg-white border border-stone-200 shadow-2xl z-50">
+    <PopoverContent class="w-80 p-4 rounded-lg bg-white border border-zinc-200 shadow-xl z-50">
       <!-- Header Digital Clock Display & AM/PM Selector -->
-      <div class="flex items-center justify-between border-b border-stone-100 pb-3 mb-3">
+      <div class="flex items-center justify-between border-b border-zinc-100 pb-3 mb-3">
         <div>
-          <div class="text-[10px] font-mono uppercase tracking-wider text-stone-400 font-semibold">
+          <div class="text-[10px] font-mono uppercase tracking-wider text-zinc-400 font-semibold">
             Selected Time
           </div>
-          <div class="text-lg font-mono font-bold text-stone-900 tracking-wide mt-0.5">
+          <div class="text-lg font-mono font-bold text-zinc-900 tracking-wide mt-0.5">
             {{ String(selectedHour12).padStart(2, '0') }}:{{ String(selectedMinute).padStart(2, '0') }}
-            <span class="text-xs font-sans text-[#a47a3c] ml-1">{{ selectedPeriod }}</span>
+            <span class="text-xs font-sans text-zinc-600 ml-1">{{ selectedPeriod }}</span>
           </div>
         </div>
 
         <!-- AM/PM Toggle Pill -->
-        <div class="flex items-center p-1 bg-stone-100 rounded-xl border border-stone-200/60">
+        <div class="flex items-center p-1 bg-zinc-100 rounded-md border border-zinc-200/80">
           <button
             type="button"
             @click="selectPeriod('AM')"
-            class="px-2.5 py-1 text-xs font-bold rounded-lg transition-all cursor-pointer"
-            :class="selectedPeriod === 'AM' ? 'bg-[#1a1a1a] text-white shadow-xs' : 'text-stone-600 hover:text-stone-900'"
+            class="px-2.5 py-1 text-xs font-semibold rounded transition-colors cursor-pointer"
+            :class="selectedPeriod === 'AM' ? 'bg-zinc-900 text-white shadow-2xs' : 'text-zinc-600 hover:text-zinc-900'"
           >
             AM
           </button>
           <button
             type="button"
             @click="selectPeriod('PM')"
-            class="px-2.5 py-1 text-xs font-bold rounded-lg transition-all cursor-pointer"
-            :class="selectedPeriod === 'PM' ? 'bg-[#1a1a1a] text-white shadow-xs' : 'text-stone-600 hover:text-stone-900'"
+            class="px-2.5 py-1 text-xs font-semibold rounded transition-colors cursor-pointer"
+            :class="selectedPeriod === 'PM' ? 'bg-zinc-900 text-white shadow-2xs' : 'text-zinc-600 hover:text-zinc-900'"
           >
             PM
           </button>
@@ -174,7 +174,7 @@ const minutes = [0, 15, 30, 45];
       <div class="grid grid-cols-2 gap-3">
         <!-- Hours Column -->
         <div class="space-y-1.5">
-          <div class="text-[10px] font-bold text-stone-500 uppercase tracking-wider">
+          <div class="text-[10px] font-semibold text-zinc-500 uppercase tracking-wider">
             Hour
           </div>
           <div class="grid grid-cols-3 gap-1 max-h-36 overflow-y-auto pr-0.5">
@@ -183,11 +183,11 @@ const minutes = [0, 15, 30, 45];
               :key="h"
               type="button"
               @click="selectHour(h)"
-              class="py-1.5 text-xs font-bold rounded-lg transition-all cursor-pointer text-center"
+              class="py-1.5 text-xs font-semibold rounded-md transition-colors cursor-pointer text-center"
               :class="
                 selectedHour12 === h
-                  ? 'bg-[#1a1a1a] text-white shadow-xs font-bold'
-                  : 'bg-stone-50 hover:bg-stone-100 text-stone-800'
+                  ? 'bg-zinc-900 text-white shadow-2xs font-bold'
+                  : 'bg-zinc-50 hover:bg-zinc-100 text-zinc-800'
               "
             >
               {{ String(h).padStart(2, '0') }}
@@ -197,7 +197,7 @@ const minutes = [0, 15, 30, 45];
 
         <!-- Minutes Column -->
         <div class="space-y-1.5">
-          <div class="text-[10px] font-bold text-stone-500 uppercase tracking-wider">
+          <div class="text-[10px] font-semibold text-zinc-500 uppercase tracking-wider">
             Minute
           </div>
           <div class="grid grid-cols-2 gap-1">
@@ -206,11 +206,11 @@ const minutes = [0, 15, 30, 45];
               :key="m"
               type="button"
               @click="selectMinute(m)"
-              class="py-1.5 text-xs font-bold rounded-lg transition-all cursor-pointer text-center"
+              class="py-1.5 text-xs font-semibold rounded-md transition-colors cursor-pointer text-center"
               :class="
                 selectedMinute === m
-                  ? 'bg-[#1a1a1a] text-white shadow-xs font-bold'
-                  : 'bg-stone-50 hover:bg-stone-100 text-stone-800'
+                  ? 'bg-zinc-900 text-white shadow-2xs font-bold'
+                  : 'bg-zinc-50 hover:bg-zinc-100 text-zinc-800'
               "
             >
               :{{ String(m).padStart(2, '0') }}
@@ -219,15 +219,15 @@ const minutes = [0, 15, 30, 45];
 
           <!-- Quick fine minutes (e.g. 05, 10, 20...) if needed -->
           <div class="pt-1">
-            <div class="text-[9px] text-stone-400 font-medium">Fine step:</div>
+            <div class="text-[9px] text-zinc-400 font-medium">Fine step:</div>
             <div class="grid grid-cols-4 gap-1 mt-1">
               <button
                 v-for="fm in [5, 10, 20, 25, 35, 40, 50, 55]"
                 :key="fm"
                 type="button"
                 @click="selectMinute(fm)"
-                class="py-0.5 text-[10px] font-mono rounded text-stone-600 hover:bg-stone-100 transition-colors"
-                :class="selectedMinute === fm ? 'bg-amber-100 text-amber-900 font-bold' : ''"
+                class="py-0.5 text-[10px] font-mono rounded text-zinc-600 hover:bg-zinc-100 transition-colors"
+                :class="selectedMinute === fm ? 'bg-zinc-900 text-white font-semibold' : ''"
               >
                 :{{ String(fm).padStart(2, '0') }}
               </button>
@@ -237,8 +237,8 @@ const minutes = [0, 15, 30, 45];
       </div>
 
       <!-- Quick Presets -->
-      <div class="mt-3 pt-3 border-t border-stone-100 space-y-1.5">
-        <div class="text-[10px] font-bold text-stone-500 uppercase tracking-wider">
+      <div class="mt-3 pt-3 border-t border-zinc-100 space-y-1.5">
+        <div class="text-[10px] font-semibold text-zinc-500 uppercase tracking-wider">
           Quick Presets
         </div>
         <div class="grid grid-cols-4 gap-1">
@@ -247,11 +247,11 @@ const minutes = [0, 15, 30, 45];
             :key="preset.time"
             type="button"
             @click="applyPreset(preset.time)"
-            class="px-1.5 py-1 text-[10px] font-semibold rounded-md border text-center transition-all cursor-pointer truncate"
+            class="px-1.5 py-1 text-[10px] font-medium rounded border text-center transition-colors cursor-pointer truncate"
             :class="
               props.modelValue === preset.time
-                ? 'bg-amber-100 text-amber-900 border-amber-300 font-bold'
-                : 'bg-stone-50 text-stone-600 border-stone-200 hover:border-stone-300 hover:bg-stone-100'
+                ? 'bg-zinc-900 text-white border-zinc-900 font-semibold'
+                : 'bg-zinc-50 text-zinc-600 border-zinc-200 hover:border-zinc-300 hover:bg-zinc-100'
             "
           >
             {{ preset.label }}
@@ -260,11 +260,11 @@ const minutes = [0, 15, 30, 45];
       </div>
 
       <!-- Done Button -->
-      <div class="mt-3 pt-2 border-t border-stone-100 flex items-center justify-end">
+      <div class="mt-3 pt-2 border-t border-zinc-100 flex items-center justify-end">
         <button
           type="button"
           @click="isOpen = false"
-          class="w-full py-1.5 bg-[#1a1a1a] hover:bg-black text-white text-xs font-semibold rounded-xl transition-all cursor-pointer shadow-xs text-center"
+          class="w-full py-1.5 bg-zinc-900 hover:bg-zinc-800 text-white text-xs font-semibold rounded-md transition-colors cursor-pointer shadow-2xs text-center"
         >
           Done
         </button>

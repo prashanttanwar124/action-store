@@ -101,7 +101,7 @@ const submit = () => {
       <div class="flex items-center justify-between">
         <Link 
           :href="route('admin.sliders.index')"
-          class="inline-flex items-center gap-2 text-xs font-semibold text-stone-600 hover:text-stone-900 transition-colors"
+          class="inline-flex items-center gap-2 text-xs font-semibold text-zinc-600 hover:text-zinc-900 transition-colors"
         >
           <ArrowLeft class="w-4 h-4" />
           <span>Back to Sliders</span>
@@ -109,27 +109,27 @@ const submit = () => {
       </div>
 
       <!-- Live Interactive Visual Preview -->
-      <div class="bg-white border border-[#e0d9cc] rounded-3xl p-6 sm:p-7 shadow-2xs space-y-3">
+      <div class="bg-white border border-[#e4e4e7] rounded-lg p-6 sm:p-7 shadow-2xs space-y-3">
         <div class="flex items-center justify-between">
           <div class="flex items-center gap-2">
-            <span class="text-[11px] font-mono uppercase bg-[#a47a3c] text-white px-2.5 py-0.5 rounded-full font-semibold">
+            <span class="text-[11px] font-mono uppercase bg-[#18181b] text-white px-2.5 py-0.5 rounded-md font-semibold">
               Live Preview
             </span>
-            <span class="text-xs text-[#6e6e73]">Exact appearance on the customer storefront hero carousel</span>
+            <span class="text-xs text-[#52525b]">Exact appearance on the customer storefront hero carousel</span>
           </div>
         </div>
 
         <div 
-          class="relative rounded-2xl sm:rounded-3xl overflow-hidden shadow-sm grid grid-cols-12 min-h-[180px] sm:min-h-[200px] transition-colors duration-300"
-          :style="{ backgroundColor: form.bg_color || '#1a1a1a' }"
+          class="relative rounded-lg sm:rounded-lg overflow-hidden shadow-sm grid grid-cols-12 min-h-[180px] sm:min-h-[200px] transition-colors duration-300"
+          :style="{ backgroundColor: form.bg_color || '#18181b' }"
         >
           <!-- Copy Section -->
           <div class="col-span-7 p-4 sm:p-7 flex flex-col justify-between text-white select-none">
             <div>
-              <div class="text-[9px] sm:text-[10px] font-semibold tracking-wider uppercase text-[#a47a3c] leading-tight mb-1">
+              <div class="text-[9px] sm:text-[10px] font-semibold tracking-wider uppercase text-[#18181b] leading-tight mb-1">
                 {{ form.tag || 'PROMOTION / TAGLINE' }}
               </div>
-              <h1 class="text-xl sm:text-3xl lg:text-4xl font-serif font-medium leading-tight tracking-tight text-white whitespace-pre-line">
+              <h1 class="text-xl sm:text-3xl lg:text-4xl font-semibold leading-tight tracking-tight text-white whitespace-pre-line">
                 {{ form.title || 'Headline Text Here' }}
               </h1>
             </div>
@@ -143,14 +143,14 @@ const submit = () => {
           </div>
 
           <!-- Photo Section -->
-          <div class="col-span-5 relative bg-stone-900 overflow-hidden">
+          <div class="col-span-5 relative bg-zinc-900 overflow-hidden">
             <img 
               v-if="imagePreview"
               :src="imagePreview" 
               :alt="form.title" 
               class="w-full h-full object-cover object-center absolute inset-0"
             />
-            <div v-else class="w-full h-full flex flex-col items-center justify-center text-stone-500 p-4 text-center">
+            <div v-else class="w-full h-full flex flex-col items-center justify-center text-zinc-500 p-4 text-center">
               <ImageIcon class="w-8 h-8 mb-1" />
               <span class="text-[10px]">No image selected</span>
             </div>
@@ -165,14 +165,14 @@ const submit = () => {
       </div>
 
       <!-- Main Form -->
-      <form @submit.prevent="submit" class="bg-white border border-[#e0d9cc] rounded-3xl p-6 sm:p-8 shadow-2xs space-y-6">
+      <form @submit.prevent="submit" class="bg-white border border-[#e4e4e7] rounded-lg p-6 sm:p-8 shadow-2xs space-y-6">
         
         <!-- Header -->
-        <div class="border-b border-[#e0d9cc]/60 pb-5">
-          <h2 class="text-xl font-serif font-medium text-[#1d1d1f]">
+        <div class="border-b border-[#e4e4e7]/60 pb-5">
+          <h2 class="text-xl font-semibold text-[#09090b]">
             Slide Details & Settings
           </h2>
-          <p class="text-xs text-[#6e6e73] mt-0.5">
+          <p class="text-xs text-[#52525b] mt-0.5">
             Configure headline copywriting, target URL, image, and appearance colors.
           </p>
         </div>
@@ -189,11 +189,11 @@ const submit = () => {
               v-model="form.title"
               rows="3"
               placeholder="e.g. Restaurant curry,&#10;cooked at&#10;home."
-              class="font-serif text-sm"
+              class="font-semibold text-sm"
               :class="{ 'border-rose-400 focus-visible:border-rose-500 focus-visible:ring-rose-500/15 focus:border-rose-500 focus:ring-rose-500/15': form.errors.title }"
               required
             />
-            <div class="flex items-center justify-between mt-1 text-[11px] text-[#86868b]">
+            <div class="flex items-center justify-between mt-1 text-[11px] text-[#71717a]">
               <span>Tip: Hit Enter for line breaks to format multi-line editorial typography.</span>
               <span v-if="form.errors.title" class="text-rose-600 font-medium">{{ form.errors.title }}</span>
             </div>
@@ -242,18 +242,18 @@ const submit = () => {
                 :class="{ 'border-rose-400 focus-visible:border-rose-500 focus-visible:ring-rose-500/15 focus:border-rose-500 focus:ring-rose-500/15': form.errors.link_url }"
                 required
               />
-              <LinkIcon class="w-4 h-4 text-stone-400 absolute left-3 top-3" />
+              <LinkIcon class="w-4 h-4 text-zinc-400 absolute left-3 top-3" />
             </div>
 
             <!-- Quick link suggestions -->
             <div class="flex items-center gap-1.5 flex-wrap mt-2">
-              <span class="text-[11px] text-[#86868b] mr-1">Quick pick:</span>
+              <span class="text-[11px] text-[#71717a] mr-1">Quick pick:</span>
               <button
                 type="button"
                 v-for="kit in recipeKits.slice(0, 3)"
                 :key="'kit-' + kit.id"
                 @click="setQuickLink('/recipe-kits/' + kit.slug)"
-                class="text-[10px] px-2 py-0.5 rounded-full bg-[#f5eee2] hover:bg-[#ebdcc8] text-[#7a5620] border border-[#e0d9cc] transition-colors cursor-pointer"
+                class="text-[10px] px-2 py-0.5 rounded-md bg-[#f4f4f5] hover:bg-[#e4e4e7] text-[#27272a] border border-[#e4e4e7] transition-colors cursor-pointer"
               >
                 Recipe: {{ kit.name }}
               </button>
@@ -262,7 +262,7 @@ const submit = () => {
                 v-for="p in products.slice(0, 3)"
                 :key="'p-' + p.id"
                 @click="setQuickLink('/products/' + p.slug)"
-                class="text-[10px] px-2 py-0.5 rounded-full bg-stone-100 hover:bg-stone-200 text-stone-700 border border-stone-200 transition-colors cursor-pointer"
+                class="text-[10px] px-2 py-0.5 rounded-md bg-zinc-100 hover:bg-zinc-200 text-zinc-700 border border-zinc-200 transition-colors cursor-pointer"
               >
                 Product: {{ p.name }}
               </button>
@@ -309,22 +309,22 @@ const submit = () => {
                 v-for="preset in bgPresets"
                 :key="preset.value"
                 @click="setPresetBg(preset.value)"
-                class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs font-medium transition-all cursor-pointer"
-                :class="form.bg_color === preset.value ? 'ring-2 ring-[#a47a3c] border-stone-800 bg-stone-50' : 'border-[#e0d9cc] bg-white hover:bg-stone-50'"
+                class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md border text-xs font-medium transition-all cursor-pointer"
+                :class="form.bg_color === preset.value ? 'ring-2 ring-[#18181b] border-zinc-800 bg-zinc-50' : 'border-[#e4e4e7] bg-white hover:bg-zinc-50'"
               >
-                <span class="w-3.5 h-3.5 rounded-full border border-stone-300" :style="{ backgroundColor: preset.value }"></span>
+                <span class="w-3.5 h-3.5 rounded-md border border-zinc-300" :style="{ backgroundColor: preset.value }"></span>
                 <span>{{ preset.label }}</span>
               </button>
               <div class="flex items-center gap-1 ml-auto">
                 <input 
                   type="color" 
                   v-model="form.bg_color" 
-                  class="w-8 h-8 rounded-lg cursor-pointer border border-[#e0d9cc]" 
+                  class="w-8 h-8 rounded-lg cursor-pointer border border-[#e4e4e7]" 
                 />
                 <Input
                   type="text"
                   v-model="form.bg_color"
-                  placeholder="#1a1a1a"
+                  placeholder="#18181b"
                   class="w-24 font-mono text-xs h-8"
                 />
               </div>
@@ -332,12 +332,12 @@ const submit = () => {
           </div>
 
           <!-- Slide Image Uploader -->
-          <div class="md:col-span-2 space-y-3 pt-2 border-t border-[#e0d9cc]/60">
+          <div class="md:col-span-2 space-y-3 pt-2 border-t border-[#e4e4e7]/60">
             <div>
               <Label class="mb-1 block">
                 Slide Image (Photo Section) <span class="text-rose-500">*</span>
               </Label>
-              <p class="text-xs text-[#6e6e73]">
+              <p class="text-xs text-[#52525b]">
                 Upload a high-resolution food photo or enter an existing image path.
               </p>
             </div>
@@ -345,12 +345,12 @@ const submit = () => {
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <!-- Upload Box -->
               <div 
-                class="border-2 border-dashed border-[#e0d9cc] hover:border-[#a47a3c] rounded-2xl p-5 text-center flex flex-col items-center justify-center bg-[#fbfaf8] hover:bg-white transition-all cursor-pointer"
+                class="border-2 border-dashed border-[#e4e4e7] hover:border-[#18181b] rounded-lg p-5 text-center flex flex-col items-center justify-center bg-[#fafafa] hover:bg-white transition-all cursor-pointer"
                 @click="fileInputRef?.click()"
               >
-                <Upload class="w-6 h-6 text-[#a47a3c] mb-2" />
-                <span class="text-xs font-semibold text-stone-800">Upload Image File</span>
-                <span class="text-[11px] text-stone-500 mt-0.5">JPG, PNG, WebP up to 10MB</span>
+                <Upload class="w-6 h-6 text-[#18181b] mb-2" />
+                <span class="text-xs font-semibold text-zinc-800">Upload Image File</span>
+                <span class="text-[11px] text-zinc-500 mt-0.5">JPG, PNG, WebP up to 10MB</span>
                 <input
                   ref="fileInputRef"
                   type="file"
@@ -361,8 +361,8 @@ const submit = () => {
               </div>
 
               <!-- Or Paste URL -->
-              <div class="flex flex-col justify-center space-y-2 p-4 bg-[#fbfaf8] border border-[#e0d9cc] rounded-2xl">
-                <span class="text-xs font-semibold text-stone-800">Or Image URL / Path:</span>
+              <div class="flex flex-col justify-center space-y-2 p-4 bg-[#fafafa] border border-[#e4e4e7] rounded-lg">
+                <span class="text-xs font-semibold text-zinc-800">Or Image URL / Path:</span>
                 <Input
                   type="text"
                   v-model="form.image_url"
@@ -370,7 +370,7 @@ const submit = () => {
                   placeholder="/images/products/paneer_curry.jpg"
                   class="font-mono text-xs bg-white"
                 />
-                <span class="text-[10px] text-stone-500">You can also reference stored catalog assets.</span>
+                <span class="text-[10px] text-zinc-500">You can also reference stored catalog assets.</span>
               </div>
             </div>
             <div v-if="form.errors.image_file || form.errors.image" class="text-rose-600 text-xs">
@@ -379,15 +379,15 @@ const submit = () => {
           </div>
 
           <!-- Active Toggle -->
-          <div class="md:col-span-2 pt-2 border-t border-[#e0d9cc]/60">
+          <div class="md:col-span-2 pt-2 border-t border-[#e4e4e7]/60">
             <label class="flex items-center gap-3 cursor-pointer select-none">
               <Checkbox 
                 :checked="form.is_active" 
                 @update:checked="form.is_active = $event" 
               />
               <div>
-                <span class="text-xs font-semibold text-stone-800">Active on Storefront</span>
-                <p class="text-[11px] text-stone-500">When checked, this slide will rotate in the homepage hero carousel.</p>
+                <span class="text-xs font-semibold text-zinc-800">Active on Storefront</span>
+                <p class="text-[11px] text-zinc-500">When checked, this slide will rotate in the homepage hero carousel.</p>
               </div>
             </label>
           </div>
@@ -395,17 +395,17 @@ const submit = () => {
         </div>
 
         <!-- Form Actions -->
-        <div class="pt-5 border-t border-[#e0d9cc]/60 flex items-center justify-end gap-3">
+        <div class="pt-5 border-t border-[#e4e4e7]/60 flex items-center justify-end gap-3">
           <Link
             :href="route('admin.sliders.index')"
-            class="px-5 py-2.5 text-xs font-semibold text-stone-600 hover:text-stone-800 rounded-full hover:bg-stone-100 transition-colors"
+            class="px-5 py-2.5 text-xs font-semibold text-zinc-600 hover:text-zinc-800 rounded-md hover:bg-zinc-100 transition-colors"
           >
             Cancel
           </Link>
           <Button
             type="submit"
             :disabled="form.processing"
-            class="rounded-full px-6 py-2.5 text-xs font-semibold"
+            class="rounded-md px-6 py-2.5 text-xs font-semibold"
           >
             {{ form.processing ? 'Creating Slide...' : 'Save & Publish Slide' }}
           </Button>

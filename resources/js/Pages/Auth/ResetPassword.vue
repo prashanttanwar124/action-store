@@ -38,7 +38,7 @@ const submit = () => {
     <div class="space-y-6">
       
       <div class="space-y-1">
-        <div class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#f5eee2] border border-[#e0d9cc] text-[#7a5620] text-[10.5px] font-semibold uppercase tracking-wider">
+        <div class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md bg-[#f5eee2] border border-[#e0d9cc] text-[#7a5620] text-[10.5px] font-semibold uppercase tracking-wider">
           <KeyRound class="w-3 h-3 text-[#a47a3c]" />
           <span>Security</span>
         </div>
@@ -67,7 +67,7 @@ const submit = () => {
               required
               autofocus
               autocomplete="username"
-              class="w-full pl-10 pr-3.5 h-11 bg-[#fbf9f5] border border-[#dfd6c8] focus:border-[#1a1a1a] rounded-xl text-xs sm:text-sm text-[#1d1d1f] focus:outline-none focus:bg-white focus:ring-3 focus:ring-[#1a1a1a]/10 transition-all font-normal"
+              class="w-full pl-10 pr-3.5 h-11 bg-[#fbf9f5] border border-[#dfd6c8] focus:border-[#1a1a1a] rounded-md text-xs sm:text-sm text-[#1d1d1f] focus:outline-none focus:bg-white focus:ring-3 focus:ring-[#1a1a1a]/10 transition-all font-normal"
               :class="{ 'border-rose-400 ring-rose-100': form.errors.email }"
             />
           </div>
@@ -91,7 +91,7 @@ const submit = () => {
               required
               autocomplete="new-password"
               placeholder="At least 8 characters"
-              class="w-full pl-10 pr-10 h-11 bg-[#fbf9f5] border border-[#dfd6c8] focus:border-[#1a1a1a] rounded-xl text-xs sm:text-sm text-[#1d1d1f] focus:outline-none focus:bg-white focus:ring-3 focus:ring-[#1a1a1a]/10 transition-all font-normal"
+              class="w-full pl-10 pr-10 h-11 bg-[#fbf9f5] border border-[#dfd6c8] focus:border-[#1a1a1a] rounded-md text-xs sm:text-sm text-[#1d1d1f] focus:outline-none focus:bg-white focus:ring-3 focus:ring-[#1a1a1a]/10 transition-all font-normal"
               :class="{ 'border-rose-400 ring-rose-100': form.errors.password }"
             />
             <button
@@ -124,7 +124,7 @@ const submit = () => {
               required
               autocomplete="new-password"
               placeholder="Confirm password"
-              class="w-full pl-10 pr-3.5 h-11 bg-[#fbf9f5] border border-[#dfd6c8] focus:border-[#1a1a1a] rounded-xl text-xs sm:text-sm text-[#1d1d1f] focus:outline-none focus:bg-white focus:ring-3 focus:ring-[#1a1a1a]/10 transition-all font-normal"
+              class="w-full pl-10 pr-3.5 h-11 bg-[#fbf9f5] border border-[#dfd6c8] focus:border-[#1a1a1a] rounded-md text-xs sm:text-sm text-[#1d1d1f] focus:outline-none focus:bg-white focus:ring-3 focus:ring-[#1a1a1a]/10 transition-all font-normal"
               :class="{ 'border-rose-400 ring-rose-100': form.errors.password_confirmation }"
             />
           </div>
@@ -136,7 +136,7 @@ const submit = () => {
         <button
           type="submit"
           :disabled="form.processing"
-          class="w-full h-11 bg-[#1a1a1a] hover:bg-black text-white font-semibold text-xs rounded-full flex items-center justify-center gap-2 transition-all active:scale-[0.99] shadow-sm cursor-pointer disabled:opacity-50 mt-1"
+          class="w-full h-11 bg-[#1a1a1a] hover:bg-black text-white font-semibold text-xs rounded-md flex items-center justify-center gap-2 transition-all active:scale-[0.99] shadow-sm cursor-pointer disabled:opacity-50 mt-1"
         >
           <span v-if="form.processing">Resetting Password...</span>
           <template v-else>

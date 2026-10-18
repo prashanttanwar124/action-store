@@ -204,20 +204,25 @@ export const useStore = defineStore('masalaStore', () => {
   // Computed Cart Items
   const cartItems = computed(() => {
     return cart.value.map(item => {
-      const prod = products.value.find(p => p.id === item.id || p.slug === item.slug);
+      const isKit = item.type === 'recipe-kit' || Boolean(item.isRecipeKit);
+      const prod = products.value.find(p =>
+        Boolean(p.isRecipeKit) === isKit && (p.id === item.id || p.slug === item.slug)
+      );
 
       const price = prod ? prod.price : Number(item.price || 0);
       const name = prod ? prod.name : (item.name || 'Grocery Item');
       const image = prod ? prod.image : (item.image || '/images/products/atta.jpg');
       const size = prod ? (prod.sizeMain || prod.size) : (item.size || item.weight || '');
       const slug = prod ? prod.slug : (item.slug || String(item.id));
-      const category = prod ? prod.category : (item.category || 'grocery');
+      const category = prod ? prod.category : (item.category || (isKit ? 'recipe-kit' : 'grocery'));
       const originalPrice = prod ? prod.originalPrice : Number(item.originalPrice || price);
       const unitCost = price;
 
       return {
         id: item.id,
         slug,
+        type: isKit ? 'recipe-kit' : 'product',
+        isRecipeKit: isKit,
         name,
         image,
         category,
@@ -238,7 +243,10 @@ export const useStore = defineStore('masalaStore', () => {
 
   const rawSubtotal = computed(() => {
     const sum = cart.value.reduce((acc, item) => {
-      const prod = products.value.find(p => p.id === item.id || p.slug === item.slug);
+      const isKit = item.type === 'recipe-kit' || Boolean(item.isRecipeKit);
+      const prod = products.value.find(p =>
+        Boolean(p.isRecipeKit) === isKit && (p.id === item.id || p.slug === item.slug)
+      );
       const price = prod ? prod.price : Number(item.price || 0);
       return acc + (price * item.quantity);
     }, 0);
@@ -274,22 +282,30 @@ export const useStore = defineStore('masalaStore', () => {
     let id = itemOrId;
     let qty = count;
     const itemObj = (typeof itemOrId === 'object' && itemOrId !== null) ? itemOrId : null;
+    const isKit = itemObj?.type === 'recipe-kit' || Boolean(itemObj?.isRecipeKit);
+    const itemType = isKit ? 'recipe-kit' : 'product';
 
     if (itemObj) {
-      id = itemObj.id || itemObj.slug;
+      id = isKit ? (itemObj.slug || itemObj.id) : (itemObj.id || itemObj.slug);
       if (itemObj.quantity) qty = itemObj.quantity;
     }
 
-    const resolvedId = resolveProductId(id);
-    const existing = cart.value.find(i => i.id === resolvedId);
+    const resolvedId = isKit ? id : resolveProductId(id);
+    const existing = cart.value.find(i =>
+      i.id === resolvedId && ((i.type || (i.isRecipeKit ? 'recipe-kit' : 'product')) === itemType)
+    );
 
     if (existing) {
       existing.quantity += qty;
     } else {
-      const prod = products.value.find(p => p.id === resolvedId || p.slug === id);
+      const prod = products.value.find(p =>
+        Boolean(p.isRecipeKit) === isKit && (p.id === resolvedId || p.slug === id)
+      );
       cart.value.push({
         id: resolvedId,
         slug: itemObj?.slug || prod?.slug || String(resolvedId),
+        type: itemType,
+        isRecipeKit: isKit,
         name: itemObj?.name || prod?.name || 'Grocery Item',
         price: Number(itemObj?.price !== undefined ? itemObj.price : (prod?.price || 0)),
         originalPrice: Number(itemObj?.originalPrice || prod?.originalPrice || itemObj?.price || 0),

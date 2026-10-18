@@ -10,7 +10,7 @@ import { ArrowLeft, Sparkles, ShieldCheck, Clock, Store } from 'lucide-vue-next'
     <header class="w-full max-w-5xl mx-auto px-4 sm:px-6 pt-6 pb-2 flex items-center justify-between">
       <Link 
         href="/" 
-        class="inline-flex items-center gap-1.5 text-xs font-semibold text-[#6e6e73] hover:text-[#1d1d1f] bg-white border border-[#e0d9cc] px-3.5 py-1.5 rounded-full transition-colors shadow-2xs group"
+        class="inline-flex items-center gap-1.5 text-xs font-semibold text-[#6e6e73] hover:text-[#1d1d1f] bg-white border border-[#e0d9cc] px-3.5 py-1.5 rounded-md transition-colors shadow-2xs group"
       >
         <ArrowLeft class="w-3.5 h-3.5 text-[#86868b] group-hover:-translate-x-0.5 transition-transform" />
         <span>Return to Storefront</span>
@@ -38,7 +38,7 @@ import { ArrowLeft, Sparkles, ShieldCheck, Clock, Store } from 'lucide-vue-next'
           <span class="text-3xl sm:text-4xl font-serif font-medium text-[#1d1d1f] tracking-tight group-hover:text-[#a47a3c] transition-colors">
             Masala Mart
           </span>
-          <span class="font-devanagari text-xs text-[#7a5620] font-medium bg-[#f5eee2] px-2 py-0.5 rounded-full border border-[#e0d9cc]">
+          <span class="font-devanagari text-xs text-[#7a5620] font-medium bg-[#f5eee2] px-2 py-0.5 rounded-md border border-[#e0d9cc]">
             किराना
           </span>
         </Link>
@@ -48,7 +48,7 @@ import { ArrowLeft, Sparkles, ShieldCheck, Clock, Store } from 'lucide-vue-next'
       </div>
 
       <!-- Card Container -->
-      <div class="w-full max-w-md bg-white border border-[#e0d9cc] rounded-3xl p-6 sm:p-8 shadow-sm">
+      <div class="w-full max-w-md bg-white border border-[#e0d9cc] rounded-lg p-6 sm:p-8 shadow-sm">
         <slot />
       </div>
 

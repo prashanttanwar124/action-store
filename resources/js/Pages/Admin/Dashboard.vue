@@ -119,151 +119,121 @@ const getInitials = (name) => {
 
 <template>
   <AdminLayout title="Dashboard Overview">
-    <div class="space-y-8">
+    <div class="space-y-6">
       
-      <!-- Welcome & Status Header -->
-      <div class="relative overflow-hidden bg-gradient-to-br from-[#f3efe7] via-[#f8f5ee] to-[#ece5d8] border border-[#e0d9cc] rounded-3xl p-6 sm:p-8 shadow-xs">
-        <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-6 relative z-10">
-          <div class="space-y-1.5">
-            <div class="flex flex-wrap items-center gap-2 mb-2">
-              <span class="inline-flex items-center gap-1.5 text-[11px] font-mono uppercase bg-[#1a1a1a] text-white px-2.5 py-0.5 rounded-full font-semibold shadow-2xs">
-                <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
-                <span>Admin Session Active</span>
-              </span>
-              <span class="text-[11px] text-[#7a5620] bg-white/80 border border-[#e0d9cc] px-2.5 py-0.5 rounded-full font-medium shadow-2xs">
-                Role-Based Access
-              </span>
-              <span class="text-[11px] text-stone-600 bg-white/60 px-2 py-0.5 rounded-full font-sans">
-                Secure Storefront
-              </span>
-            </div>
-            
-            <h1 class="text-2xl sm:text-3xl lg:text-4xl font-serif font-medium text-[#1d1d1f] tracking-tight">
-              Welcome back, {{ currentAdmin?.name }}
-            </h1>
-            <p class="text-xs sm:text-sm text-[#6e6e73] max-w-2xl leading-relaxed">
-              Complete oversight of products, registered user accounts, team credentials, and store access rules.
-            </p>
+      <!-- Compact Page Header -->
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white border border-zinc-200 rounded-lg p-5 shadow-2xs">
+        <div>
+          <div class="flex items-center gap-2 mb-1">
+            <span class="inline-flex items-center gap-1.5 text-[10px] font-mono uppercase bg-zinc-900 text-white px-2 py-0.5 rounded font-semibold">
+              <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+              <span>Session Active</span>
+            </span>
+            <span class="text-[10px] font-mono uppercase text-zinc-600 bg-zinc-100 border border-zinc-200 px-2 py-0.5 rounded font-medium">
+              RBAC Enabled
+            </span>
           </div>
-
-          <div class="flex flex-wrap items-center gap-2.5 shrink-0">
-            <a 
-              href="/" 
-              target="_blank"
-              class="px-4 py-2 bg-white hover:bg-stone-50 text-[#1d1d1f] text-xs font-semibold rounded-full inline-flex items-center gap-1.5 border border-[#e0d9cc] transition-all shadow-2xs hover:shadow-xs"
-            >
-              <Store class="w-3.5 h-3.5 text-[#a47a3c]" />
-              <span>Preview Storefront</span>
-              <ExternalLink class="w-3 h-3 text-[#86868b]" />
-            </a>
-
-            <button 
-              type="button"
-              @click="showCreateRoleModal = true"
-              class="px-4 py-2 bg-[#1a1a1a] hover:bg-black text-white text-xs font-semibold rounded-full inline-flex items-center gap-1.5 transition-all cursor-pointer shadow-xs hover:scale-[1.02]"
-            >
-              <Plus class="w-3.5 h-3.5" />
-              <span>New Staff Role</span>
-            </button>
-          </div>
+          
+          <h1 class="text-xl sm:text-2xl font-semibold text-zinc-900 tracking-tight">
+            System Overview
+          </h1>
+          <p class="text-xs text-zinc-500 mt-0.5">
+            Logged in as <span class="font-medium text-zinc-700">{{ currentAdmin?.name }}</span> — Manage catalog metrics, staff roles, and access permissions.
+          </p>
         </div>
 
-        <!-- Decorative subtle pattern overlay -->
-        <div class="absolute -right-8 -bottom-8 w-48 h-48 rounded-full bg-[#a47a3c]/5 blur-2xl pointer-events-none"></div>
-      </div>
+        <div class="flex flex-wrap items-center gap-2 shrink-0">
+          <a 
+            href="/" 
+            target="_blank"
+            class="px-3 py-1.5 bg-white hover:bg-zinc-50 text-zinc-700 text-xs font-medium rounded-md inline-flex items-center gap-1.5 border border-zinc-200 transition-colors"
+          >
+            <Store class="w-3.5 h-3.5 text-zinc-500" />
+            <span>Storefront</span>
+            <ExternalLink class="w-3 h-3 text-zinc-400" />
+          </a>
 
-      <!-- Quick Section Anchor Tabs -->
-      <div class="flex items-center gap-1.5 overflow-x-auto pb-1 text-xs no-scrollbar">
-        <a 
-          href="#stats-section" 
-          class="px-3.5 py-1.5 rounded-full bg-white hover:bg-[#f3efe7] border border-[#e0d9cc] text-[#1d1d1f] font-medium whitespace-nowrap transition-colors shadow-2xs"
-        >
-          Overview Stats
-        </a>
-        <a 
-          href="#roles-section" 
-          class="px-3.5 py-1.5 rounded-full bg-white hover:bg-[#f3efe7] border border-[#e0d9cc] text-[#1d1d1f] font-medium whitespace-nowrap transition-colors shadow-2xs"
-        >
-          Staff Roles & Permissions ({{ roles.length }})
-        </a>
-        <a 
-          href="#admins-section" 
-          class="px-3.5 py-1.5 rounded-full bg-white hover:bg-[#f3efe7] border border-[#e0d9cc] text-[#1d1d1f] font-medium whitespace-nowrap transition-colors shadow-2xs"
-        >
-          Admin Accounts ({{ admins.length }})
-        </a>
+          <button 
+            type="button"
+            @click="showCreateRoleModal = true"
+            class="px-3.5 py-1.5 bg-zinc-900 hover:bg-zinc-800 text-white text-xs font-semibold rounded-md inline-flex items-center gap-1.5 transition-colors cursor-pointer"
+          >
+            <Plus class="w-3.5 h-3.5" />
+            <span>New Staff Role</span>
+          </button>
+        </div>
       </div>
 
       <!-- Stats Grid -->
-      <div id="stats-section" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div id="stats-section" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
         <!-- Products -->
-        <div class="bg-white border border-[#e0d9cc] rounded-2xl p-5 shadow-2xs flex flex-col justify-between hover:border-[#a47a3c]/50 transition-colors">
-          <div class="flex items-center justify-between text-[#6e6e73]">
-            <span class="text-xs font-semibold uppercase tracking-wider">Catalog Products</span>
-            <div class="w-8 h-8 rounded-xl bg-[#f5eee2] flex items-center justify-center text-[#a47a3c]">
+        <div class="bg-white border border-zinc-200 rounded-lg p-4 shadow-2xs flex flex-col justify-between">
+          <div class="flex items-center justify-between text-zinc-500">
+            <span class="text-xs font-medium">Catalog Products</span>
+            <div class="w-7 h-7 rounded-md bg-zinc-100 flex items-center justify-center text-zinc-700">
               <Package class="w-4 h-4" />
             </div>
           </div>
-          <div class="mt-4">
-            <div class="text-2xl sm:text-3xl font-serif font-medium text-[#1d1d1f]">
+          <div class="mt-3">
+            <div class="text-2xl font-semibold text-zinc-900 tabular-nums">
               {{ stats.total_products }}
             </div>
             <div class="flex items-center gap-1.5 mt-1 text-[11px] text-emerald-700">
               <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
-              <span>Available in storefront</span>
+              <span>Active in catalog</span>
             </div>
           </div>
         </div>
 
         <!-- Store Customers -->
-        <div class="bg-white border border-[#e0d9cc] rounded-2xl p-5 shadow-2xs flex flex-col justify-between hover:border-[#a47a3c]/50 transition-colors">
-          <div class="flex items-center justify-between text-[#6e6e73]">
-            <span class="text-xs font-semibold uppercase tracking-wider">Registered Users</span>
-            <div class="w-8 h-8 rounded-xl bg-[#f5eee2] flex items-center justify-center text-[#a47a3c]">
+        <div class="bg-white border border-zinc-200 rounded-lg p-4 shadow-2xs flex flex-col justify-between">
+          <div class="flex items-center justify-between text-zinc-500">
+            <span class="text-xs font-medium">Registered Users</span>
+            <div class="w-7 h-7 rounded-md bg-zinc-100 flex items-center justify-center text-zinc-700">
               <Users class="w-4 h-4" />
             </div>
           </div>
-          <div class="mt-4">
-            <div class="text-2xl sm:text-3xl font-serif font-medium text-[#1d1d1f]">
+          <div class="mt-3">
+            <div class="text-2xl font-semibold text-zinc-900 tabular-nums">
               {{ stats.total_users }}
             </div>
-            <div class="flex items-center gap-1.5 mt-1 text-[11px] text-[#6e6e73]">
+            <div class="flex items-center gap-1.5 mt-1 text-[11px] text-zinc-500">
               <span>Customer accounts</span>
             </div>
           </div>
         </div>
 
         <!-- Staff / Admins -->
-        <div class="bg-white border border-[#e0d9cc] rounded-2xl p-5 shadow-2xs flex flex-col justify-between hover:border-[#a47a3c]/50 transition-colors">
-          <div class="flex items-center justify-between text-[#6e6e73]">
-            <span class="text-xs font-semibold uppercase tracking-wider">Active Admins</span>
-            <div class="w-8 h-8 rounded-xl bg-[#f5eee2] flex items-center justify-center text-[#a47a3c]">
+        <div class="bg-white border border-zinc-200 rounded-lg p-4 shadow-2xs flex flex-col justify-between">
+          <div class="flex items-center justify-between text-zinc-500">
+            <span class="text-xs font-medium">Active Admins</span>
+            <div class="w-7 h-7 rounded-md bg-zinc-100 flex items-center justify-center text-zinc-700">
               <UserCheck class="w-4 h-4" />
             </div>
           </div>
-          <div class="mt-4">
-            <div class="text-2xl sm:text-3xl font-serif font-medium text-[#1d1d1f]">
+          <div class="mt-3">
+            <div class="text-2xl font-semibold text-zinc-900 tabular-nums">
               {{ stats.total_admins }}
             </div>
-            <div class="flex items-center gap-1.5 mt-1 text-[11px] text-[#6e6e73]">
+            <div class="flex items-center gap-1.5 mt-1 text-[11px] text-zinc-500">
               <span>Store staff & managers</span>
             </div>
           </div>
         </div>
 
         <!-- Roles & Permissions -->
-        <div class="bg-white border border-[#e0d9cc] rounded-2xl p-5 shadow-2xs flex flex-col justify-between hover:border-[#a47a3c]/50 transition-colors">
-          <div class="flex items-center justify-between text-[#6e6e73]">
-            <span class="text-xs font-semibold uppercase tracking-wider">Staff Roles</span>
-            <div class="w-8 h-8 rounded-xl bg-[#f5eee2] flex items-center justify-center text-[#a47a3c]">
+        <div class="bg-white border border-zinc-200 rounded-lg p-4 shadow-2xs flex flex-col justify-between">
+          <div class="flex items-center justify-between text-zinc-500">
+            <span class="text-xs font-medium">Staff Roles</span>
+            <div class="w-7 h-7 rounded-md bg-zinc-100 flex items-center justify-center text-zinc-700">
               <Shield class="w-4 h-4" />
             </div>
           </div>
-          <div class="mt-4">
-            <div class="text-2xl sm:text-3xl font-serif font-medium text-[#1d1d1f]">
-              {{ stats.total_roles }} <span class="text-base text-[#6e6e73] font-normal">roles</span>
+          <div class="mt-3">
+            <div class="text-2xl font-semibold text-zinc-900 tabular-nums">
+              {{ stats.total_roles }} <span class="text-xs text-zinc-500 font-normal">roles</span>
             </div>
-            <div class="flex items-center gap-1.5 mt-1 text-[11px] text-[#6e6e73]">
+            <div class="flex items-center gap-1.5 mt-1 text-[11px] text-zinc-500">
               <span>{{ stats.total_permissions }} permissions assigned</span>
             </div>
           </div>
@@ -271,93 +241,93 @@ const getInitials = (name) => {
       </div>
 
       <!-- Staff Roles & Permissions Section -->
-      <section id="roles-section" class="space-y-4 pt-2">
+      <section id="roles-section" class="space-y-3 pt-1">
         <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div class="flex items-center gap-2">
-            <h2 class="text-xl font-serif font-medium text-[#1d1d1f] tracking-tight">
+            <h2 class="text-base font-semibold text-zinc-900 tracking-tight">
               Staff Roles & Permissions
             </h2>
-            <span class="text-[11px] font-mono text-[#7a5620] bg-[#f5eee2] px-2 py-0.5 rounded-full border border-[#e0d9cc]">
+            <span class="text-[10px] font-mono text-zinc-600 bg-zinc-100 px-2 py-0.5 rounded border border-zinc-200">
               Access Control
             </span>
           </div>
 
           <!-- Role Search Input -->
           <div class="relative w-full sm:w-64">
-            <Search class="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-[#86868b]" />
+            <Search class="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400" />
             <input 
               v-model="searchRoleQuery"
               type="text"
               placeholder="Filter roles or permissions..."
-              class="w-full pl-8 pr-3 py-1.5 text-xs bg-white border border-[#e0d9cc] rounded-full focus:outline-none focus:ring-1 focus:ring-[#1a1a1a] focus:border-[#1a1a1a]"
+              class="w-full pl-8 pr-3 py-1.5 text-xs bg-white border border-zinc-200 rounded-md focus:outline-none focus:border-zinc-900"
             />
           </div>
         </div>
 
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-3.5">
           <div 
             v-for="role in filteredRoles" 
             :key="role.id"
-            class="bg-white border border-[#e0d9cc] rounded-2xl p-5 shadow-2xs flex flex-col justify-between group hover:border-[#a47a3c]/60 transition-colors"
+            class="bg-white border border-zinc-200 rounded-lg p-4 shadow-2xs flex flex-col justify-between hover:border-zinc-300 transition-colors"
           >
             <div>
               <div class="flex items-center justify-between">
                 <div class="flex items-center gap-2">
-                  <div class="w-2.5 h-2.5 rounded-full bg-[#a47a3c]"></div>
-                  <h3 class="font-serif font-medium text-base text-[#1d1d1f]">
+                  <div class="w-2 h-2 rounded-full bg-zinc-900"></div>
+                  <h3 class="font-semibold text-sm text-zinc-900">
                     {{ role.name }}
                   </h3>
                 </div>
-                <span class="text-[11px] font-mono text-[#86868b] bg-[#fbf9f5] px-2 py-0.5 rounded-full border border-[#e0d9cc]">
+                <span class="text-[11px] font-mono text-zinc-600 bg-zinc-50 px-2 py-0.5 rounded border border-zinc-200">
                   {{ role.users_count }} {{ role.users_count === 1 ? 'user' : 'users' }}
                 </span>
               </div>
 
               <!-- Permission Badges -->
-              <div class="mt-3 pt-3 border-t border-[#e0d9cc]/60">
-                <div class="text-[10px] uppercase tracking-wider font-semibold text-[#86868b] mb-2">
-                  Granted Permissions:
+              <div class="mt-3 pt-3 border-t border-zinc-100">
+                <div class="text-[10px] uppercase tracking-wider font-semibold text-zinc-400 mb-2">
+                  Granted Permissions
                 </div>
-                <div class="flex flex-wrap gap-1.5">
+                <div class="flex flex-wrap gap-1">
                   <span 
                     v-for="perm in role.permissions" 
                     :key="perm"
-                    class="text-[10px] bg-[#f5eee2] text-[#7a5620] border border-[#e0d9cc] px-2 py-0.5 rounded-md font-mono"
+                    class="text-[10px] bg-zinc-100 text-zinc-700 border border-zinc-200 px-1.5 py-0.5 rounded font-mono"
                   >
                     {{ perm }}
                   </span>
-                  <span v-if="role.permissions.length === 0" class="text-xs text-[#86868b] italic">
+                  <span v-if="role.permissions.length === 0" class="text-xs text-zinc-400 italic">
                     No permissions assigned
                   </span>
                 </div>
               </div>
             </div>
 
-            <div class="mt-4 pt-3 border-t border-[#e0d9cc]/40 text-[11px] text-[#6e6e73] flex items-center gap-1.5">
+            <div class="mt-3 pt-2.5 border-t border-zinc-100 text-[11px] text-zinc-500 flex items-center gap-1.5">
               <CheckCircle2 class="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-              <span class="truncate font-medium text-emerald-800">Active role configured</span>
+              <span class="truncate font-medium text-emerald-700">Active role configured</span>
             </div>
           </div>
 
-          <div v-if="filteredRoles.length === 0" class="col-span-full py-8 text-center text-xs text-[#86868b] bg-white rounded-2xl border border-dashed border-[#e0d9cc]">
+          <div v-if="filteredRoles.length === 0" class="col-span-full py-8 text-center text-xs text-zinc-500 bg-white rounded-lg border border-dashed border-zinc-200">
             No roles matching "{{ searchRoleQuery }}".
           </div>
         </div>
       </section>
 
       <!-- Administrators Table -->
-      <section id="admins-section" class="space-y-4 pt-2">
+      <section id="admins-section" class="space-y-3 pt-1">
         <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
             <div class="flex items-center gap-2">
-              <h2 class="text-xl font-serif font-medium text-[#1d1d1f] tracking-tight">
+              <h2 class="text-base font-semibold text-zinc-900 tracking-tight">
                 Admin Staff Accounts
               </h2>
-              <span class="text-xs text-[#86868b] bg-white px-2.5 py-0.5 rounded-full border border-[#e0d9cc]">
+              <span class="text-[11px] font-mono text-zinc-600 bg-zinc-100 px-2 py-0.5 rounded border border-zinc-200">
                 {{ filteredAdmins.length }} showing
               </span>
             </div>
-            <p class="text-xs text-[#6e6e73] mt-0.5">
+            <p class="text-xs text-zinc-500 mt-0.5">
               Authorized staff members managing store catalog, customer orders, and operations.
             </p>
           </div>
@@ -365,22 +335,22 @@ const getInitials = (name) => {
           <!-- Controls: Search & Role Filters -->
           <div class="flex flex-wrap items-center gap-2">
             <div class="relative w-full sm:w-56">
-              <Search class="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-[#86868b]" />
+              <Search class="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400" />
               <input 
                 v-model="searchAdminQuery"
                 type="text"
-                placeholder="Search staff by name or email..."
-                class="w-full pl-8 pr-3 py-1.5 text-xs bg-white border border-[#e0d9cc] rounded-full focus:outline-none focus:ring-1 focus:ring-[#1a1a1a] focus:border-[#1a1a1a]"
+                placeholder="Search staff..."
+                class="w-full pl-8 pr-3 py-1.5 text-xs bg-white border border-zinc-200 rounded-md focus:outline-none focus:border-zinc-900"
               />
             </div>
 
             <!-- Role Filter Pills -->
-            <div class="flex items-center gap-1 bg-white p-1 rounded-full border border-[#e0d9cc] text-[11px]">
+            <div class="flex items-center gap-1 bg-white p-1 rounded-md border border-zinc-200 text-[11px]">
               <button 
                 type="button"
                 @click="selectedRoleFilter = 'ALL'"
-                class="px-2.5 py-0.5 rounded-full font-medium transition-colors cursor-pointer"
-                :class="selectedRoleFilter === 'ALL' ? 'bg-[#1a1a1a] text-white' : 'text-stone-600 hover:text-black'"
+                class="px-2.5 py-0.5 rounded font-medium transition-colors cursor-pointer"
+                :class="selectedRoleFilter === 'ALL' ? 'bg-zinc-900 text-white' : 'text-zinc-600 hover:text-zinc-900'"
               >
                 All
               </button>
@@ -389,8 +359,8 @@ const getInitials = (name) => {
                 :key="r.id"
                 type="button"
                 @click="selectedRoleFilter = r.name"
-                class="px-2.5 py-0.5 rounded-full font-medium transition-colors cursor-pointer"
-                :class="selectedRoleFilter === r.name ? 'bg-[#1a1a1a] text-white' : 'text-stone-600 hover:text-black'"
+                class="px-2.5 py-0.5 rounded font-medium transition-colors cursor-pointer"
+                :class="selectedRoleFilter === r.name ? 'bg-zinc-900 text-white' : 'text-zinc-600 hover:text-zinc-900'"
               >
                 {{ r.name }}
               </button>
@@ -398,51 +368,51 @@ const getInitials = (name) => {
           </div>
         </div>
 
-        <div class="bg-white border border-[#e0d9cc] rounded-2xl overflow-hidden shadow-2xs">
+        <div class="bg-white border border-zinc-200 rounded-lg overflow-hidden shadow-2xs">
           <div class="overflow-x-auto">
             <table class="w-full text-left text-xs">
-              <thead class="bg-[#f3efe7] text-[#6e6e73] uppercase text-[10px] font-semibold tracking-wider border-b border-[#e0d9cc]">
+              <thead class="bg-zinc-50 text-zinc-500 uppercase text-[10px] font-semibold tracking-wider border-b border-zinc-200">
                 <tr>
-                  <th class="py-3 px-4">Admin Profile</th>
-                  <th class="py-3 px-4">Email Address</th>
-                  <th class="py-3 px-4">Assigned Roles</th>
-                  <th class="py-3 px-4">Created Date</th>
-                  <th class="py-3 px-4 text-right">Actions</th>
+                  <th class="py-2.5 px-4">Admin Profile</th>
+                  <th class="py-2.5 px-4">Email Address</th>
+                  <th class="py-2.5 px-4">Assigned Roles</th>
+                  <th class="py-2.5 px-4">Created Date</th>
+                  <th class="py-2.5 px-4 text-right">Actions</th>
                 </tr>
               </thead>
-              <tbody class="divide-y divide-[#e0d9cc]/60">
-                <tr v-for="adm in filteredAdmins" :key="adm.id" class="hover:bg-[#fbf9f5] transition-colors">
-                  <td class="py-3.5 px-4 font-semibold text-[#1d1d1f]">
+              <tbody class="divide-y divide-zinc-100">
+                <tr v-for="adm in filteredAdmins" :key="adm.id" class="hover:bg-zinc-50/80 transition-colors">
+                  <td class="py-3 px-4 font-semibold text-zinc-900">
                     <div class="flex items-center gap-2.5">
-                      <div class="w-7 h-7 rounded-full bg-[#1a1a1a] text-white flex items-center justify-center font-bold text-[10px] shadow-2xs">
+                      <div class="w-7 h-7 rounded-md bg-zinc-900 text-white flex items-center justify-center font-semibold text-[10px]">
                         {{ getInitials(adm.name) }}
                       </div>
                       <span>{{ adm.name }}</span>
                     </div>
                   </td>
-                  <td class="py-3.5 px-4 font-mono text-[#6e6e73]">
+                  <td class="py-3 px-4 font-mono text-zinc-600">
                     {{ adm.email }}
                   </td>
-                  <td class="py-3.5 px-4">
+                  <td class="py-3 px-4">
                     <div class="flex flex-wrap gap-1">
                       <span 
                         v-for="r in adm.roles" 
                         :key="r"
-                        class="text-[10px] font-mono px-2 py-0.5 rounded-full font-semibold"
-                        :class="r === 'Super Admin' ? 'bg-[#1a1a1a] text-white' : 'bg-[#f5eee2] text-[#7a5620] border border-[#e0d9cc]'"
+                        class="text-[10px] font-mono px-2 py-0.5 rounded font-semibold"
+                        :class="r === 'Super Admin' ? 'bg-zinc-900 text-white' : 'bg-zinc-100 text-zinc-700 border border-zinc-200'"
                       >
                         {{ r }}
                       </span>
                     </div>
                   </td>
-                  <td class="py-3.5 px-4 text-[#86868b]">
+                  <td class="py-3 px-4 text-zinc-500">
                     {{ adm.created_at }}
                   </td>
-                  <td class="py-3.5 px-4 text-right">
+                  <td class="py-3 px-4 text-right">
                     <button 
                       type="button"
                       @click="openRoleEdit(adm)"
-                      class="px-3 py-1 text-xs font-semibold text-[#1a1a1a] hover:text-[#a47a3c] bg-[#f3efe7] hover:bg-[#ece7de] rounded-lg transition-colors cursor-pointer border border-[#e0d9cc]/80"
+                      class="px-2.5 py-1 text-xs font-medium text-zinc-700 hover:text-zinc-900 bg-white hover:bg-zinc-50 rounded-md transition-colors cursor-pointer border border-zinc-200"
                     >
                       Manage Roles
                     </button>
@@ -450,7 +420,7 @@ const getInitials = (name) => {
                 </tr>
 
                 <tr v-if="filteredAdmins.length === 0">
-                  <td colspan="5" class="py-8 text-center text-xs text-[#86868b]">
+                  <td colspan="5" class="py-8 text-center text-xs text-zinc-500">
                     No administrators found matching your search and filter criteria.
                   </td>
                 </tr>
@@ -460,51 +430,49 @@ const getInitials = (name) => {
         </div>
       </section>
 
-
-
     </div>
 
     <!-- Create Role Modal -->
     <div 
       v-if="showCreateRoleModal"
-      class="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4"
+      class="fixed inset-0 z-50 bg-zinc-950/60 backdrop-blur-xs flex items-center justify-center p-4"
       @click.self="showCreateRoleModal = false"
     >
-      <div class="bg-white rounded-3xl max-w-md w-full p-6 sm:p-7 shadow-2xl border border-[#e0d9cc] space-y-4">
+      <div class="bg-white rounded-lg max-w-md w-full p-5 shadow-xl border border-zinc-200 space-y-4">
         <div class="flex items-center justify-between">
           <div>
-            <h3 class="font-serif font-medium text-lg text-[#1d1d1f]">Create New Staff Role</h3>
-            <p class="text-xs text-[#6e6e73]">Define a role with customized permissions for your team</p>
+            <h3 class="font-semibold text-base text-zinc-900">Create New Staff Role</h3>
+            <p class="text-xs text-zinc-500">Define a role with customized permissions for your team</p>
           </div>
-          <button @click="showCreateRoleModal = false" class="text-stone-400 hover:text-stone-700 cursor-pointer text-xl leading-none">&times;</button>
+          <button @click="showCreateRoleModal = false" class="text-zinc-400 hover:text-zinc-700 cursor-pointer text-xl leading-none">&times;</button>
         </div>
 
         <form @submit.prevent="submitCreateRole" class="space-y-4">
           <div>
-            <label class="block text-xs font-semibold uppercase tracking-wider text-[#6e6e73] mb-1">Role Name</label>
+            <label class="block text-xs font-medium text-zinc-700 mb-1">Role Name</label>
             <input 
               v-model="newRoleForm.name" 
               type="text" 
               placeholder="e.g. Catalog Specialist"
               required
-              class="w-full px-3.5 py-2 border border-[#e0d9cc] rounded-xl text-xs focus:ring-1 focus:ring-[#1a1a1a] focus:border-[#1a1a1a] focus:outline-none"
+              class="w-full px-3 py-1.5 border border-zinc-200 rounded-md text-xs focus:border-zinc-900 focus:outline-none"
             />
             <p v-if="newRoleForm.errors.name" class="text-xs text-red-600 mt-1">{{ newRoleForm.errors.name }}</p>
           </div>
 
           <div>
-            <label class="block text-xs font-semibold uppercase tracking-wider text-[#6e6e73] mb-2">Assign Permissions</label>
-            <div class="space-y-2 max-h-48 overflow-y-auto border border-[#e0d9cc] rounded-xl p-3 bg-[#fbf9f5]">
+            <label class="block text-xs font-medium text-zinc-700 mb-1.5">Assign Permissions</label>
+            <div class="space-y-1.5 max-h-48 overflow-y-auto border border-zinc-200 rounded-md p-2.5 bg-zinc-50">
               <label 
                 v-for="perm in availablePermissions" 
                 :key="perm"
-                class="flex items-center gap-2 text-xs text-[#1d1d1f] cursor-pointer hover:bg-stone-100 p-1 rounded"
+                class="flex items-center gap-2 text-xs text-zinc-800 cursor-pointer hover:bg-zinc-100 p-1 rounded"
               >
                 <input 
                   type="checkbox" 
                   :value="perm" 
                   v-model="newRoleForm.permissions"
-                  class="rounded border-[#e0d9cc] text-[#1a1a1a] focus:ring-[#1a1a1a]"
+                  class="rounded border-zinc-300 text-zinc-900 focus:ring-zinc-900"
                 />
                 <span class="font-mono">{{ perm }}</span>
               </label>
@@ -515,14 +483,14 @@ const getInitials = (name) => {
             <button 
               type="button" 
               @click="showCreateRoleModal = false" 
-              class="px-4 py-2 text-xs font-semibold text-[#6e6e73] hover:text-[#1d1d1f] cursor-pointer"
+              class="px-3.5 py-1.5 text-xs font-medium text-zinc-600 hover:text-zinc-900 cursor-pointer"
             >
               Cancel
             </button>
             <button 
               type="submit" 
               :disabled="newRoleForm.processing"
-              class="px-5 py-2 bg-[#1a1a1a] hover:bg-black text-white text-xs font-semibold rounded-full cursor-pointer disabled:opacity-50 transition-colors"
+              class="px-4 py-1.5 bg-zinc-900 hover:bg-zinc-800 text-white text-xs font-semibold rounded-md cursor-pointer disabled:opacity-50 transition-colors"
             >
               Save Role
             </button>
@@ -534,32 +502,32 @@ const getInitials = (name) => {
     <!-- Edit Admin Roles Modal -->
     <div 
       v-if="editingAdmin"
-      class="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4"
+      class="fixed inset-0 z-50 bg-zinc-950/60 backdrop-blur-xs flex items-center justify-center p-4"
       @click.self="editingAdmin = null"
     >
-      <div class="bg-white rounded-3xl max-w-md w-full p-6 sm:p-7 shadow-2xl border border-[#e0d9cc] space-y-4">
+      <div class="bg-white rounded-lg max-w-md w-full p-5 shadow-xl border border-zinc-200 space-y-4">
         <div class="flex items-center justify-between">
           <div>
-            <h3 class="font-serif font-medium text-lg text-[#1d1d1f]">Manage Staff Roles</h3>
-            <p class="text-xs text-[#6e6e73]">{{ editingAdmin.name }} ({{ editingAdmin.email }})</p>
+            <h3 class="font-semibold text-base text-zinc-900">Manage Staff Roles</h3>
+            <p class="text-xs text-zinc-500">{{ editingAdmin.name }} ({{ editingAdmin.email }})</p>
           </div>
-          <button @click="editingAdmin = null" class="text-stone-400 hover:text-stone-700 cursor-pointer text-xl leading-none">&times;</button>
+          <button @click="editingAdmin = null" class="text-zinc-400 hover:text-zinc-700 cursor-pointer text-xl leading-none">&times;</button>
         </div>
 
         <form @submit.prevent="submitSyncRoles" class="space-y-4">
-          <div class="space-y-2 border border-[#e0d9cc] rounded-xl p-3 bg-[#fbf9f5]">
+          <div class="space-y-1.5 border border-zinc-200 rounded-md p-2.5 bg-zinc-50">
             <label 
               v-for="r in roles" 
               :key="r.name"
-              class="flex items-center gap-2 text-xs text-[#1d1d1f] cursor-pointer hover:bg-stone-100 p-1 rounded"
+              class="flex items-center gap-2 text-xs text-zinc-800 cursor-pointer hover:bg-zinc-100 p-1 rounded"
             >
               <input 
                 type="checkbox" 
                 :value="r.name" 
                 v-model="syncRoleForm.roles"
-                class="rounded border-[#e0d9cc] text-[#1a1a1a] focus:ring-[#1a1a1a]"
+                class="rounded border-zinc-300 text-zinc-900 focus:ring-zinc-900"
               />
-              <span class="font-semibold">{{ r.name }}</span>
+              <span class="font-medium">{{ r.name }}</span>
             </label>
           </div>
 
@@ -567,14 +535,14 @@ const getInitials = (name) => {
             <button 
               type="button" 
               @click="editingAdmin = null" 
-              class="px-4 py-2 text-xs font-semibold text-[#6e6e73] hover:text-[#1d1d1f] cursor-pointer"
+              class="px-3.5 py-1.5 text-xs font-medium text-zinc-600 hover:text-zinc-900 cursor-pointer"
             >
               Cancel
             </button>
             <button 
               type="submit" 
               :disabled="syncRoleForm.processing"
-              class="px-5 py-2 bg-[#1a1a1a] hover:bg-black text-white text-xs font-semibold rounded-full cursor-pointer disabled:opacity-50 transition-colors"
+              class="px-4 py-1.5 bg-zinc-900 hover:bg-zinc-800 text-white text-xs font-semibold rounded-md cursor-pointer disabled:opacity-50 transition-colors"
             >
               Update Roles
             </button>

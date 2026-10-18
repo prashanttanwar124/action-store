@@ -22,10 +22,11 @@ export function pickupOptions(info, day, now, timezone, bookedSlots = {}, maxCap
   const date = new Date(`${today}T12:00:00Z`);
   if (day === 'tomorrow') date.setUTCDate(date.getUTCDate() + 1);
 
-  const dayOfWeek = new Intl.DateTimeFormat('en-US', { timeZone: timezone, weekday: 'long' })
+  const dayOfWeek = new Intl.DateTimeFormat('en-US', { timeZone: 'UTC', weekday: 'long' })
     .format(date)
     .toLowerCase();
-  const isDayOpen = !pickupDays || !Array.isArray(pickupDays) || pickupDays.length === 0 || pickupDays.includes(dayOfWeek);
+  const normalizedDays = Array.isArray(pickupDays) ? pickupDays.map(d => String(d).toLowerCase()) : null;
+  const isDayOpen = !normalizedDays || normalizedDays.length === 0 || normalizedDays.includes(dayOfWeek);
 
   const start = timeMinutes(info.pickup_slot_start_time ?? '09:00');
   const end = timeMinutes(info.pickup_slot_end_time ?? '21:00');
@@ -172,12 +173,12 @@ export function useCheckoutSchedule(storeInfo, timezone, scheduleConfig = {}) {
     }).formatToParts(now.value).map(part => [part.type, part.value]));
 
     const todayDate = new Date(`${parts.year}-${parts.month}-${parts.day}T12:00:00Z`);
-    const dayOfWeek = new Intl.DateTimeFormat('en-US', { timeZone: tz.value, weekday: 'long' })
+    const dayOfWeek = new Intl.DateTimeFormat('en-US', { timeZone: 'UTC', weekday: 'long' })
       .format(todayDate)
       .toLowerCase();
 
-    const allowedDays = pickupDays.value;
-    if (allowedDays && Array.isArray(allowedDays) && allowedDays.length > 0 && !allowedDays.includes(dayOfWeek)) {
+    const allowedDays = Array.isArray(pickupDays.value) ? pickupDays.value.map(d => String(d).toLowerCase()) : null;
+    if (allowedDays && allowedDays.length > 0 && !allowedDays.includes(dayOfWeek)) {
       return false;
     }
 
@@ -269,8 +270,11 @@ export function useCheckoutSchedule(storeInfo, timezone, scheduleConfig = {}) {
 
   const scheduleError = computed(() => {
     if (storeInfo.value.is_pickup_active === false) return 'Store pickup is currently paused.';
+    if (pickupTimingMode.value !== 'scheduled') {
+      if (todayOptions.value.isDayOpen === false) return 'Store pickup is closed on this day. Please select another day.';
+      return isAsapAvailable.value ? '' : 'Store is currently closed for ASAP pickup. Please select a scheduled pickup time.';
+    }
     if (options.value.isDayOpen === false) return 'Store pickup is closed on this day. Please select another day.';
-    if (pickupTimingMode.value !== 'scheduled') return '';
     const valid = scheduledTimingType.value === 'slot'
       ? options.value.slots.some(slot => slot.label === selectedScheduledTime.value && !slot.disabled)
       : options.value.times.includes(formattedCustomTime.value);
@@ -279,6 +283,10 @@ export function useCheckoutSchedule(storeInfo, timezone, scheduleConfig = {}) {
 
   function pickupPayload() {
     now.value = new Date();
+    if (pickupTimingMode.value === 'asap' && !isAsapAvailable.value) {
+      pickupTimingMode.value = 'scheduled';
+      throw new Error('Store is currently closed for ASAP pickup. Please select a scheduled pickup time.');
+    }
     if (scheduleError.value) throw new Error(scheduleError.value);
     const minutes = timeMinutes(formattedCustomTime.value);
     return {

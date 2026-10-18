@@ -48,20 +48,20 @@ const handleDelete = () => {
     <div class="space-y-6">
 
       <!-- Header & Quick Actions -->
-      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white border border-[#e0d9cc] rounded-3xl p-6 sm:p-7 shadow-2xs">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white border border-[#e4e4e7] rounded-lg p-6 sm:p-7 shadow-2xs">
         <div>
           <div class="flex items-center gap-2 mb-1">
-            <span class="text-[11px] font-mono uppercase bg-[#1a1a1a] text-white px-2.5 py-0.5 rounded-full font-semibold">
+            <span class="text-[11px] font-mono uppercase bg-[#18181b] text-white px-2.5 py-0.5 rounded-md font-semibold">
               Hero Section
             </span>
-            <span class="text-[11px] text-[#7a5620] bg-[#f5eee2] border border-[#e0d9cc] px-2.5 py-0.5 rounded-full font-medium">
+            <span class="text-[11px] text-[#27272a] bg-[#f4f4f5] border border-[#e4e4e7] px-2.5 py-0.5 rounded-md font-medium">
               Live Homepage Carousel
             </span>
           </div>
-          <h1 class="text-2xl sm:text-3xl font-serif font-medium text-[#1d1d1f] tracking-tight">
+          <h1 class="text-2xl sm:text-3xl font-semibold text-[#09090b] tracking-tight">
             Homepage Hero Sliders
           </h1>
-          <p class="text-xs sm:text-sm text-[#6e6e73] font-normal mt-1">
+          <p class="text-xs sm:text-sm text-[#52525b] font-normal mt-1">
             Configure headline banners, seasonal announcements, recipe highlights, and call-to-actions shown on the customer storefront.
           </p>
         </div>
@@ -70,16 +70,16 @@ const handleDelete = () => {
           <a
             href="/"
             target="_blank"
-            class="inline-flex items-center gap-2 px-4 py-2.5 bg-[#f3efe7] hover:bg-[#ece7de] text-[#1d1d1f] border border-[#e0d9cc] rounded-full text-xs font-semibold transition-colors shadow-2xs"
+            class="inline-flex items-center gap-2 px-4 py-2.5 bg-[#f4f4f5] hover:bg-[#e4e4e7] text-[#09090b] border border-[#e4e4e7] rounded-md text-xs font-semibold transition-colors shadow-2xs"
           >
-            <Eye class="w-4 h-4 text-[#a47a3c]" />
+            <Eye class="w-4 h-4 text-[#18181b]" />
             <span>Preview Storefront</span>
-            <ExternalLink class="w-3.5 h-3.5 text-[#86868b]" />
+            <ExternalLink class="w-3.5 h-3.5 text-[#71717a]" />
           </a>
 
           <Link
             :href="route('admin.sliders.create')"
-            class="inline-flex items-center gap-2 px-5 py-2.5 bg-[#1a1a1a] hover:bg-black text-white text-xs font-semibold rounded-full shadow-sm hover:shadow transition-all active:scale-98 cursor-pointer"
+            class="inline-flex items-center gap-2 px-5 py-2.5 bg-[#18181b] hover:bg-black text-white text-xs font-semibold rounded-md shadow-sm hover:shadow transition-all active:scale-98 cursor-pointer"
           >
             <Plus class="w-4 h-4 stroke-[2.5]" />
             <span>Add Slide</span>
@@ -88,17 +88,17 @@ const handleDelete = () => {
       </div>
 
       <!-- Slides List -->
-      <div v-if="sliders.length === 0" class="bg-white border border-[#e0d9cc] rounded-3xl p-12 text-center shadow-2xs">
-        <div class="w-16 h-16 rounded-full bg-[#f5eee2] text-[#a47a3c] flex items-center justify-center mx-auto mb-4">
+      <div v-if="sliders.length === 0" class="bg-white border border-[#e4e4e7] rounded-lg p-12 text-center shadow-2xs">
+        <div class="w-16 h-16 rounded-md bg-[#f4f4f5] text-[#18181b] flex items-center justify-center mx-auto mb-4">
           <Sliders class="w-8 h-8" />
         </div>
-        <h3 class="text-lg font-serif font-medium text-[#1d1d1f]">No hero slides configured</h3>
-        <p class="text-xs text-[#6e6e73] max-w-md mx-auto mt-1 mb-6">
+        <h3 class="text-lg font-semibold text-[#09090b]">No hero slides configured</h3>
+        <p class="text-xs text-[#52525b] max-w-md mx-auto mt-1 mb-6">
           The storefront will display built-in default slides until you publish custom slides from this console.
         </p>
         <Link
           :href="route('admin.sliders.create')"
-          class="inline-flex items-center gap-2 px-5 py-2.5 bg-[#1a1a1a] hover:bg-black text-white text-xs font-semibold rounded-full shadow-sm transition-all"
+          class="inline-flex items-center gap-2 px-5 py-2.5 bg-[#18181b] hover:bg-black text-white text-xs font-semibold rounded-md shadow-sm transition-all"
         >
           <Plus class="w-4 h-4 stroke-[2.5]" />
           <span>Create First Slide</span>
@@ -109,21 +109,21 @@ const handleDelete = () => {
         <div 
           v-for="(slide, index) in sliders" 
           :key="slide.id"
-          class="bg-white border border-[#e0d9cc] rounded-3xl p-5 sm:p-6 shadow-2xs hover:border-[#a47a3c]/60 transition-all flex flex-col lg:flex-row lg:items-center justify-between gap-6"
+          class="bg-white border border-[#e4e4e7] rounded-lg p-5 sm:p-6 shadow-2xs hover:border-[#18181b]/60 transition-all flex flex-col lg:flex-row lg:items-center justify-between gap-6"
         >
           <!-- Left: Visual Banner Miniature Preview -->
           <div class="w-full lg:w-[380px] shrink-0">
             <div 
-              class="relative rounded-2xl overflow-hidden shadow-xs border border-white/10 grid grid-cols-12 min-h-[140px]"
-              :style="{ backgroundColor: slide.bg_color || '#1a1a1a' }"
+              class="relative rounded-lg overflow-hidden shadow-xs border border-white/10 grid grid-cols-12 min-h-[140px]"
+              :style="{ backgroundColor: slide.bg_color || '#18181b' }"
             >
               <!-- Copy Preview -->
               <div class="col-span-7 p-3.5 flex flex-col justify-between text-white select-none">
                 <div>
-                  <div class="text-[8px] font-semibold tracking-wider uppercase text-[#a47a3c] leading-tight line-clamp-1 mb-0.5">
+                  <div class="text-[8px] font-semibold tracking-wider uppercase text-[#18181b] leading-tight line-clamp-1 mb-0.5">
                     {{ slide.tag || 'FEATURED' }}
                   </div>
-                  <h4 class="text-sm font-serif font-medium leading-tight line-clamp-3 whitespace-pre-line">
+                  <h4 class="text-sm font-semibold leading-tight line-clamp-3 whitespace-pre-line">
                     {{ slide.title }}
                   </h4>
                 </div>
@@ -134,7 +134,7 @@ const handleDelete = () => {
               </div>
 
               <!-- Image Area -->
-              <div class="col-span-5 relative bg-stone-900 overflow-hidden">
+              <div class="col-span-5 relative bg-zinc-900 overflow-hidden">
                 <img 
                   :src="slide.image" 
                   :alt="slide.title" 
@@ -151,53 +151,53 @@ const handleDelete = () => {
           <!-- Middle: Metadata & Configuration -->
           <div class="flex-1 space-y-2 min-w-0">
             <div class="flex items-center gap-2 flex-wrap">
-              <span class="text-xs font-mono font-bold text-stone-500 bg-stone-100 px-2 py-0.5 rounded-md">
+              <span class="text-xs font-mono font-bold text-zinc-500 bg-zinc-100 px-2 py-0.5 rounded-md">
                 Slide #{{ index + 1 }}
               </span>
               <span 
-                class="text-[11px] font-semibold px-2.5 py-0.5 rounded-full"
-                :class="slide.is_active ? 'bg-emerald-100 text-emerald-800 border border-emerald-200' : 'bg-stone-100 text-stone-600 border border-stone-200'"
+                class="text-[11px] font-semibold px-2.5 py-0.5 rounded-md"
+                :class="slide.is_active ? 'bg-emerald-100 text-emerald-800 border border-emerald-200' : 'bg-zinc-100 text-zinc-600 border border-zinc-200'"
               >
                 {{ slide.is_active ? '● Active on Storefront' : '○ Disabled' }}
               </span>
-              <span class="text-xs text-[#86868b] font-mono">
+              <span class="text-xs text-[#71717a] font-mono">
                 Order: {{ slide.sort_order }}
               </span>
             </div>
 
             <div>
-              <h3 class="font-serif font-medium text-base text-[#1d1d1f] truncate">
+              <h3 class="font-semibold text-base text-[#09090b] truncate">
                 {{ slide.title.replace(/\n/g, ' ') }}
               </h3>
-              <p class="text-xs text-[#6e6e73] font-normal truncate mt-0.5">
-                Target: <span class="font-mono text-stone-800">{{ slide.link_url }}</span>
+              <p class="text-xs text-[#52525b] font-normal truncate mt-0.5">
+                Target: <span class="font-mono text-zinc-800">{{ slide.link_url }}</span>
               </p>
             </div>
 
-            <div class="flex items-center gap-4 text-xs text-[#86868b] pt-1">
+            <div class="flex items-center gap-4 text-xs text-[#71717a] pt-1">
               <span class="inline-flex items-center gap-1.5">
-                <span class="w-3 h-3 rounded-full border border-stone-300" :style="{ backgroundColor: slide.bg_color }"></span>
-                <span>{{ slide.bg_color || '#1a1a1a' }}</span>
+                <span class="w-3 h-3 rounded-full border border-zinc-300" :style="{ backgroundColor: slide.bg_color }"></span>
+                <span>{{ slide.bg_color || '#18181b' }}</span>
               </span>
               <span>·</span>
-              <span>CTA: <strong class="text-stone-700">{{ slide.cta_text }}</strong></span>
+              <span>CTA: <strong class="text-zinc-700">{{ slide.cta_text }}</strong></span>
             </div>
           </div>
 
           <!-- Right: Actions -->
-          <div class="flex items-center gap-2 shrink-0 pt-2 lg:pt-0 border-t lg:border-t-0 border-[#e0d9cc]/60">
+          <div class="flex items-center gap-2 shrink-0 pt-2 lg:pt-0 border-t lg:border-t-0 border-[#e4e4e7]/60">
             <Link
               :href="route('admin.sliders.edit', slide.id)"
-              class="inline-flex items-center gap-1.5 px-3.5 py-2 bg-[#f3efe7] hover:bg-[#ece7de] text-[#1d1d1f] text-xs font-medium rounded-xl border border-[#e0d9cc] transition-colors cursor-pointer"
+              class="inline-flex items-center gap-1.5 px-3.5 py-2 bg-[#f4f4f5] hover:bg-[#e4e4e7] text-[#09090b] text-xs font-medium rounded-md border border-[#e4e4e7] transition-colors cursor-pointer"
             >
-              <Edit class="w-3.5 h-3.5 text-[#a47a3c]" />
+              <Edit class="w-3.5 h-3.5 text-[#18181b]" />
               <span>Edit</span>
             </Link>
 
             <button
               type="button"
               @click="confirmDelete(slide)"
-              class="inline-flex items-center gap-1.5 px-3.5 py-2 text-rose-600 hover:text-rose-700 hover:bg-rose-50 rounded-xl text-xs font-medium transition-colors cursor-pointer border border-transparent hover:border-rose-200"
+              class="inline-flex items-center gap-1.5 px-3.5 py-2 text-rose-600 hover:text-rose-700 hover:bg-rose-50 rounded-md text-xs font-medium transition-colors cursor-pointer border border-transparent hover:border-rose-200"
               title="Delete Slide"
             >
               <Trash2 class="w-3.5 h-3.5" />
@@ -214,24 +214,24 @@ const handleDelete = () => {
       v-if="deletingSlider" 
       class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs"
     >
-      <div class="bg-white rounded-3xl max-w-md w-full p-6 sm:p-7 space-y-4 shadow-2xl border border-[#e0d9cc]">
-        <div class="w-12 h-12 rounded-2xl bg-rose-50 text-rose-600 flex items-center justify-center">
+      <div class="bg-white rounded-lg max-w-md w-full p-6 sm:p-7 space-y-4 shadow-2xl border border-[#e4e4e7]">
+        <div class="w-12 h-12 rounded-lg bg-rose-50 text-rose-600 flex items-center justify-center">
           <Trash2 class="w-6 h-6" />
         </div>
         <div>
-          <h3 class="text-lg font-serif font-medium text-[#1d1d1f]">
+          <h3 class="text-lg font-semibold text-[#09090b]">
             Delete Hero Slide?
           </h3>
-          <p class="text-xs text-[#6e6e73] mt-1">
-            Are you sure you want to remove slide <strong class="text-[#1d1d1f]">"{{ deletingSlider.title.replace(/\n/g, ' ') }}"</strong>? This slide will immediately be removed from the customer carousel.
+          <p class="text-xs text-[#52525b] mt-1">
+            Are you sure you want to remove slide <strong class="text-[#09090b]">"{{ deletingSlider.title.replace(/\n/g, ' ') }}"</strong>? This slide will immediately be removed from the customer carousel.
           </p>
         </div>
 
-        <div class="flex items-center justify-end gap-3 pt-3 border-t border-[#e0d9cc]/60">
+        <div class="flex items-center justify-end gap-3 pt-3 border-t border-[#e4e4e7]/60">
           <button
             type="button"
             @click="deletingSlider = null"
-            class="px-4 py-2 text-xs font-medium text-stone-600 hover:text-stone-800 rounded-full hover:bg-stone-100 transition-colors cursor-pointer"
+            class="px-4 py-2 text-xs font-medium text-zinc-600 hover:text-zinc-800 rounded-md hover:bg-zinc-100 transition-colors cursor-pointer"
           >
             Cancel
           </button>
@@ -239,7 +239,7 @@ const handleDelete = () => {
             type="button"
             @click="handleDelete"
             :disabled="isDeleting"
-            class="px-5 py-2 text-xs font-semibold text-white bg-rose-600 hover:bg-rose-700 rounded-full transition-colors cursor-pointer disabled:opacity-50"
+            class="px-5 py-2 text-xs font-semibold text-white bg-rose-600 hover:bg-rose-700 rounded-md transition-colors cursor-pointer disabled:opacity-50"
           >
             {{ isDeleting ? 'Deleting...' : 'Confirm Delete' }}
           </button>

@@ -212,20 +212,20 @@ const executeDelete = () => {
     <div class="space-y-6 max-w-7xl mx-auto pb-16">
       
       <!-- TOP BANNER / HEADER -->
-      <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white border border-[#dfd6c8] p-5 sm:p-6 rounded-2xl sm:rounded-3xl shadow-2xs">
+      <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white border border-[#e4e4e7] p-5 sm:p-6 rounded-lg sm:rounded-lg shadow-2xs">
         <div>
           <div class="flex items-center gap-2 mb-1">
-            <span class="text-[11px] font-mono uppercase bg-stone-900 text-white px-2.5 py-0.5 rounded-full font-bold tracking-wider">
+            <span class="text-[11px] font-mono uppercase bg-zinc-900 text-white px-2.5 py-0.5 rounded-md font-bold tracking-wider">
               Procurement & Supply Chain
             </span>
-            <span class="text-[11px] text-amber-900 bg-amber-50 border border-amber-200/80 px-2.5 py-0.5 rounded-full font-bold">
+            <span class="text-[11px] text-amber-900 bg-amber-50 border border-amber-200/80 px-2.5 py-0.5 rounded-md font-bold">
               Direct Sourcing
             </span>
           </div>
-          <h1 class="text-2xl sm:text-3xl font-serif font-bold text-stone-900 tracking-tight">
+          <h1 class="text-2xl sm:text-3xl font-semibold text-zinc-900 tracking-tight">
             Suppliers &amp; Vendors
           </h1>
-          <p class="text-xs sm:text-sm text-stone-600 font-normal mt-1 max-w-2xl leading-relaxed">
+          <p class="text-xs sm:text-sm text-zinc-600 font-normal mt-1 max-w-2xl leading-relaxed">
             Manage farm-direct dairies, stone mills, spice cooperatives, and artisan producers supplying Masala Mart's inventory.
           </p>
         </div>
@@ -234,7 +234,7 @@ const executeDelete = () => {
         <button
           type="button"
           @click="openCreateDrawer"
-          class="inline-flex items-center gap-2 px-5 py-2.5 bg-stone-900 hover:bg-black text-white text-xs font-bold rounded-full transition-all shadow-xs active:scale-[0.98] cursor-pointer self-start md:self-center shrink-0"
+          class="inline-flex items-center gap-2 px-5 py-2.5 bg-zinc-900 hover:bg-black text-white text-xs font-bold rounded-md transition-all shadow-xs active:scale-[0.98] cursor-pointer self-start md:self-center shrink-0"
         >
           <Plus class="w-4 h-4 stroke-[2.5]" />
           <span>Register Supplier</span>
@@ -245,89 +245,89 @@ const executeDelete = () => {
       <div class="grid grid-cols-2 lg:grid-cols-4 gap-3.5 sm:gap-4">
         
         <!-- Total Suppliers -->
-        <div class="bg-white border border-[#dfd6c8] rounded-2xl p-4 sm:p-5 shadow-2xs flex flex-col justify-between">
+        <div class="bg-white border border-[#e4e4e7] rounded-lg p-4 sm:p-5 shadow-2xs flex flex-col justify-between">
           <div class="flex items-center justify-between">
-            <span class="text-xs font-bold text-stone-500 uppercase tracking-wider">Total Suppliers</span>
-            <div class="w-8 h-8 rounded-xl bg-stone-100 flex items-center justify-center text-stone-800">
+            <span class="text-xs font-bold text-zinc-500 uppercase tracking-wider">Total Suppliers</span>
+            <div class="w-8 h-8 rounded-md bg-zinc-100 flex items-center justify-center text-zinc-800">
               <Truck class="w-4 h-4" />
             </div>
           </div>
           <div class="mt-3">
-            <div class="text-2xl sm:text-3xl font-serif font-bold text-stone-900">
+            <div class="text-2xl sm:text-3xl font-semibold text-zinc-900">
               {{ metrics.total_suppliers }}
             </div>
-            <p class="text-[11px] text-stone-500 font-medium mt-0.5">Active vendor accounts</p>
+            <p class="text-[11px] text-zinc-500 font-medium mt-0.5">Active vendor accounts</p>
           </div>
         </div>
 
         <!-- Active Suppliers -->
-        <div class="bg-white border border-[#dfd6c8] rounded-2xl p-4 sm:p-5 shadow-2xs flex flex-col justify-between">
+        <div class="bg-white border border-[#e4e4e7] rounded-lg p-4 sm:p-5 shadow-2xs flex flex-col justify-between">
           <div class="flex items-center justify-between">
-            <span class="text-xs font-bold text-stone-500 uppercase tracking-wider">Active Suppliers</span>
-            <div class="w-8 h-8 rounded-xl bg-emerald-50 flex items-center justify-center text-emerald-700">
+            <span class="text-xs font-bold text-zinc-500 uppercase tracking-wider">Active Suppliers</span>
+            <div class="w-8 h-8 rounded-md bg-emerald-50 flex items-center justify-center text-emerald-700">
               <CheckCircle2 class="w-4 h-4" />
             </div>
           </div>
           <div class="mt-3">
-            <div class="text-2xl sm:text-3xl font-serif font-bold text-emerald-800">
+            <div class="text-2xl sm:text-3xl font-semibold text-emerald-800">
               {{ metrics.active_suppliers }}
             </div>
-            <p class="text-[11px] text-stone-500 font-medium mt-0.5">Fulfilling orders currently</p>
+            <p class="text-[11px] text-zinc-500 font-medium mt-0.5">Fulfilling orders currently</p>
           </div>
         </div>
 
         <!-- Linked Products -->
-        <div class="bg-white border border-[#dfd6c8] rounded-2xl p-4 sm:p-5 shadow-2xs flex flex-col justify-between">
+        <div class="bg-white border border-[#e4e4e7] rounded-lg p-4 sm:p-5 shadow-2xs flex flex-col justify-between">
           <div class="flex items-center justify-between">
-            <span class="text-xs font-bold text-stone-500 uppercase tracking-wider">Sourced Products</span>
-            <div class="w-8 h-8 rounded-xl bg-amber-50 flex items-center justify-center text-amber-800">
+            <span class="text-xs font-bold text-zinc-500 uppercase tracking-wider">Sourced Products</span>
+            <div class="w-8 h-8 rounded-md bg-amber-50 flex items-center justify-center text-amber-800">
               <Package class="w-4 h-4" />
             </div>
           </div>
           <div class="mt-3">
-            <div class="text-2xl sm:text-3xl font-serif font-bold text-stone-900">
+            <div class="text-2xl sm:text-3xl font-semibold text-zinc-900">
               {{ metrics.total_supplied_products }}
             </div>
-            <p class="text-[11px] text-stone-500 font-medium mt-0.5">Assigned inventory SKUs</p>
+            <p class="text-[11px] text-zinc-500 font-medium mt-0.5">Assigned inventory SKUs</p>
           </div>
         </div>
 
         <!-- Avg Lead Time -->
-        <div class="bg-white border border-[#dfd6c8] rounded-2xl p-4 sm:p-5 shadow-2xs flex flex-col justify-between">
+        <div class="bg-white border border-[#e4e4e7] rounded-lg p-4 sm:p-5 shadow-2xs flex flex-col justify-between">
           <div class="flex items-center justify-between">
-            <span class="text-xs font-bold text-stone-500 uppercase tracking-wider">Avg. Lead Time</span>
-            <div class="w-8 h-8 rounded-xl bg-stone-100 flex items-center justify-center text-stone-800">
+            <span class="text-xs font-bold text-zinc-500 uppercase tracking-wider">Avg. Lead Time</span>
+            <div class="w-8 h-8 rounded-md bg-zinc-100 flex items-center justify-center text-zinc-800">
               <Clock class="w-4 h-4" />
             </div>
           </div>
           <div class="mt-3">
-            <div class="text-2xl sm:text-3xl font-serif font-bold text-stone-900">
-              {{ metrics.avg_lead_time }} <span class="text-sm font-sans font-medium text-stone-600">days</span>
+            <div class="text-2xl sm:text-3xl font-semibold text-zinc-900">
+              {{ metrics.avg_lead_time }} <span class="text-sm font-sans font-medium text-zinc-600">days</span>
             </div>
-            <p class="text-[11px] text-stone-500 font-medium mt-0.5">Restock turnaround time</p>
+            <p class="text-[11px] text-zinc-500 font-medium mt-0.5">Restock turnaround time</p>
           </div>
         </div>
 
       </div>
 
       <!-- SEARCH, FILTERS & SORT CONTROLS BAR -->
-      <div class="bg-white border border-[#dfd6c8] rounded-2xl p-3 sm:p-4 shadow-2xs flex flex-col md:flex-row md:items-center justify-between gap-3">
+      <div class="bg-white border border-[#e4e4e7] rounded-lg p-3 sm:p-4 shadow-2xs flex flex-col md:flex-row md:items-center justify-between gap-3">
         
         <!-- Omni-Search -->
         <div class="relative flex-1 max-w-md">
-          <Search class="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-stone-400 pointer-events-none" />
+          <Search class="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400 pointer-events-none" />
           <input
             v-model="searchInput"
             @input="handleSearchInput"
             type="text"
             placeholder="Search suppliers by name, code, contact person, city…"
-            class="w-full h-10 pl-10 pr-9 bg-stone-50 focus:bg-white border border-[#e0d9cc] focus:border-[#1a1a1a] focus:ring-3 focus:ring-[#1a1a1a]/10 focus:outline-none rounded-xl text-xs font-medium text-stone-900 placeholder:text-stone-500 transition-all shadow-2xs"
+            class="w-full h-9 pl-10 pr-9 bg-white focus:bg-white border border-[#e4e4e7] focus:border-[#18181b] focus:ring-3 focus:ring-[#18181b]/10 focus:outline-none rounded-md text-xs font-medium text-zinc-900 placeholder:text-zinc-500 transition-all shadow-2xs"
           />
           <button
             v-if="searchInput"
             type="button"
             @click="clearSearch"
-            class="absolute right-2.5 top-1/2 -translate-y-1/2 p-1 text-stone-400 hover:text-stone-800 rounded-full hover:bg-stone-200 transition-colors"
+            class="absolute right-2.5 top-1/2 -translate-y-1/2 p-1 text-zinc-400 hover:text-zinc-800 rounded-md hover:bg-zinc-200 transition-colors"
           >
             <X class="w-3.5 h-3.5" />
           </button>
@@ -337,15 +337,15 @@ const executeDelete = () => {
         <div class="flex items-center gap-2 overflow-x-auto no-scrollbar shrink-0">
           
           <!-- Status Pills -->
-          <div class="inline-flex items-center p-0.5 bg-stone-100 border border-stone-200 rounded-full text-xs font-bold">
+          <div class="inline-flex items-center p-0.5 bg-zinc-100 border border-zinc-200 rounded-md text-xs font-bold">
             <button
               type="button"
               @click="handleStatusFilter('all')"
               :class="[
-                'px-3 py-1 rounded-full transition-colors cursor-pointer',
+                'px-3 py-1 rounded-md transition-colors cursor-pointer',
                 activeStatus === 'all'
-                  ? 'bg-stone-900 text-white shadow-xs'
-                  : 'text-stone-600 hover:text-stone-900'
+                  ? 'bg-zinc-900 text-white shadow-xs'
+                  : 'text-zinc-600 hover:text-zinc-900'
               ]"
             >
               All ({{ metrics.total_suppliers }})
@@ -354,10 +354,10 @@ const executeDelete = () => {
               type="button"
               @click="handleStatusFilter('active')"
               :class="[
-                'px-3 py-1 rounded-full transition-colors cursor-pointer',
+                'px-3 py-1 rounded-md transition-colors cursor-pointer',
                 activeStatus === 'active'
-                  ? 'bg-stone-900 text-white shadow-xs'
-                  : 'text-stone-600 hover:text-stone-900'
+                  ? 'bg-zinc-900 text-white shadow-xs'
+                  : 'text-zinc-600 hover:text-zinc-900'
               ]"
             >
               Active ({{ metrics.active_suppliers }})
@@ -366,10 +366,10 @@ const executeDelete = () => {
               type="button"
               @click="handleStatusFilter('inactive')"
               :class="[
-                'px-3 py-1 rounded-full transition-colors cursor-pointer',
+                'px-3 py-1 rounded-md transition-colors cursor-pointer',
                 activeStatus === 'inactive'
-                  ? 'bg-stone-900 text-white shadow-xs'
-                  : 'text-stone-600 hover:text-stone-900'
+                  ? 'bg-zinc-900 text-white shadow-xs'
+                  : 'text-zinc-600 hover:text-zinc-900'
               ]"
             >
               Inactive
@@ -378,17 +378,17 @@ const executeDelete = () => {
 
           <!-- Sort Select -->
           <Select :model-value="activeSort" @update:model-value="handleSortChange">
-            <SelectTrigger class="h-9 w-auto rounded-full border border-stone-300 bg-white hover:bg-stone-50 px-3 text-xs font-bold text-stone-900 shadow-2xs gap-1.5 focus:border-[#1a1a1a] focus:ring-3 focus:ring-[#1a1a1a]/10">
+            <SelectTrigger class="h-9 w-auto rounded-md border border-zinc-300 bg-white hover:bg-white px-3 text-xs font-bold text-zinc-900 shadow-2xs gap-1.5 focus:border-[#18181b] focus:ring-3 focus:ring-[#18181b]/10">
               <div class="flex items-center gap-1.5 mr-0.5">
-                <ArrowUpDown class="w-3.5 h-3.5 text-stone-500 shrink-0" />
+                <ArrowUpDown class="w-3.5 h-3.5 text-zinc-500 shrink-0" />
                 <SelectValue placeholder="Sort" />
               </div>
             </SelectTrigger>
-            <SelectContent class="rounded-2xl border border-stone-200 bg-white shadow-xl min-w-[200px] p-1.5 z-50">
-              <SelectItem value="name" class="rounded-xl text-xs py-2 font-medium">Name (A to Z)</SelectItem>
-              <SelectItem value="products_count" class="rounded-xl text-xs py-2 font-medium">Most Products Supplied</SelectItem>
-              <SelectItem value="lead_time" class="rounded-xl text-xs py-2 font-medium">Fastest Lead Time</SelectItem>
-              <SelectItem value="latest" class="rounded-xl text-xs py-2 font-medium">Recently Registered</SelectItem>
+            <SelectContent class="rounded-lg border border-zinc-200 bg-white shadow-xl min-w-[200px] p-1.5 z-50">
+              <SelectItem value="name" class="rounded-md text-xs py-2 font-medium">Name (A to Z)</SelectItem>
+              <SelectItem value="products_count" class="rounded-md text-xs py-2 font-medium">Most Products Supplied</SelectItem>
+              <SelectItem value="lead_time" class="rounded-md text-xs py-2 font-medium">Fastest Lead Time</SelectItem>
+              <SelectItem value="latest" class="rounded-md text-xs py-2 font-medium">Recently Registered</SelectItem>
             </SelectContent>
           </Select>
 
@@ -397,12 +397,12 @@ const executeDelete = () => {
       </div>
 
       <!-- SUPPLIERS TABLE & LISTING -->
-      <div class="bg-white border border-[#dfd6c8] rounded-2xl sm:rounded-3xl shadow-2xs overflow-hidden">
+      <div class="bg-white border border-[#e4e4e7] rounded-lg sm:rounded-lg shadow-2xs overflow-hidden">
         
         <div v-if="suppliers.data && suppliers.data.length > 0" class="overflow-x-auto">
           <table class="w-full text-left text-xs">
             
-            <thead class="bg-stone-50 border-b border-stone-200 text-stone-600 uppercase font-mono text-[11px] tracking-wider">
+            <thead class="bg-zinc-50 border-b border-zinc-200 text-zinc-600 uppercase font-mono text-[11px] tracking-wider">
               <tr>
                 <th class="py-3.5 px-4 font-bold">Supplier Info</th>
                 <th class="py-3.5 px-4 font-bold">Contact Person</th>
@@ -414,27 +414,27 @@ const executeDelete = () => {
               </tr>
             </thead>
 
-            <tbody class="divide-y divide-stone-100">
+            <tbody class="divide-y divide-zinc-100">
               <tr 
                 v-for="s in suppliers.data" 
                 :key="s.id"
-                class="hover:bg-stone-50/70 transition-colors group"
+                class="hover:bg-zinc-50/70 transition-colors group"
               >
                 <!-- Supplier Name & Code -->
                 <td class="py-4 px-4">
                   <div class="flex items-center gap-3">
-                    <div class="w-9 h-9 rounded-xl bg-amber-50 border border-amber-200 flex items-center justify-center text-amber-900 font-bold font-serif shrink-0">
+                    <div class="w-9 h-9 rounded-md bg-amber-50 border border-amber-200 flex items-center justify-center text-amber-900 font-bold font-semibold shrink-0">
                       {{ s.name.charAt(0) }}
                     </div>
                     <div>
-                      <div class="font-bold text-stone-900 text-sm group-hover:text-amber-900 transition-colors">
+                      <div class="font-bold text-zinc-900 text-sm group-hover:text-amber-900 transition-colors">
                         {{ s.name }}
                       </div>
                       <div class="flex items-center gap-1.5 mt-0.5">
-                        <span class="font-mono text-[10.5px] bg-stone-100 text-stone-700 px-1.5 py-0.2 rounded border border-stone-200 font-semibold">
+                        <span class="font-mono text-[10.5px] bg-zinc-100 text-zinc-700 px-1.5 py-0.2 rounded border border-zinc-200 font-semibold">
                           {{ s.code }}
                         </span>
-                        <span v-if="s.notes" class="text-[11px] text-stone-500 max-w-[170px] truncate" :title="s.notes">
+                        <span v-if="s.notes" class="text-[11px] text-zinc-500 max-w-[170px] truncate" :title="s.notes">
                           · {{ s.notes }}
                         </span>
                       </div>
@@ -444,17 +444,17 @@ const executeDelete = () => {
 
                 <!-- Contact Details -->
                 <td class="py-4 px-4">
-                  <div class="font-semibold text-stone-900 flex items-center gap-1.5">
-                    <User class="w-3.5 h-3.5 text-stone-400" />
+                  <div class="font-semibold text-zinc-900 flex items-center gap-1.5">
+                    <User class="w-3.5 h-3.5 text-zinc-400" />
                     <span>{{ s.contact_person || 'Direct Office' }}</span>
                   </div>
-                  <div class="flex flex-col gap-0.5 mt-1 text-[11px] text-stone-600">
+                  <div class="flex flex-col gap-0.5 mt-1 text-[11px] text-zinc-600">
                     <a v-if="s.phone" :href="'tel:' + s.phone" class="hover:text-amber-900 hover:underline flex items-center gap-1">
-                      <Phone class="w-3 h-3 text-stone-400" />
+                      <Phone class="w-3 h-3 text-zinc-400" />
                       <span>{{ s.phone }}</span>
                     </a>
                     <a v-if="s.email" :href="'mailto:' + s.email" class="hover:text-amber-900 hover:underline flex items-center gap-1 truncate max-w-[160px]">
-                      <Mail class="w-3 h-3 text-stone-400" />
+                      <Mail class="w-3 h-3 text-zinc-400" />
                       <span>{{ s.email }}</span>
                     </a>
                   </div>
@@ -462,23 +462,23 @@ const executeDelete = () => {
 
                 <!-- Location -->
                 <td class="py-4 px-4">
-                  <div class="flex items-center gap-1.5 font-semibold text-stone-900">
-                    <MapPin class="w-3.5 h-3.5 text-stone-400" />
+                  <div class="flex items-center gap-1.5 font-semibold text-zinc-900">
+                    <MapPin class="w-3.5 h-3.5 text-zinc-400" />
                     <span>{{ s.city || 'Standard' }}<span v-if="s.state">, {{ s.state }}</span></span>
                   </div>
-                  <div class="text-[11px] text-stone-500 mt-0.5 truncate max-w-[140px]" :title="s.address">
+                  <div class="text-[11px] text-zinc-500 mt-0.5 truncate max-w-[140px]" :title="s.address">
                     {{ s.address || s.country || 'USA' }}
                   </div>
                 </td>
 
                 <!-- Lead Time & Payment Terms -->
                 <td class="py-4 px-4">
-                  <div class="inline-flex items-center gap-1 bg-stone-100 text-stone-800 border border-stone-200 px-2 py-0.5 rounded-md font-bold text-[11px]">
-                    <Clock class="w-3 h-3 text-stone-500" />
+                  <div class="inline-flex items-center gap-1 bg-zinc-100 text-zinc-800 border border-zinc-200 px-2 py-0.5 rounded-md font-bold text-[11px]">
+                    <Clock class="w-3 h-3 text-zinc-500" />
                     <span>{{ s.lead_time_days }} {{ s.lead_time_days === 1 ? 'day' : 'days' }}</span>
                   </div>
-                  <div class="text-[11px] font-medium text-stone-600 mt-1 flex items-center gap-1">
-                    <CreditCard class="w-3 h-3 text-stone-400" />
+                  <div class="text-[11px] font-medium text-zinc-600 mt-1 flex items-center gap-1">
+                    <CreditCard class="w-3 h-3 text-zinc-400" />
                     <span>{{ s.payment_terms }}</span>
                   </div>
                 </td>
@@ -487,8 +487,8 @@ const executeDelete = () => {
                 <td class="py-4 px-4">
                   <div class="flex items-center gap-1.5">
                     <span 
-                      class="px-2 py-0.5 rounded-full text-[11px] font-bold border"
-                      :class="s.products_count > 0 ? 'bg-amber-50 text-amber-900 border-amber-200' : 'bg-stone-100 text-stone-600 border-stone-200'"
+                      class="px-2 py-0.5 rounded-md text-[11px] font-bold border"
+                      :class="s.products_count > 0 ? 'bg-amber-50 text-amber-900 border-amber-200' : 'bg-zinc-100 text-zinc-600 border-zinc-200'"
                     >
                       {{ s.products_count }} {{ s.products_count === 1 ? 'product' : 'products' }}
                     </span>
@@ -500,10 +500,10 @@ const executeDelete = () => {
                       :key="p.id"
                       :src="p.image"
                       :alt="p.name"
-                      class="inline-block h-6 w-6 rounded-full ring-2 ring-white object-cover bg-stone-100"
+                      class="inline-block h-6 w-6 rounded-md ring-2 ring-white object-cover bg-zinc-100"
                       :title="p.name + ' · $' + p.price"
                     />
-                    <span v-if="s.products_count > 3" class="inline-flex items-center justify-center h-6 w-6 rounded-full bg-stone-200 text-[9.5px] font-bold text-stone-700 ring-2 ring-white">
+                    <span v-if="s.products_count > 3" class="inline-flex items-center justify-center h-6 w-6 rounded-md bg-zinc-200 text-[9.5px] font-bold text-zinc-700 ring-2 ring-white">
                       +{{ s.products_count - 3 }}
                     </span>
                   </div>
@@ -514,15 +514,15 @@ const executeDelete = () => {
                   <button
                     type="button"
                     @click="toggleSupplierStatus(s)"
-                    class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold border transition-all cursor-pointer shadow-2xs hover:scale-105 active:scale-95"
+                    class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-bold border transition-all cursor-pointer shadow-2xs hover:scale-105 active:scale-95"
                     :class="s.status === 'active'
                       ? 'bg-emerald-50 text-emerald-800 border-emerald-200 hover:bg-emerald-100'
-                      : 'bg-stone-100 text-stone-600 border-stone-300 hover:bg-stone-200'"
+                      : 'bg-zinc-100 text-zinc-600 border-zinc-300 hover:bg-zinc-200'"
                     :title="'Click to mark ' + (s.status === 'active' ? 'inactive' : 'active')"
                   >
                     <span 
                       class="w-1.5 h-1.5 rounded-full" 
-                      :class="s.status === 'active' ? 'bg-emerald-600' : 'bg-stone-400'"
+                      :class="s.status === 'active' ? 'bg-emerald-600' : 'bg-zinc-400'"
                     ></span>
                     <span>{{ s.status === 'active' ? 'Active' : 'Inactive' }}</span>
                   </button>
@@ -534,7 +534,7 @@ const executeDelete = () => {
                     <button
                       type="button"
                       @click="openEditDrawer(s)"
-                      class="p-1.5 text-stone-600 hover:text-stone-900 hover:bg-stone-100 rounded-lg transition-colors cursor-pointer"
+                      class="p-1.5 text-zinc-600 hover:text-zinc-900 hover:bg-zinc-100 rounded-lg transition-colors cursor-pointer"
                       title="Edit Supplier"
                     >
                       <Edit2 class="w-4 h-4 stroke-[2]" />
@@ -557,20 +557,20 @@ const executeDelete = () => {
 
         <!-- Empty State -->
         <div v-else class="p-10 sm:p-16 text-center space-y-3">
-          <div class="w-14 h-14 rounded-full bg-stone-100 flex items-center justify-center mx-auto text-stone-500">
+          <div class="w-14 h-14 rounded-md bg-zinc-100 flex items-center justify-center mx-auto text-zinc-500">
             <Truck class="w-6 h-6 stroke-[1.8]" />
           </div>
-          <h3 class="text-base sm:text-lg font-serif font-bold text-stone-900">
+          <h3 class="text-base sm:text-lg font-semibold text-zinc-900">
             No suppliers found
           </h3>
-          <p class="text-xs text-stone-500 max-w-sm mx-auto leading-relaxed">
+          <p class="text-xs text-zinc-500 max-w-sm mx-auto leading-relaxed">
             We couldn't find any suppliers matching your search filters. Try clearing your filters or register a new vendor.
           </p>
           <div class="pt-2">
             <button
               type="button"
               @click="openCreateDrawer"
-              class="px-5 py-2 bg-stone-900 text-white rounded-full text-xs font-bold hover:bg-black transition-colors shadow-xs cursor-pointer"
+              class="px-5 py-2 bg-zinc-900 text-white rounded-md text-xs font-bold hover:bg-black transition-colors shadow-xs cursor-pointer"
             >
               Register First Supplier
             </button>
@@ -610,22 +610,22 @@ const executeDelete = () => {
       >
         <div 
           v-if="isDrawerOpen" 
-          class="fixed inset-y-0 right-0 w-full max-w-xl bg-white shadow-2xl z-50 flex flex-col border-l border-stone-200"
+          class="fixed inset-y-0 right-0 w-full max-w-xl bg-white shadow-2xl z-50 flex flex-col border-l border-zinc-200"
         >
           <!-- Drawer Header -->
-          <div class="flex items-center justify-between px-6 py-5 border-b border-stone-200 bg-stone-50/70">
+          <div class="flex items-center justify-between px-6 py-5 border-b border-zinc-200 bg-zinc-50/70">
             <div>
               <span class="text-[10.5px] font-mono uppercase bg-amber-100 text-amber-900 px-2 py-0.5 rounded font-bold">
                 {{ editingSupplier ? 'Update Vendor' : 'New Vendor Registration' }}
               </span>
-              <h2 class="text-xl font-serif font-bold text-stone-900 mt-1">
+              <h2 class="text-xl font-semibold text-zinc-900 mt-1">
                 {{ editingSupplier ? editingSupplier.name : 'Register Supplier' }}
               </h2>
             </div>
             <button
               type="button"
               @click="closeDrawer"
-              class="p-2 text-stone-500 hover:text-stone-900 rounded-full hover:bg-stone-200/60 transition-colors cursor-pointer"
+              class="p-2 text-zinc-500 hover:text-zinc-900 rounded-md hover:bg-zinc-200/60 transition-colors cursor-pointer"
             >
               <X class="w-5 h-5" />
             </button>
@@ -636,7 +636,7 @@ const executeDelete = () => {
             
             <!-- Section 1: Business Identity -->
             <div class="space-y-4">
-              <h3 class="text-xs font-bold text-stone-500 uppercase tracking-wider border-b border-stone-200 pb-1.5">
+              <h3 class="text-xs font-bold text-zinc-500 uppercase tracking-wider border-b border-zinc-200 pb-1.5">
                 1. Supplier Information
               </h3>
 
@@ -651,7 +651,7 @@ const executeDelete = () => {
                     type="text"
                     required
                     placeholder="e.g. Amrit Farm Dairy or Punjab Heritage Mills"
-                    class="bg-stone-50 rounded-xl text-xs font-medium"
+                    class="bg-white rounded-md text-xs font-medium"
                   />
                   <span v-if="supplierForm.errors.name" class="text-xs text-red-600 font-semibold mt-0.5 block">
                     {{ supplierForm.errors.name }}
@@ -667,9 +667,9 @@ const executeDelete = () => {
                     v-model="supplierForm.code"
                     type="text"
                     placeholder="Auto-generated (e.g. SUP-006)"
-                    class="bg-stone-50 rounded-xl text-xs font-mono font-medium"
+                    class="bg-white rounded-md text-xs font-mono font-medium"
                   />
-                  <span class="text-[10.5px] text-stone-400 mt-0.5 block">Leave empty to auto-generate</span>
+                  <span class="text-[10.5px] text-zinc-400 mt-0.5 block">Leave empty to auto-generate</span>
                   <span v-if="supplierForm.errors.code" class="text-xs text-red-600 font-semibold mt-0.5 block">
                     {{ supplierForm.errors.code }}
                   </span>
@@ -681,12 +681,12 @@ const executeDelete = () => {
                     Vendor Status <span class="text-red-500">*</span>
                   </Label>
                   <Select v-model="supplierForm.status">
-                    <SelectTrigger class="bg-stone-50 rounded-xl text-xs font-semibold h-10">
+                    <SelectTrigger class="bg-white rounded-md text-xs font-semibold h-9">
                       <SelectValue placeholder="Select status" />
                     </SelectTrigger>
-                    <SelectContent class="rounded-xl border border-stone-200 bg-white shadow-xl z-50">
+                    <SelectContent class="rounded-md border border-zinc-200 bg-white shadow-xl z-50">
                       <SelectItem value="active" class="text-xs py-2 font-semibold text-emerald-800">Active (Accepting Orders)</SelectItem>
-                      <SelectItem value="inactive" class="text-xs py-2 font-semibold text-stone-600">Inactive (Paused)</SelectItem>
+                      <SelectItem value="inactive" class="text-xs py-2 font-semibold text-zinc-600">Inactive (Paused)</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -695,7 +695,7 @@ const executeDelete = () => {
 
             <!-- Section 2: Contact Person & Communication -->
             <div class="space-y-4 pt-2">
-              <h3 class="text-xs font-bold text-stone-500 uppercase tracking-wider border-b border-stone-200 pb-1.5">
+              <h3 class="text-xs font-bold text-zinc-500 uppercase tracking-wider border-b border-zinc-200 pb-1.5">
                 2. Contact &amp; Representative
               </h3>
 
@@ -709,7 +709,7 @@ const executeDelete = () => {
                     v-model="supplierForm.contact_person"
                     type="text"
                     placeholder="e.g. Harpreet Singh"
-                    class="bg-stone-50 rounded-xl text-xs font-medium"
+                    class="bg-white rounded-md text-xs font-medium"
                   />
                 </div>
 
@@ -722,7 +722,7 @@ const executeDelete = () => {
                     v-model="supplierForm.email"
                     type="email"
                     placeholder="orders@supplier.com"
-                    class="bg-stone-50 rounded-xl text-xs font-medium"
+                    class="bg-white rounded-md text-xs font-medium"
                   />
                   <span v-if="supplierForm.errors.email" class="text-xs text-red-600 font-semibold mt-0.5 block">
                     {{ supplierForm.errors.email }}
@@ -738,7 +738,7 @@ const executeDelete = () => {
                     v-model="supplierForm.phone"
                     type="text"
                     placeholder="+1 (555) 234-5678"
-                    class="bg-stone-50 rounded-xl text-xs font-medium"
+                    class="bg-white rounded-md text-xs font-medium"
                   />
                 </div>
               </div>
@@ -746,7 +746,7 @@ const executeDelete = () => {
 
             <!-- Section 3: Physical Location -->
             <div class="space-y-4 pt-2">
-              <h3 class="text-xs font-bold text-stone-500 uppercase tracking-wider border-b border-stone-200 pb-1.5">
+              <h3 class="text-xs font-bold text-zinc-500 uppercase tracking-wider border-b border-zinc-200 pb-1.5">
                 3. Address &amp; Warehouse Location
               </h3>
 
@@ -760,7 +760,7 @@ const executeDelete = () => {
                     v-model="supplierForm.address"
                     type="text"
                     placeholder="e.g. 84 Meadow Road, Suite 2"
-                    class="bg-stone-50 rounded-xl text-xs font-medium"
+                    class="bg-white rounded-md text-xs font-medium"
                   />
                 </div>
 
@@ -771,7 +771,7 @@ const executeDelete = () => {
                     v-model="supplierForm.city"
                     type="text"
                     placeholder="Edison"
-                    class="bg-stone-50 rounded-xl text-xs font-medium"
+                    class="bg-white rounded-md text-xs font-medium"
                   />
                 </div>
 
@@ -782,7 +782,7 @@ const executeDelete = () => {
                     v-model="supplierForm.state"
                     type="text"
                     placeholder="NJ"
-                    class="bg-stone-50 rounded-xl text-xs font-medium"
+                    class="bg-white rounded-md text-xs font-medium"
                   />
                 </div>
 
@@ -793,7 +793,7 @@ const executeDelete = () => {
                     v-model="supplierForm.postal_code"
                     type="text"
                     placeholder="08817"
-                    class="bg-stone-50 rounded-xl text-xs font-medium"
+                    class="bg-white rounded-md text-xs font-medium"
                   />
                 </div>
               </div>
@@ -801,7 +801,7 @@ const executeDelete = () => {
 
             <!-- Section 4: Commercial & Fulfillment Terms -->
             <div class="space-y-4 pt-2">
-              <h3 class="text-xs font-bold text-stone-500 uppercase tracking-wider border-b border-stone-200 pb-1.5">
+              <h3 class="text-xs font-bold text-zinc-500 uppercase tracking-wider border-b border-zinc-200 pb-1.5">
                 4. Fulfillment &amp; Commercial Terms
               </h3>
 
@@ -816,9 +816,9 @@ const executeDelete = () => {
                     type="number"
                     min="0"
                     placeholder="2"
-                    class="bg-stone-50 rounded-xl text-xs font-medium"
+                    class="bg-white rounded-md text-xs font-medium"
                   />
-                  <span class="text-[10.5px] text-stone-400 mt-0.5 block">Estimated days for delivery</span>
+                  <span class="text-[10.5px] text-zinc-400 mt-0.5 block">Estimated days for delivery</span>
                 </div>
 
                 <!-- Payment Terms -->
@@ -827,10 +827,10 @@ const executeDelete = () => {
                     Payment Terms
                   </Label>
                   <Select v-model="supplierForm.payment_terms">
-                    <SelectTrigger class="bg-stone-50 rounded-xl text-xs font-semibold h-10">
+                    <SelectTrigger class="bg-white rounded-md text-xs font-semibold h-9">
                       <SelectValue placeholder="Payment Terms" />
                     </SelectTrigger>
-                    <SelectContent class="rounded-xl border border-stone-200 bg-white shadow-xl z-50">
+                    <SelectContent class="rounded-md border border-zinc-200 bg-white shadow-xl z-50">
                       <SelectItem value="Net 15" class="text-xs py-2 font-medium">Net 15 Days</SelectItem>
                       <SelectItem value="Net 30" class="text-xs py-2 font-medium">Net 30 Days</SelectItem>
                       <SelectItem value="Net 60" class="text-xs py-2 font-medium">Net 60 Days</SelectItem>
@@ -850,7 +850,7 @@ const executeDelete = () => {
                     v-model="supplierForm.notes"
                     rows="3"
                     placeholder="e.g. Certified organic dairy, morning delivery route, FSSAI / FDA approved batch codes..."
-                    class="bg-stone-50 rounded-xl text-xs font-medium"
+                    class="bg-white rounded-md text-xs font-medium"
                   />
                 </div>
               </div>
@@ -858,7 +858,7 @@ const executeDelete = () => {
 
             <!-- Section 5: Associated Sourced Products (When Editing) -->
             <div v-if="editingSupplier && editingSupplier.products && editingSupplier.products.length > 0" class="space-y-2 pt-2">
-              <h3 class="text-xs font-bold text-stone-500 uppercase tracking-wider border-b border-stone-200 pb-1.5 flex items-center justify-between">
+              <h3 class="text-xs font-bold text-zinc-500 uppercase tracking-wider border-b border-zinc-200 pb-1.5 flex items-center justify-between">
                 <span>Linked Inventory SKUs ({{ editingSupplier.products_count }})</span>
                 <Link :href="route('admin.products.index')" class="text-amber-800 hover:underline normal-case flex items-center gap-1">
                   <span>Manage Products</span>
@@ -866,20 +866,20 @@ const executeDelete = () => {
                 </Link>
               </h3>
 
-              <div class="divide-y divide-stone-100 bg-stone-50 rounded-xl border border-stone-200 p-2 space-y-1">
+              <div class="divide-y divide-zinc-100 bg-zinc-50 rounded-md border border-zinc-200 p-2 space-y-1">
                 <div 
                   v-for="prod in editingSupplier.products" 
                   :key="prod.id"
                   class="flex items-center justify-between p-2 rounded-lg hover:bg-white transition-colors"
                 >
                   <div class="flex items-center gap-2.5">
-                    <img :src="prod.image" :alt="prod.name" class="w-8 h-8 rounded-lg object-cover border border-stone-200 bg-white" />
+                    <img :src="prod.image" :alt="prod.name" class="w-8 h-8 rounded-lg object-cover border border-zinc-200 bg-white" />
                     <div>
-                      <div class="font-bold text-stone-900 text-xs">{{ prod.name }}</div>
-                      <div class="text-[10.5px] text-stone-500 font-mono">${{ prod.price.toFixed(2) }}</div>
+                      <div class="font-bold text-zinc-900 text-xs">{{ prod.name }}</div>
+                      <div class="text-[10.5px] text-zinc-500 font-mono">${{ prod.price.toFixed(2) }}</div>
                     </div>
                   </div>
-                  <span class="text-[11px] font-bold px-2 py-0.5 rounded-md bg-stone-200/80 text-stone-800">
+                  <span class="text-[11px] font-bold px-2 py-0.5 rounded-md bg-zinc-200/80 text-zinc-800">
                     {{ prod.stock }} in stock
                   </span>
                 </div>
@@ -887,18 +887,18 @@ const executeDelete = () => {
             </div>
 
             <!-- Drawer Footer Buttons -->
-            <div class="pt-4 border-t border-stone-200 flex items-center justify-end gap-2.5">
+            <div class="pt-4 border-t border-zinc-200 flex items-center justify-end gap-2.5">
               <button
                 type="button"
                 @click="closeDrawer"
-                class="px-5 py-2.5 rounded-full border border-stone-300 text-stone-700 hover:text-stone-900 font-bold text-xs hover:bg-stone-50 transition-colors cursor-pointer"
+                class="px-5 py-2.5 rounded-md border border-zinc-300 text-zinc-700 hover:text-zinc-900 font-bold text-xs hover:bg-zinc-50 transition-colors cursor-pointer"
               >
                 Cancel
               </button>
               <button
                 type="submit"
                 :disabled="supplierForm.processing"
-                class="px-6 py-2.5 rounded-full bg-stone-900 hover:bg-black text-white font-bold text-xs transition-all shadow-xs active:scale-[0.98] disabled:opacity-50 cursor-pointer"
+                class="px-6 py-2.5 rounded-md bg-zinc-900 hover:bg-black text-white font-bold text-xs transition-all shadow-xs active:scale-[0.98] disabled:opacity-50 cursor-pointer"
               >
                 {{ supplierForm.processing ? 'Saving…' : (editingSupplier ? 'Save Changes' : 'Register Supplier') }}
               </button>
@@ -928,19 +928,19 @@ const executeDelete = () => {
           @click="isDeleteModalOpen = false"
         >
           <div 
-            class="bg-white rounded-3xl max-w-md w-full p-6 space-y-4 shadow-2xl border border-stone-200"
+            class="bg-white rounded-lg max-w-md w-full p-6 space-y-4 shadow-2xl border border-zinc-200"
             @click.stop
           >
-            <div class="w-12 h-12 rounded-full bg-red-100 flex items-center justify-center text-red-600 mx-auto">
+            <div class="w-12 h-12 rounded-md bg-red-100 flex items-center justify-center text-red-600 mx-auto">
               <AlertCircle class="w-6 h-6 stroke-[2]" />
             </div>
 
             <div class="text-center space-y-1">
-              <h3 class="text-lg font-serif font-bold text-stone-900">
+              <h3 class="text-lg font-semibold text-zinc-900">
                 Delete Supplier Account?
               </h3>
-              <p class="text-xs text-stone-500 leading-relaxed">
-                Are you sure you want to remove <strong class="text-stone-900">{{ supplierToDelete?.name }}</strong>? Products linked to this vendor will have their supplier association unlinked, but will not be deleted.
+              <p class="text-xs text-zinc-500 leading-relaxed">
+                Are you sure you want to remove <strong class="text-zinc-900">{{ supplierToDelete?.name }}</strong>? Products linked to this vendor will have their supplier association unlinked, but will not be deleted.
               </p>
             </div>
 
@@ -948,14 +948,14 @@ const executeDelete = () => {
               <button
                 type="button"
                 @click="isDeleteModalOpen = false"
-                class="px-5 py-2.5 rounded-full border border-stone-300 text-stone-700 font-bold text-xs hover:bg-stone-50 cursor-pointer"
+                class="px-5 py-2.5 rounded-md border border-zinc-300 text-zinc-700 font-bold text-xs hover:bg-zinc-50 cursor-pointer"
               >
                 Cancel
               </button>
               <button
                 type="button"
                 @click="executeDelete"
-                class="px-5 py-2.5 rounded-full bg-red-600 hover:bg-red-700 text-white font-bold text-xs shadow-xs cursor-pointer"
+                class="px-5 py-2.5 rounded-md bg-red-600 hover:bg-red-700 text-white font-bold text-xs shadow-xs cursor-pointer"
               >
                 Confirm Delete
               </button>

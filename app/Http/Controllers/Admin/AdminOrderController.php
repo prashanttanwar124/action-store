@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Events\OrderItemsPackedUpdated;
 use App\Events\OrderStatusUpdated;
 use App\Http\Controllers\Controller;
 use App\Models\Order;
@@ -25,7 +26,15 @@ class AdminOrderController extends Controller
         $status = $request->input('status', 'all');
         $search = $request->input('search');
 
-        $query = Order::with('items')->latest();
+        $query = Order::with('items')
+            ->orderByRaw("CASE status
+                WHEN 'confirmed' THEN 1
+                WHEN 'packing' THEN 2
+                WHEN 'ready_for_pickup' THEN 3
+                WHEN 'completed' THEN 4
+                WHEN 'cancelled' THEN 5
+                ELSE 6 END ASC")
+            ->latest();
 
         if ($status && $status !== 'all') {
             $query->where('status', $status);
@@ -40,7 +49,7 @@ class AdminOrderController extends Controller
             });
         }
 
-        $orders = $query->paginate(12)->withQueryString()->through(function ($order) {
+        $orders = $query->paginate(48)->withQueryString()->through(function ($order) {
             return [
                 'id' => $order->id,
                 'order_number' => $order->order_number,
@@ -52,6 +61,7 @@ class AdminOrderController extends Controller
                 'total' => (float) $order->total,
                 'points_earned' => $order->points_earned,
                 'payment_method' => $order->payment_method,
+                'stripe_payment_id' => $order->stripe_payment_id,
                 'fulfillment_type' => $order->fulfillment_type,
                 'pickup_slot' => $order->pickup_slot,
                 'pickup_location' => $order->pickup_location,
@@ -70,6 +80,7 @@ class AdminOrderController extends Controller
                         'unit_price' => (float) $item->unit_price,
                         'quantity' => $item->quantity,
                         'total_price' => (float) $item->total_price,
+                        'is_packed' => (bool) $item->is_packed,
                         'image' => $item->image,
                     ];
                 }),
@@ -81,11 +92,15 @@ class AdminOrderController extends Controller
         $todayOrders = Order::whereDate('created_at', $today);
 
         $stats = [
+            'total_all' => Order::count(),
             'total_today' => (clone $todayOrders)->count(),
             'confirmed' => Order::where('status', 'confirmed')->count(),
             'packing' => Order::where('status', 'packing')->count(),
             'ready_for_pickup' => Order::where('status', 'ready_for_pickup')->count(),
+            'completed' => Order::where('status', 'completed')->count(),
             'completed_today' => (clone $todayOrders)->where('status', 'completed')->count(),
+            'cancelled' => Order::where('status', 'cancelled')->count(),
+            'cancelled_today' => (clone $todayOrders)->where('status', 'cancelled')->count(),
             'revenue_today' => (float) (clone $todayOrders)->where('status', '!=', 'cancelled')->sum('total'),
         ];
 
@@ -123,7 +138,11 @@ class AdminOrderController extends Controller
         }
 
         // Broadcast real-time status update to both Admin KDS and Customer tracking screens
-        OrderStatusUpdated::dispatch($order);
+        try {
+            OrderStatusUpdated::dispatch($order);
+        } catch (\Throwable $e) {
+            Log::warning("OrderStatusUpdated broadcast failed for {$order->order_number}: {$e->getMessage()}");
+        }
 
         if ($request->wantsJson()) {
             return response()->json([
@@ -134,6 +153,43 @@ class AdminOrderController extends Controller
         }
 
         return back()->with('success', "Order {$order->order_number} status updated to ".str_replace('_', ' ', $validated['status']));
+    }
+
+    /**
+     * Persist single or bulk item packing state in the database and broadcast to all KDS screens.
+     */
+    public function updateItemsPacked(Request $request, Order $order): JsonResponse
+    {
+        $validated = $request->validate([
+            'item_id' => ['nullable', 'integer'],
+            'is_packed' => ['required', 'boolean'],
+        ]);
+
+        if (! empty($validated['item_id'])) {
+            $order->items()
+                ->whereKey($validated['item_id'])
+                ->update(['is_packed' => $validated['is_packed']]);
+        } else {
+            $order->items()->update(['is_packed' => $validated['is_packed']]);
+        }
+
+        $order->load('items');
+
+        try {
+            OrderItemsPackedUpdated::dispatch($order);
+        } catch (\Throwable $e) {
+            Log::warning("OrderItemsPackedUpdated broadcast failed for {$order->order_number}: {$e->getMessage()}");
+        }
+
+        return response()->json([
+            'success' => true,
+            'order_id' => $order->id,
+            'packed_item_ids' => $order->items
+                ->where('is_packed', true)
+                ->pluck('id')
+                ->values()
+                ->all(),
+        ]);
     }
 
     /**

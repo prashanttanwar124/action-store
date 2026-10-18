@@ -97,7 +97,7 @@ function handleSearchSubmit() {
           <ShoppingBag class="w-5 h-5 stroke-[2]" />
           <span 
             v-if="store.totalItemCount > 0"
-            class="absolute -top-1 -right-1 bg-[#1a1a1a] text-white text-[10px] font-bold w-4 h-4 rounded-full flex items-center justify-center border-2 border-white shadow-xs"
+            class="absolute -top-1 -right-1 bg-[#1a1a1a] text-white text-[10px] font-bold w-4 h-4 rounded-md flex items-center justify-center border-2 border-white shadow-xs"
           >
             {{ store.totalItemCount }}
           </span>
@@ -137,15 +137,15 @@ function handleSearchSubmit() {
             </button>
           </div>
 
-          <!-- Desktop Single Store Pickup Pill (Uniform h-[42px] rounded-full) -->
+          <!-- Desktop Single Store Pickup Pill (Uniform h-[42px] rounded-md) -->
           <div class="relative hidden sm:block">
             <button 
               type="button"
               @click="$emit('openStoreInfo')"
-              class="h-[42px] inline-flex items-center gap-2 px-3 bg-[#f4efe6] hover:bg-[#ede6da] border border-[#dfd6c8] hover:border-[#cfc4b2] text-left rounded-full transition-all duration-150 cursor-pointer shadow-xs active:scale-[0.99] shrink-0"
+              class="h-[42px] inline-flex items-center gap-2 px-3 bg-[#f4efe6] hover:bg-[#ede6da] border border-[#dfd6c8] hover:border-[#cfc4b2] text-left rounded-md transition-all duration-150 cursor-pointer shadow-xs active:scale-[0.99] shrink-0"
               title="View store hours, location & curbside directions"
             >
-              <div class="relative w-6 h-6 rounded-full bg-white border border-[#dfd6c8] flex items-center justify-center shrink-0">
+              <div class="relative w-6 h-6 rounded-md bg-white border border-[#dfd6c8] flex items-center justify-center shrink-0">
                 <MapPin class="w-3.5 h-3.5 text-[#8a6b32] stroke-[2.2]" />
                 <span class="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 rounded-full" :class="storeInfo.is_busy ? 'bg-amber-500 animate-pulse' : 'bg-emerald-500'"></span>
               </div>
@@ -167,7 +167,7 @@ function handleSearchSubmit() {
           </div>
         </div>
 
-        <!-- Desktop Global Search Bar (Uniform h-[42px] rounded-full) -->
+        <!-- Desktop Global Search Bar (Uniform h-[42px] rounded-md) -->
         <div v-if="headerMode !== 'search' && page.component !== 'Search'" class="flex-1 max-w-xl mx-2 hidden sm:block">
           <div class="relative flex items-center h-[42px] group">
             <Search class="absolute left-3.5 w-4 h-4 text-[#86868b] group-focus-within:text-[#1a1a1a] transition-colors stroke-[2.2]" />
@@ -177,13 +177,13 @@ function handleSearchSubmit() {
               type="text" 
               placeholder="Search paneer, atta, desi ghee, garam masala, maggi…"
               @keydown.enter="handleSearchSubmit"
-              class="w-full h-full pl-10 pr-10 bg-[#f4efe6] hover:bg-[#ede6da] border border-[#dfd6c8] focus:border-[#1a1a1a] rounded-full text-xs text-[#1d1d1f] placeholder-[#86868b] focus:outline-none focus:bg-white focus:ring-4 focus:ring-[#1a1a1a]/5 transition-all font-normal shadow-xs"
+              class="w-full h-full pl-10 pr-10 bg-[#f4efe6] hover:bg-[#ede6da] border border-[#dfd6c8] focus:border-[#1a1a1a] rounded-md text-xs text-[#1d1d1f] placeholder-[#86868b] focus:outline-none focus:bg-white focus:ring-4 focus:ring-[#1a1a1a]/5 transition-all font-normal shadow-xs"
             />
             <button 
               v-if="store.searchQuery" 
               type="button"
               @click="store.searchQuery = ''"
-              class="absolute right-3 p-1 text-[#86868b] hover:text-[#1d1d1f] rounded-full hover:bg-stone-200/60 transition-colors"
+              class="absolute right-3 p-1 text-[#86868b] hover:text-[#1d1d1f] rounded-md hover:bg-stone-200/60 transition-colors"
               title="Clear search"
             >
               <X class="w-3.5 h-3.5" />
@@ -197,11 +197,11 @@ function handleSearchSubmit() {
           </div>
         </div>
 
-        <!-- Header Right Actions (Uniform h-[42px] rounded-full) -->
+        <!-- Header Right Actions (Uniform h-[42px] rounded-md) -->
         <div class="flex items-center gap-2 sm:gap-2.5 shrink-0">
           <Link 
             href="/reorder" 
-            class="hidden md:inline-flex items-center gap-1.5 h-[42px] px-3.5 border border-[#dfd6c8] bg-[#f4efe6] hover:bg-[#ede6da] rounded-full text-xs font-semibold text-[#1d1d1f] transition-colors shadow-xs shrink-0"
+            class="hidden md:inline-flex items-center gap-1.5 h-[42px] px-3.5 border border-[#dfd6c8] bg-[#f4efe6] hover:bg-[#ede6da] rounded-md text-xs font-semibold text-[#1d1d1f] transition-colors shadow-xs shrink-0"
           >
             <RefreshCw class="w-3.5 h-3.5 text-[#6e6e73]" />
             <span>Buy It Again</span>
@@ -210,7 +210,7 @@ function handleSearchSubmit() {
           <Link 
             v-if="page.props.auth?.user"
             href="/account" 
-            class="hidden sm:inline-flex items-center gap-1.5 h-[42px] px-3.5 border border-[#dfd6c8] bg-[#f4efe6] hover:bg-[#ede6da] rounded-full text-xs font-semibold text-[#1d1d1f] transition-colors shadow-xs shrink-0"
+            class="hidden sm:inline-flex items-center gap-1.5 h-[42px] px-3.5 border border-[#dfd6c8] bg-[#f4efe6] hover:bg-[#ede6da] rounded-md text-xs font-semibold text-[#1d1d1f] transition-colors shadow-xs shrink-0"
             :title="'Logged in as ' + page.props.auth.user.name"
           >
             <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
@@ -220,24 +220,24 @@ function handleSearchSubmit() {
           <Link 
             v-else
             href="/login" 
-            class="hidden sm:inline-flex items-center gap-1.5 h-[42px] px-3.5 border border-[#dfd6c8] bg-[#f4efe6] hover:bg-[#ede6da] rounded-full text-xs font-semibold text-[#1d1d1f] transition-colors shadow-xs shrink-0"
+            class="hidden sm:inline-flex items-center gap-1.5 h-[42px] px-3.5 border border-[#dfd6c8] bg-[#f4efe6] hover:bg-[#ede6da] rounded-md text-xs font-semibold text-[#1d1d1f] transition-colors shadow-xs shrink-0"
             title="Sign in to your account"
           >
             <User class="w-3.5 h-3.5 text-[#6e6e73]" />
             <span>Sign In</span>
           </Link>
 
-          <!-- Cart Trigger Button (Uniform h-[42px] rounded-full) -->
+          <!-- Cart Trigger Button (Uniform h-[42px] rounded-md) -->
           <Link 
             href="/cart"
-            class="relative h-[42px] px-3.5 sm:px-4 bg-[#1a1a1a] hover:bg-black text-white rounded-full transition-all hover:opacity-95 active:scale-[0.98] cursor-pointer inline-flex items-center justify-center gap-2.5 border border-[#1a1a1a] shadow-xs shrink-0"
+            class="relative h-[42px] px-3.5 sm:px-4 bg-[#1a1a1a] hover:bg-black text-white rounded-md transition-all hover:opacity-95 active:scale-[0.98] cursor-pointer inline-flex items-center justify-center gap-2.5 border border-[#1a1a1a] shadow-xs shrink-0"
             aria-label="Shopping Cart"
           >
             <div class="relative w-5 h-5 flex items-center justify-center">
               <ShoppingBag class="w-4 h-4 stroke-[2]" />
               <span 
                 v-if="store.totalItemCount > 0"
-                class="absolute -top-1.5 -right-2 bg-[#a47a3c] text-white text-[9.5px] font-bold w-4 h-4 rounded-full flex items-center justify-center border-2 border-[#1a1a1a] shadow-xs"
+                class="absolute -top-1.5 -right-2 bg-[#a47a3c] text-white text-[9.5px] font-bold w-4 h-4 rounded-md flex items-center justify-center border-2 border-[#1a1a1a] shadow-xs"
               >
                 {{ store.totalItemCount }}
               </span>
@@ -255,10 +255,10 @@ function handleSearchSubmit() {
       <div v-if="headerMode === 'storefront' && page.component !== 'Search'" class="sm:hidden pb-2.5 pt-0.5">
         <div 
           @click="$emit('openStoreInfo')"
-          class="flex items-center justify-between px-3 py-2 bg-gradient-to-r from-[#f7f3ec] via-[#f5efe5] to-[#faf6ef] hover:from-[#f3ece0] hover:to-[#f5eee2] border border-[#dfd6c8] rounded-2xl text-xs text-[#1d1d1f] transition-all cursor-pointer shadow-2xs active:scale-[0.99]"
+          class="flex items-center justify-between px-3 py-2 bg-gradient-to-r from-[#f7f3ec] via-[#f5efe5] to-[#faf6ef] hover:from-[#f3ece0] hover:to-[#f5eee2] border border-[#dfd6c8] rounded-lg text-xs text-[#1d1d1f] transition-all cursor-pointer shadow-2xs active:scale-[0.99]"
         >
           <div class="flex items-center gap-2.5 min-w-0">
-            <span class="w-7 h-7 rounded-xl bg-white border border-[#dfd6c8] text-[#a47a3c] flex items-center justify-center shrink-0 shadow-2xs">
+            <span class="w-7 h-7 rounded-md bg-white border border-[#dfd6c8] text-[#a47a3c] flex items-center justify-center shrink-0 shadow-2xs">
               <Sparkles class="w-3.5 h-3.5 text-[#a47a3c]" />
             </span>
             <div class="flex flex-col min-w-0 leading-tight">
@@ -286,7 +286,7 @@ function handleSearchSubmit() {
             :key="cat.id"
             :href="cat.href" 
             :class="[
-              'transition-colors px-3 py-1.5 rounded-full shrink-0 flex items-center gap-1.5',
+              'transition-colors px-3 py-1.5 rounded-md shrink-0 flex items-center gap-1.5',
               currentCategory === cat.id 
                 ? 'bg-[#1a1a1a] text-white font-semibold shadow-xs' 
                 : 'bg-[#f3efe7] text-[#6e6e73] hover:text-[#1d1d1f] border border-[#e0d9cc]/60'

@@ -210,7 +210,7 @@ const submit = () => {
       <div class="flex items-center justify-between">
         <Link 
           :href="route('admin.recipe-kits.index')"
-          class="inline-flex items-center gap-2 text-xs font-semibold text-stone-600 hover:text-stone-900 transition-colors"
+          class="inline-flex items-center gap-2 text-xs font-semibold text-zinc-600 hover:text-zinc-900 transition-colors"
         >
           <ArrowLeft class="w-4 h-4" />
           <span>Back to Recipe Kits</span>
@@ -221,15 +221,15 @@ const submit = () => {
       <form @submit.prevent="submit" class="space-y-6">
 
         <!-- Card 1: Kit Identity & Headline -->
-        <div class="bg-white border border-[#e0d9cc] rounded-3xl p-6 sm:p-8 shadow-2xs space-y-5">
-          <div class="border-b border-[#e0d9cc]/60 pb-4">
-            <span class="text-[11px] font-mono uppercase bg-[#1a1a1a] text-white px-2.5 py-0.5 rounded-full font-semibold">
+        <div class="bg-white border border-[#e4e4e7] rounded-lg p-6 sm:p-8 shadow-2xs space-y-5">
+          <div class="border-b border-[#e4e4e7]/60 pb-4">
+            <span class="text-[11px] font-mono uppercase bg-[#18181b] text-white px-2.5 py-0.5 rounded-md font-semibold">
               Step 1
             </span>
-            <h2 class="text-xl font-serif font-medium text-[#1d1d1f] mt-2">
+            <h2 class="text-xl font-semibold text-[#09090b] mt-2">
               Recipe Kit Information
             </h2>
-            <p class="text-xs text-[#6e6e73] mt-0.5">
+            <p class="text-xs text-[#52525b] mt-0.5">
               Specify the dish name, banner tagline, cooking specs, and description.
             </p>
           </div>
@@ -244,7 +244,7 @@ const submit = () => {
                 type="text"
                 v-model="form.name"
                 placeholder="e.g. Paneer Butter Masala Kit"
-                class="w-full h-11 bg-[#fbfaf8] rounded-2xl text-sm font-serif"
+                class="w-full h-9 bg-[#fafafa] rounded-lg text-sm font-semibold"
                 :class="{ 'border-rose-400 focus-visible:border-rose-500 focus-visible:ring-rose-500/15 focus:border-rose-500 focus:ring-rose-500/15': form.errors.name }"
                 required
               />
@@ -261,7 +261,7 @@ const submit = () => {
                 v-model="form.slug"
                 @input="isSlugManuallyEdited = true"
                 placeholder="paneer-curry"
-                class="w-full h-10 bg-[#fbfaf8] rounded-2xl text-xs font-mono"
+                class="w-full h-9 bg-[#fafafa] rounded-lg text-xs font-mono"
                 :class="{ 'border-rose-400 focus-visible:border-rose-500 focus-visible:ring-rose-500/15 focus:border-rose-500 focus:ring-rose-500/15': form.errors.slug }"
               />
               <div v-if="form.errors.slug" class="text-rose-600 text-[11px] mt-1">{{ form.errors.slug }}</div>
@@ -276,7 +276,7 @@ const submit = () => {
                 type="text"
                 v-model="form.subtitle_tag"
                 placeholder="e.g. CHEF-CRAFTED · DINNER IN 20 MINS"
-                class="w-full h-10 bg-[#fbfaf8] rounded-2xl text-xs"
+                class="w-full h-9 bg-[#fafafa] rounded-lg text-xs"
                 :class="{ 'border-rose-400 focus-visible:border-rose-500 focus-visible:ring-rose-500/15 focus:border-rose-500 focus:ring-rose-500/15': form.errors.subtitle_tag }"
               />
               <div v-if="form.errors.subtitle_tag" class="text-rose-600 text-[11px] mt-1">{{ form.errors.subtitle_tag }}</div>
@@ -292,10 +292,10 @@ const submit = () => {
                   type="text"
                   v-model="form.cooking_time"
                   placeholder="e.g. 20 mins, 35 mins"
-                  class="w-full h-10 pl-9 bg-[#fbfaf8] rounded-2xl text-xs"
+                  class="w-full h-9 pl-9 bg-[#fafafa] rounded-lg text-xs"
                   :class="{ 'border-rose-400 focus-visible:border-rose-500 focus-visible:ring-rose-500/15 focus:border-rose-500 focus:ring-rose-500/15': form.errors.cooking_time }"
                 />
-                <Clock class="w-4 h-4 text-stone-400 absolute left-3 top-3 pointer-events-none" />
+                <Clock class="w-4 h-4 text-zinc-400 absolute left-3 top-3 pointer-events-none" />
               </div>
             </div>
 
@@ -309,10 +309,10 @@ const submit = () => {
                   type="text"
                   v-model="form.servings"
                   placeholder="e.g. Serves 4, Feast for 6"
-                  class="w-full h-10 pl-9 bg-[#fbfaf8] rounded-2xl text-xs"
+                  class="w-full h-9 pl-9 bg-[#fafafa] rounded-lg text-xs"
                   :class="{ 'border-rose-400 focus-visible:border-rose-500 focus-visible:ring-rose-500/15 focus:border-rose-500 focus:ring-rose-500/15': form.errors.servings }"
                 />
-                <Users class="w-4 h-4 text-stone-400 absolute left-3 top-3 pointer-events-none" />
+                <Users class="w-4 h-4 text-zinc-400 absolute left-3 top-3 pointer-events-none" />
               </div>
             </div>
 
@@ -322,7 +322,7 @@ const submit = () => {
                 Difficulty Level
               </Label>
               <Select v-model="form.difficulty">
-                <SelectTrigger class="w-full h-10 bg-[#fbfaf8] rounded-2xl">
+                <SelectTrigger class="w-full h-9 bg-[#fafafa] rounded-lg">
                   <SelectValue placeholder="Select difficulty..." />
                 </SelectTrigger>
                 <SelectContent>
@@ -341,8 +341,8 @@ const submit = () => {
                   @update:checked="form.is_active = $event"
                 />
                 <div>
-                  <span class="text-xs font-semibold text-stone-800">Publish Kit Immediately</span>
-                  <p class="text-[11px] text-stone-500">Visible on storefront recipe kits grid.</p>
+                  <span class="text-xs font-semibold text-zinc-800">Publish Kit Immediately</span>
+                  <p class="text-[11px] text-zinc-500">Visible on storefront recipe kits grid.</p>
                 </div>
               </label>
             </div>
@@ -356,28 +356,28 @@ const submit = () => {
                 v-model="form.description"
                 rows="3"
                 placeholder="Detailed summary of the recipe, the flavor profile, and what is included..."
-                class="w-full bg-[#fbfaf8] rounded-2xl text-xs resize-y"
+                class="w-full bg-[#fafafa] rounded-lg text-xs resize-y"
               />
             </div>
           </div>
         </div>
 
         <!-- Card 2: Interactive Linked Products for Group Buy -->
-        <div class="bg-white border border-[#e0d9cc] rounded-3xl p-6 sm:p-8 shadow-2xs space-y-5">
-          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-[#e0d9cc]/60 pb-4">
+        <div class="bg-white border border-[#e4e4e7] rounded-lg p-6 sm:p-8 shadow-2xs space-y-5">
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-[#e4e4e7]/60 pb-4">
             <div>
               <div class="flex items-center gap-2">
-                <span class="text-[11px] font-mono uppercase bg-[#7a5620] text-white px-2.5 py-0.5 rounded-full font-semibold">
+                <span class="text-[11px] font-mono uppercase bg-[#27272a] text-white px-2.5 py-0.5 rounded-md font-semibold">
                   Step 2 · Core Feature
                 </span>
-                <span class="text-xs font-semibold text-emerald-800 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full">
+                <span class="text-xs font-semibold text-emerald-800 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-md">
                   Group Buy / Bundle Linking
                 </span>
               </div>
-              <h2 class="text-xl font-serif font-medium text-[#1d1d1f] mt-1.5">
+              <h2 class="text-xl font-semibold text-[#09090b] mt-1.5">
                 Linked Catalog Ingredients (Group Buy)
               </h2>
-              <p class="text-xs text-[#6e6e73]">
+              <p class="text-xs text-[#52525b]">
                 Connect individual store products into this kit. When customers order this kit, all linked products are bundled in one tap with bundle discount.
               </p>
             </div>
@@ -385,7 +385,7 @@ const submit = () => {
             <!-- Add Product Selector -->
             <div class="flex items-center gap-2 shrink-0">
               <Select v-model="selectedProductToAdd">
-                <SelectTrigger class="w-[230px] h-9 bg-[#fbfaf8] rounded-xl text-xs">
+                <SelectTrigger class="w-[230px] h-9 bg-[#fafafa] rounded-md text-xs">
                   <SelectValue placeholder="Select catalog product..." />
                 </SelectTrigger>
                 <SelectContent>
@@ -404,7 +404,7 @@ const submit = () => {
                 @click="addProductToKit"
                 :disabled="!selectedProductToAdd"
                 size="sm"
-                class="rounded-xl h-9 bg-[#1a1a1a] hover:bg-black text-white text-xs font-semibold gap-1.5 cursor-pointer disabled:opacity-40"
+                class="rounded-md h-9 bg-[#18181b] hover:bg-black text-white text-xs font-semibold gap-1.5 cursor-pointer disabled:opacity-40"
               >
                 <Plus class="w-3.5 h-3.5 stroke-[2.5]" />
                 <span>Link Product</span>
@@ -415,11 +415,11 @@ const submit = () => {
           <!-- Empty State -->
           <div 
             v-if="form.products.length === 0" 
-            class="p-8 border-2 border-dashed border-[#e0d9cc] rounded-2xl text-center bg-[#fbfaf8]"
+            class="p-8 border-2 border-dashed border-[#e4e4e7] rounded-lg text-center bg-[#fafafa]"
           >
-            <PackagePlus class="w-8 h-8 text-stone-400 mx-auto mb-2" />
-            <div class="text-xs font-semibold text-stone-800">No products linked yet</div>
-            <p class="text-[11px] text-stone-500 max-w-sm mx-auto mt-0.5">
+            <PackagePlus class="w-8 h-8 text-zinc-400 mx-auto mb-2" />
+            <div class="text-xs font-semibold text-zinc-800">No products linked yet</div>
+            <p class="text-[11px] text-zinc-500 max-w-sm mx-auto mt-0.5">
               Select products from the catalog above (e.g. Malai Paneer, Desi Ghee, Garam Masala) to link them to this recipe kit.
             </p>
           </div>
@@ -429,20 +429,20 @@ const submit = () => {
             <div 
               v-for="(item, idx) in form.products" 
               :key="item.product_id"
-              class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-2xl bg-[#fbfaf8] border border-[#e0d9cc] hover:border-[#a47a3c]/60 transition-colors"
+              class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-lg bg-[#fafafa] border border-[#e4e4e7] hover:border-[#18181b]/60 transition-colors"
             >
               <!-- Left: Image & Name -->
               <div class="flex items-center gap-3 min-w-0 flex-1">
                 <img 
                   :src="item.image || '/images/products/paneer_curry.jpg'" 
                   :alt="item.name"
-                  class="w-12 h-12 rounded-xl object-cover border border-[#e0d9cc]/60 shrink-0" 
+                  class="w-12 h-12 rounded-md object-cover border border-[#e4e4e7]/60 shrink-0" 
                 />
                 <div class="min-w-0">
-                  <div class="text-xs font-semibold text-[#1d1d1f] truncate">
+                  <div class="text-xs font-semibold text-[#09090b] truncate">
                     {{ item.name }}
                   </div>
-                  <div class="text-[11px] text-[#86868b]">
+                  <div class="text-[11px] text-[#71717a]">
                     Catalog Price: ${{ Number(item.price).toFixed(2) }} {{ item.size_main ? '· ' + item.size_main : '' }}
                   </div>
                 </div>
@@ -452,7 +452,7 @@ const submit = () => {
               <div class="flex items-center gap-3 flex-wrap">
                 <!-- Qty -->
                 <div class="flex items-center gap-1.5">
-                  <span class="text-[10px] font-mono uppercase text-stone-500">Qty:</span>
+                  <span class="text-[10px] font-mono uppercase text-zinc-500">Qty:</span>
                   <Input
                     type="number"
                     v-model.number="item.quantity"
@@ -468,12 +468,12 @@ const submit = () => {
                     type="text"
                     v-model="item.unit_notes"
                     placeholder="e.g. 400g cubed, for gravy"
-                    class="w-full h-8 bg-white rounded-lg text-xs placeholder:text-stone-400"
+                    class="w-full h-8 bg-white rounded-lg text-xs placeholder:text-zinc-400"
                   />
                 </div>
 
                 <!-- Optional toggle -->
-                <label class="inline-flex items-center gap-1.5 text-[11px] text-stone-600 cursor-pointer select-none">
+                <label class="inline-flex items-center gap-1.5 text-[11px] text-zinc-600 cursor-pointer select-none">
                   <Checkbox 
                     :checked="item.is_optional" 
                     @update:checked="item.is_optional = $event"
@@ -483,7 +483,7 @@ const submit = () => {
                 </label>
 
                 <!-- Subtotal -->
-                <div class="text-xs font-mono font-bold text-stone-800 min-w-[60px] text-right">
+                <div class="text-xs font-mono font-bold text-zinc-800 min-w-[60px] text-right">
                   ${{ (Number(item.price) * Number(item.quantity)).toFixed(2) }}
                 </div>
 
@@ -493,7 +493,7 @@ const submit = () => {
                   variant="ghost"
                   size="icon"
                   @click="removeProductFromKit(idx)"
-                  class="h-8 w-8 text-stone-400 hover:text-rose-600 hover:bg-rose-50 cursor-pointer"
+                  class="h-8 w-8 text-zinc-400 hover:text-rose-600 hover:bg-rose-50 cursor-pointer"
                   title="Remove product from kit"
                 >
                   <Trash2 class="w-4 h-4" />
@@ -502,22 +502,22 @@ const submit = () => {
             </div>
 
             <!-- Group Buy Bundle Summary Callout -->
-            <div class="p-4 rounded-2xl bg-[#f5eee2] border border-[#e0d9cc] flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div class="p-4 rounded-lg bg-[#f4f4f5] border border-[#e4e4e7] flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div class="space-y-0.5">
-                <div class="text-xs font-semibold text-[#7a5620] flex items-center gap-1.5">
-                  <Sparkles class="w-4 h-4 text-[#a47a3c]" />
+                <div class="text-xs font-semibold text-[#27272a] flex items-center gap-1.5">
+                  <Sparkles class="w-4 h-4 text-[#18181b]" />
                   <span>Group Buy Bundle Calculation</span>
                 </div>
-                <div class="text-[11px] text-stone-600">
+                <div class="text-[11px] text-zinc-600">
                   Total cost if {{ form.products.length }} ingredients are bought individually: 
-                  <strong class="text-stone-900">${{ individualProductsTotal.toFixed(2) }}</strong>
+                  <strong class="text-zinc-900">${{ individualProductsTotal.toFixed(2) }}</strong>
                 </div>
               </div>
 
               <button
                 type="button"
                 @click="copyIndividualTotalToOriginal"
-                class="text-[11px] font-semibold text-[#7a5620] hover:text-[#523812] underline cursor-pointer shrink-0"
+                class="text-[11px] font-semibold text-[#27272a] hover:text-[#27272a] underline cursor-pointer shrink-0"
               >
                 Use as Original Price ($)
               </button>
@@ -526,15 +526,15 @@ const submit = () => {
         </div>
 
         <!-- Card 3: Pricing & Bundle Discount -->
-        <div class="bg-white border border-[#e0d9cc] rounded-3xl p-6 sm:p-8 shadow-2xs space-y-5">
-          <div class="border-b border-[#e0d9cc]/60 pb-4">
-            <span class="text-[11px] font-mono uppercase bg-[#1a1a1a] text-white px-2.5 py-0.5 rounded-full font-semibold">
+        <div class="bg-white border border-[#e4e4e7] rounded-lg p-6 sm:p-8 shadow-2xs space-y-5">
+          <div class="border-b border-[#e4e4e7]/60 pb-4">
+            <span class="text-[11px] font-mono uppercase bg-[#18181b] text-white px-2.5 py-0.5 rounded-md font-semibold">
               Step 3
             </span>
-            <h2 class="text-xl font-serif font-medium text-[#1d1d1f] mt-2">
+            <h2 class="text-xl font-semibold text-[#09090b] mt-2">
               Kit Bundle Pricing
             </h2>
-            <p class="text-xs text-[#6e6e73] mt-0.5">
+            <p class="text-xs text-[#52525b] mt-0.5">
               Set the discounted bundle price customers pay for the complete recipe kit.
             </p>
           </div>
@@ -550,7 +550,7 @@ const submit = () => {
                 step="0.01"
                 v-model="form.price"
                 placeholder="14.99"
-                class="w-full h-11 bg-[#fbfaf8] rounded-2xl text-base font-serif font-medium"
+                class="w-full h-9 bg-[#fafafa] rounded-lg text-base font-semibold"
                 :class="{ 'border-rose-400 focus-visible:border-rose-500 focus-visible:ring-rose-500/15 focus:border-rose-500 focus:ring-rose-500/15': form.errors.price }"
                 required
               />
@@ -567,7 +567,7 @@ const submit = () => {
                 step="0.01"
                 v-model="form.original_price"
                 placeholder="18.99"
-                class="w-full h-11 bg-[#fbfaf8] rounded-2xl text-base font-serif font-medium"
+                class="w-full h-9 bg-[#fafafa] rounded-lg text-base font-semibold"
                 :class="{ 'border-rose-400 focus-visible:border-rose-500 focus-visible:ring-rose-500/15 focus:border-rose-500 focus:ring-rose-500/15': form.errors.original_price }"
               />
               <div v-if="form.errors.original_price" class="text-rose-600 text-[11px] mt-1">{{ form.errors.original_price }}</div>
@@ -575,15 +575,15 @@ const submit = () => {
 
             <!-- Live Savings Badge -->
             <div class="flex flex-col justify-center">
-              <span class="text-xs font-semibold uppercase tracking-wider text-stone-700 mb-1.5">Customer Savings:</span>
+              <span class="text-xs font-semibold uppercase tracking-wider text-zinc-700 mb-1.5">Customer Savings:</span>
               <div 
                 v-if="bundleSavings > 0"
-                class="p-2.5 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold flex items-center gap-1.5"
+                class="p-2.5 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold flex items-center gap-1.5"
               >
                 <TrendingDown class="w-4 h-4" />
                 <span>Save ${{ bundleSavings.toFixed(2) }} (Bundle Discount)</span>
               </div>
-              <div v-else class="text-xs text-stone-400 italic">
+              <div v-else class="text-xs text-zinc-400 italic">
                 Set Bundle Price lower than Original Price to highlight savings badge.
               </div>
             </div>
@@ -591,15 +591,15 @@ const submit = () => {
         </div>
 
         <!-- Card 4: Multi-Image Gallery -->
-        <div class="bg-white border border-[#e0d9cc] rounded-3xl p-6 sm:p-8 shadow-2xs space-y-5">
-          <div class="border-b border-[#e0d9cc]/60 pb-4">
-            <span class="text-[11px] font-mono uppercase bg-[#1a1a1a] text-white px-2.5 py-0.5 rounded-full font-semibold">
+        <div class="bg-white border border-[#e4e4e7] rounded-lg p-6 sm:p-8 shadow-2xs space-y-5">
+          <div class="border-b border-[#e4e4e7]/60 pb-4">
+            <span class="text-[11px] font-mono uppercase bg-[#18181b] text-white px-2.5 py-0.5 rounded-md font-semibold">
               Step 4
             </span>
-            <h2 class="text-xl font-serif font-medium text-[#1d1d1f] mt-2">
+            <h2 class="text-xl font-semibold text-[#09090b] mt-2">
               Multi-Image Gallery
             </h2>
-            <p class="text-xs text-[#6e6e73] mt-0.5">
+            <p class="text-xs text-[#52525b] mt-0.5">
               Upload multiple hero and detail photos for the dish and prepared meal.
             </p>
           </div>
@@ -607,12 +607,12 @@ const submit = () => {
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <!-- Upload Box -->
             <div 
-              class="border-2 border-dashed border-[#e0d9cc] hover:border-[#a47a3c] rounded-2xl p-6 text-center flex flex-col items-center justify-center bg-[#fbfaf8] hover:bg-white transition-all cursor-pointer"
+              class="border-2 border-dashed border-[#e4e4e7] hover:border-[#18181b] rounded-lg p-6 text-center flex flex-col items-center justify-center bg-[#fafafa] hover:bg-white transition-all cursor-pointer"
               @click="fileInputRef?.click()"
             >
-              <Upload class="w-7 h-7 text-[#a47a3c] mb-2" />
-              <span class="text-xs font-semibold text-stone-800">Upload Multiple Images</span>
-              <span class="text-[11px] text-stone-500 mt-0.5">Select one or more JPG, PNG, WebP files</span>
+              <Upload class="w-7 h-7 text-[#18181b] mb-2" />
+              <span class="text-xs font-semibold text-zinc-800">Upload Multiple Images</span>
+              <span class="text-[11px] text-zinc-500 mt-0.5">Select one or more JPG, PNG, WebP files</span>
               <input
                 ref="fileInputRef"
                 type="file"
@@ -624,40 +624,40 @@ const submit = () => {
             </div>
 
             <!-- Or Paste Image URL -->
-            <div class="flex flex-col justify-center space-y-2 p-5 bg-[#fbfaf8] border border-[#e0d9cc] rounded-2xl">
-              <span class="text-xs font-semibold text-stone-800">Add Image by URL or Path:</span>
+            <div class="flex flex-col justify-center space-y-2 p-5 bg-[#fafafa] border border-[#e4e4e7] rounded-lg">
+              <span class="text-xs font-semibold text-zinc-800">Add Image by URL or Path:</span>
               <div class="flex items-center gap-2">
                 <Input
                   type="text"
                   v-model="manualUrlInput"
                   @keydown.enter.prevent="addManualUrl"
                   placeholder="/images/products/paneer_curry.jpg"
-                  class="flex-1 h-9 bg-white rounded-xl text-xs font-mono"
+                  class="flex-1 h-9 bg-white rounded-md text-xs font-mono"
                 />
                 <Button
                   type="button"
                   @click="addManualUrl"
                   size="sm"
-                  class="h-9 px-3.5 bg-[#1a1a1a] hover:bg-black text-white text-xs font-semibold rounded-xl cursor-pointer"
+                  class="h-9 px-3.5 bg-[#18181b] hover:bg-black text-white text-xs font-semibold rounded-md cursor-pointer"
                 >
                   Add
                 </Button>
               </div>
-              <span class="text-[10px] text-stone-500">Supports catalog paths or web URLs. First image serves as primary cover.</span>
+              <span class="text-[10px] text-zinc-500">Supports catalog paths or web URLs. First image serves as primary cover.</span>
             </div>
           </div>
 
           <!-- Preview Gallery Grid -->
           <div v-if="previewImages.length > 0" class="space-y-2 pt-2">
-            <span class="text-xs font-semibold text-stone-700">Image Gallery Preview ({{ previewImages.length }}):</span>
+            <span class="text-xs font-semibold text-zinc-700">Image Gallery Preview ({{ previewImages.length }}):</span>
             <div class="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-3">
               <div 
                 v-for="(img, idx) in previewImages" 
                 :key="idx"
-                class="relative aspect-square rounded-xl overflow-hidden bg-stone-100 border border-[#e0d9cc] group shadow-2xs"
+                class="relative aspect-square rounded-md overflow-hidden bg-zinc-100 border border-[#e4e4e7] group shadow-2xs"
               >
                 <img :src="img.url" :alt="img.name" class="w-full h-full object-cover" />
-                <span v-if="idx === 0" class="absolute top-1.5 left-1.5 bg-[#a47a3c] text-white text-[9px] font-mono px-1.5 py-0.5 rounded shadow-xs">
+                <span v-if="idx === 0" class="absolute top-1.5 left-1.5 bg-[#18181b] text-white text-[9px] font-mono px-1.5 py-0.5 rounded shadow-xs">
                   Cover
                 </span>
                 <button
@@ -674,16 +674,16 @@ const submit = () => {
         </div>
 
         <!-- Card 5: Recipe Steps -->
-        <div class="bg-white border border-[#e0d9cc] rounded-3xl p-6 sm:p-8 shadow-2xs space-y-5">
-          <div class="flex items-center justify-between border-b border-[#e0d9cc]/60 pb-4">
+        <div class="bg-white border border-[#e4e4e7] rounded-lg p-6 sm:p-8 shadow-2xs space-y-5">
+          <div class="flex items-center justify-between border-b border-[#e4e4e7]/60 pb-4">
             <div>
-              <span class="text-[11px] font-mono uppercase bg-[#1a1a1a] text-white px-2.5 py-0.5 rounded-full font-semibold">
+              <span class="text-[11px] font-mono uppercase bg-[#18181b] text-white px-2.5 py-0.5 rounded-md font-semibold">
                 Step 5
               </span>
-              <h2 class="text-xl font-serif font-medium text-[#1d1d1f] mt-2">
+              <h2 class="text-xl font-semibold text-[#09090b] mt-2">
                 Step-by-Step Cooking Instructions
               </h2>
-              <p class="text-xs text-[#6e6e73] mt-0.5">
+              <p class="text-xs text-[#52525b] mt-0.5">
                 Included in the digital recipe card on the kit page.
               </p>
             </div>
@@ -693,7 +693,7 @@ const submit = () => {
               variant="outline"
               size="sm"
               @click="addRecipeStep"
-              class="h-8 rounded-xl gap-1.5 bg-[#f3efe7] hover:bg-[#ece7de] text-[#1d1d1f] text-xs font-semibold border-[#e0d9cc] cursor-pointer"
+              class="h-8 rounded-md gap-1.5 bg-[#f4f4f5] hover:bg-[#e4e4e7] text-[#09090b] text-xs font-semibold border-[#e4e4e7] cursor-pointer"
             >
               <Plus class="w-3.5 h-3.5 stroke-[2.5]" />
               <span>Add Step</span>
@@ -706,21 +706,21 @@ const submit = () => {
               :key="idx"
               class="flex items-center gap-3"
             >
-              <span class="w-7 h-7 rounded-full bg-[#f5eee2] text-[#7a5620] border border-[#e0d9cc] flex items-center justify-center font-mono font-bold text-xs shrink-0">
+              <span class="w-7 h-7 rounded-md bg-[#f4f4f5] text-[#27272a] border border-[#e4e4e7] flex items-center justify-center font-mono font-bold text-xs shrink-0">
                 {{ idx + 1 }}
               </span>
               <Input
                 type="text"
                 v-model="form.recipe_steps[idx]"
                 placeholder="Describe this cooking step..."
-                class="flex-1 h-9 bg-[#fbfaf8] rounded-xl text-xs"
+                class="flex-1 h-9 bg-[#fafafa] rounded-md text-xs"
               />
               <Button
                 type="button"
                 variant="ghost"
                 size="icon"
                 @click="removeRecipeStep(idx)"
-                class="h-8 w-8 text-stone-400 hover:text-rose-600 cursor-pointer"
+                class="h-8 w-8 text-zinc-400 hover:text-rose-600 cursor-pointer"
                 title="Remove step"
               >
                 <X class="w-4 h-4" />
@@ -730,10 +730,10 @@ const submit = () => {
         </div>
 
         <!-- Form Actions Bar -->
-        <div class="bg-white border border-[#e0d9cc] rounded-3xl p-6 shadow-2xs flex items-center justify-between gap-4">
+        <div class="bg-white border border-[#e4e4e7] rounded-lg p-6 shadow-2xs flex items-center justify-between gap-4">
           <Link
             :href="route('admin.recipe-kits.index')"
-            class="px-5 py-2.5 text-xs font-semibold text-stone-600 hover:text-stone-800 rounded-full hover:bg-stone-100 transition-colors"
+            class="px-5 py-2.5 text-xs font-semibold text-zinc-600 hover:text-zinc-800 rounded-md hover:bg-zinc-100 transition-colors"
           >
             Cancel
           </Link>
@@ -741,7 +741,7 @@ const submit = () => {
           <Button
             type="submit"
             :disabled="form.processing"
-            class="h-11 px-7 bg-[#1a1a1a] hover:bg-black text-white text-xs font-semibold rounded-full shadow-sm hover:shadow transition-all active:scale-98 cursor-pointer disabled:opacity-50"
+            class="h-11 px-7 bg-[#18181b] hover:bg-black text-white text-xs font-semibold rounded-md shadow-sm hover:shadow transition-all active:scale-98 cursor-pointer disabled:opacity-50"
           >
             {{ form.processing ? 'Publishing Kit...' : 'Publish Recipe Kit' }}
           </Button>

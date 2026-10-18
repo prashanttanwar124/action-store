@@ -28,7 +28,7 @@ class ProductTest extends TestCase
             ->has('products', 10)
             ->has('sliders')
             ->has('recipeKits')
-            ->where('totalProductCount', 14)
+            ->where('totalProductCount', 20)
             ->where('products.0.slug', 'atta')
         );
     }
@@ -44,7 +44,7 @@ class ProductTest extends TestCase
         $response->assertInertia(fn (Assert $page) => $page
             ->component('Search')
             ->has('products.data', 10)
-            ->where('products.total', 14)
+            ->where('products.total', 20)
             ->where('products.current_page', 1)
             ->has('recipeKits')
             ->has('categories')
@@ -70,7 +70,7 @@ class ProductTest extends TestCase
         $page2Response->assertInertia(fn (Assert $page) => $page
             ->component('Search')
             ->where('products.current_page', 2)
-            ->has('products.data', 4)
+            ->has('products.data', 10)
         );
     }
 

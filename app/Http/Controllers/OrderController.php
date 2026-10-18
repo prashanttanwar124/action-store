@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Exceptions\InsufficientStockException;
 use App\Exceptions\PaymentMismatchException;
 use App\Exceptions\SlotCapacityExceededException;
 use App\Models\Checkout;
@@ -219,9 +220,12 @@ class OrderController extends Controller
             } catch (InsufficientStockException $e) {
                 $checkout->release();
 
+                $isSlotFull = $e instanceof SlotCapacityExceededException;
+
                 throw ValidationException::withMessages([
+                    ...($isSlotFull ? ['pickup_slot' => [$e->getMessage()]] : []),
                     'items' => [$e->getMessage()],
-                    'error_code' => $e instanceof SlotCapacityExceededException ? 'slot_full' : 'out_of_stock',
+                    'error_code' => $isSlotFull ? 'slot_full' : 'out_of_stock',
                 ]);
             }
         }
@@ -493,7 +497,7 @@ class OrderController extends Controller
             $catalogItem = $model::query()
                 ->where(is_numeric($item['id']) ? 'id' : 'slug', $item['id'])->first();
 
-            if (! $catalogItem && ! isset($item['type'])) {
+            if (! $catalogItem && (! isset($item['type']) || ! is_numeric($item['id']))) {
                 $catalogItem = RecipeKit::query()
                     ->where(is_numeric($item['id']) ? 'id' : 'slug', $item['id'])->first();
             }
@@ -629,13 +633,14 @@ class OrderController extends Controller
         if ($timingMode === 'asap') {
             $tz = config('app.timezone');
             $now = now($tz);
-            $currentTime = $now->format('H:i');
             $start = $storeInfo->pickup_slot_start_time ?? '09:00';
             $end = $storeInfo->pickup_slot_end_time ?? '21:00';
             $prepMinutes = (int) ($storeInfo->effective_prep_time_minutes ?? 15);
-            $readyTime = $now->copy()->addMinutes($prepMinutes)->format('H:i');
+            $startAt = $now->copy()->setTimeFromTimeString($start.':00');
+            $endAt = $now->copy()->setTimeFromTimeString($end.':00');
+            $readyAt = $now->copy()->addMinutes($prepMinutes);
 
-            if ($currentTime < $start || $currentTime > $end || $readyTime > $end) {
+            if ($now->lt($startAt) || $now->gt($endAt) || $readyAt->gt($endAt)) {
                 $formattedHours = date('g:i A', strtotime($start)).' – '.date('g:i A', strtotime($end));
                 throw ValidationException::withMessages([
                     'pickup_timing_mode' => "Store is currently closed for ASAP pickup (pickup hours: {$formattedHours}). Please select a scheduled time for tomorrow.",
@@ -662,13 +667,13 @@ class OrderController extends Controller
             $capacitySlot = null;
             if (($data['pickup_timing_type'] ?? '') === 'slot') {
                 $slot = collect($storeInfo->available_pickup_slots)->firstWhere('label', $data['pickup_slot'] ?? '');
-                if (! $slot || ! preg_match('/^(\d{1,2}):(\d{2}) (AM|PM)/', $slot['label'], $parts)) {
+                if (! $slot || ! preg_match('/^(\d{1,2}):(\d{2})\s*(AM|PM)/i', $slot['label'], $parts)) {
                     throw ValidationException::withMessages([
                         'pickup_slot' => 'Choose an available pickup window.',
                         'error_code' => 'slot_inactive',
                     ]);
                 }
-                $hour = ((int) $parts[1] % 12) + ($parts[3] === 'PM' ? 12 : 0);
+                $hour = ((int) $parts[1] % 12) + (strtoupper($parts[3]) === 'PM' ? 12 : 0);
                 $time = sprintf('%02d:%02d', $hour, (int) $parts[2]);
                 $label = $slot['label'];
                 $capacitySlot = "{$date} · {$slot['label']}";

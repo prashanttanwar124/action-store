@@ -28,13 +28,13 @@ const fillDemo = (email, password = 'password') => {
 <template>
   <Head title="Admin Login — Masala Mart Backoffice" />
 
-  <div class="min-h-screen bg-[#fbf9f5] flex flex-col justify-center items-center px-4 sm:px-6 py-12 selection:bg-[#a47a3c] selection:text-white relative">
+  <div class="min-h-screen bg-zinc-50 flex flex-col justify-center items-center px-4 sm:px-6 py-12 selection:bg-zinc-900 selection:text-white relative">
     
     <!-- Top back button to Storefront -->
     <div class="absolute top-6 left-6">
       <Link 
         href="/" 
-        class="inline-flex items-center gap-1.5 text-xs font-semibold text-[#6e6e73] hover:text-[#1d1d1f] bg-[#f3efe7] border border-[#e0d9cc] px-3.5 py-1.5 rounded-full transition-colors shadow-2xs"
+        class="inline-flex items-center gap-1.5 text-xs font-medium text-zinc-600 hover:text-zinc-900 bg-white border border-zinc-200 px-3 py-1.5 rounded-md transition-colors shadow-2xs"
       >
         <ArrowLeft class="w-3.5 h-3.5" />
         <span>Return to Storefront</span>
@@ -42,34 +42,34 @@ const fillDemo = (email, password = 'password') => {
     </div>
 
     <!-- Login Container -->
-    <div class="w-full max-w-md space-y-6">
+    <div class="w-full max-w-sm space-y-5">
 
       <!-- Header & Brand -->
-      <div class="text-center space-y-2">
-        <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#f5eee2] border border-[#e0d9cc] text-[#7a5620] text-xs font-mono font-medium">
-          <Shield class="w-3.5 h-3.5 text-[#a47a3c]" />
-          <span>ADMIN AUTH GUARD</span>
+      <div class="text-center space-y-1.5">
+        <div class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded bg-zinc-900 text-zinc-100 text-[11px] font-mono font-medium">
+          <Shield class="w-3 h-3 text-emerald-400" />
+          <span>ADMIN GUARD</span>
         </div>
         
-        <h1 class="text-3xl sm:text-4xl font-serif font-medium text-[#1d1d1f] tracking-tight">
+        <h1 class="text-2xl font-semibold text-zinc-900 tracking-tight">
           Masala Mart Backoffice
         </h1>
-        <p class="text-xs text-[#6e6e73]">
-          Staff & management portal protected by Spatie Role Permissions
+        <p class="text-xs text-zinc-500">
+          Sign in with your staff or administrator credentials
         </p>
       </div>
 
       <!-- Card -->
-      <div class="bg-[#f3efe7] border border-[#e0d9cc] rounded-3xl p-6 sm:p-8 shadow-sm">
+      <div class="bg-white border border-zinc-200 rounded-lg p-6 shadow-xs">
         
         <form @submit.prevent="submit" class="space-y-4">
           <!-- Email Input -->
           <div>
-            <Label for="email" class="block mb-1.5">
+            <Label for="email" class="block mb-1.5 text-xs font-medium text-zinc-700">
               Admin Email
             </Label>
             <div class="relative">
-              <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-[#86868b] z-10">
+              <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-zinc-400 z-10">
                 <Mail class="w-4 h-4" />
               </div>
               <Input
@@ -80,7 +80,7 @@ const fillDemo = (email, password = 'password') => {
                 autofocus
                 autocomplete="username"
                 placeholder="admin@masalamart.com"
-                class="w-full pl-10 pr-3.5 h-11 bg-white rounded-xl text-sm"
+                class="w-full pl-9 pr-3 h-9 bg-white border-zinc-200 rounded-md text-xs"
                 :class="{ 'border-red-500 focus-visible:ring-red-500': form.errors.email }"
               />
             </div>
@@ -91,11 +91,11 @@ const fillDemo = (email, password = 'password') => {
 
           <!-- Password Input -->
           <div>
-            <Label for="password" class="block mb-1.5">
+            <Label for="password" class="block mb-1.5 text-xs font-medium text-zinc-700">
               Password
             </Label>
             <div class="relative">
-              <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-[#86868b] z-10">
+              <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-zinc-400 z-10">
                 <Lock class="w-4 h-4" />
               </div>
               <Input
@@ -105,7 +105,7 @@ const fillDemo = (email, password = 'password') => {
                 required
                 autocomplete="current-password"
                 placeholder="••••••••"
-                class="w-full pl-10 pr-3.5 h-11 bg-white rounded-xl text-sm"
+                class="w-full pl-9 pr-3 h-9 bg-white border-zinc-200 rounded-md text-xs"
                 :class="{ 'border-red-500 focus-visible:ring-red-500': form.errors.password }"
               />
             </div>
@@ -115,13 +115,13 @@ const fillDemo = (email, password = 'password') => {
           </div>
 
           <!-- Remember Me -->
-          <div class="flex items-center justify-between pt-1">
+          <div class="flex items-center justify-between pt-0.5">
             <label class="flex items-center gap-2 cursor-pointer select-none">
               <Checkbox 
                 :checked="form.remember" 
                 @update:checked="form.remember = $event"
               />
-              <span class="text-xs text-[#6e6e73]">Stay logged in to admin session</span>
+              <span class="text-xs text-zinc-600">Keep session active</span>
             </label>
           </div>
 
@@ -129,43 +129,43 @@ const fillDemo = (email, password = 'password') => {
           <Button
             type="submit"
             :disabled="form.processing"
-            class="w-full h-11 bg-[#1a1a1a] hover:bg-black text-white font-semibold text-xs rounded-full flex items-center justify-center gap-2 transition-transform active:scale-98 shadow-md cursor-pointer disabled:opacity-50 mt-2"
+            class="w-full h-9 bg-zinc-900 hover:bg-zinc-800 text-white font-semibold text-xs rounded-md flex items-center justify-center gap-2 transition-colors cursor-pointer disabled:opacity-50 mt-2"
           >
             <span v-if="form.processing">Authenticating...</span>
             <template v-else>
-              <span>Sign In to Admin Guard</span>
-              <ArrowRight class="w-4 h-4" />
+              <span>Sign In</span>
+              <ArrowRight class="w-3.5 h-3.5" />
             </template>
           </Button>
         </form>
 
         <!-- Pre-fill demo accounts for quick testing -->
-        <div class="mt-6 pt-5 border-t border-[#e0d9cc]/70">
-          <p class="text-[11px] font-semibold uppercase tracking-wider text-[#86868b] mb-2.5 text-center">
-            One-Click Demo Credentials
+        <div class="mt-5 pt-4 border-t border-zinc-100">
+          <p class="text-[10px] font-mono uppercase tracking-wider text-zinc-400 mb-2 text-center">
+            Quick Demo Access
           </p>
           <div class="grid grid-cols-2 gap-2">
             <button
               type="button"
               @click="fillDemo('admin@masalamart.com')"
-              class="p-2 bg-white/80 hover:bg-white border border-[#e0d9cc] rounded-xl text-left transition-colors cursor-pointer group"
+              class="p-2 bg-zinc-50 hover:bg-zinc-100 border border-zinc-200 rounded-md text-left transition-colors cursor-pointer"
             >
-              <div class="text-[11px] font-bold text-[#1d1d1f] group-hover:text-[#a47a3c]">
+              <div class="text-[11px] font-semibold text-zinc-900">
                 Super Admin
               </div>
-              <div class="text-[10px] text-[#6e6e73] font-mono truncate">
+              <div class="text-[10px] text-zinc-500 font-mono truncate">
                 admin@masalamart.com
               </div>
             </button>
             <button
               type="button"
               @click="fillDemo('manager@masalamart.com')"
-              class="p-2 bg-white/80 hover:bg-white border border-[#e0d9cc] rounded-xl text-left transition-colors cursor-pointer group"
+              class="p-2 bg-zinc-50 hover:bg-zinc-100 border border-zinc-200 rounded-md text-left transition-colors cursor-pointer"
             >
-              <div class="text-[11px] font-bold text-[#1d1d1f] group-hover:text-[#a47a3c]">
+              <div class="text-[11px] font-semibold text-zinc-900">
                 Store Manager
               </div>
-              <div class="text-[10px] text-[#6e6e73] font-mono truncate">
+              <div class="text-[10px] text-zinc-500 font-mono truncate">
                 manager@masalamart.com
               </div>
             </button>
@@ -175,8 +175,8 @@ const fillDemo = (email, password = 'password') => {
       </div>
 
       <!-- Info note -->
-      <p class="text-center text-[11px] text-[#86868b]">
-        Admin session cookies are isolated from user storefront sessions.
+      <p class="text-center text-[11px] text-zinc-400">
+        Isolated admin authentication session (`guard: admin`).
       </p>
 
     </div>

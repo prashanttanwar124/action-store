@@ -86,3 +86,44 @@ test('cart subtotal computes correctly for items in cart', () => {
   store.addToCart({ id: 1, name: 'Paneer', price: 4.99, quantity: 3 });
   assert.equal(store.subtotal, 14.97);
 });
+
+test('pickupOptions computes weekday accurately in UTC+13 timezone and normalizes pickupDays casing', () => {
+  // 2026-10-03T12:00:00Z is Sunday 2026-10-04 01:00 in Pacific/Auckland (UTC+13)
+  const options = pickupOptions(
+    info,
+    'today',
+    new Date('2026-10-03T12:00:00Z'),
+    'Pacific/Auckland',
+    {},
+    15,
+    ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'] // Sunday closed
+  );
+  assert.equal(options.date, '2026-10-04');
+  assert.equal(options.isDayOpen, false);
+});
+
+test('cart store preserves recipe-kit type and prevents numeric ID collision with regular products', () => {
+  setActivePinia(createPinia());
+  const store = useStore();
+  store.setProducts([
+    { id: 1, name: 'Basmati Rice', price: 9.99, weight: '5kg', isRecipeKit: false },
+  ]);
+
+  store.addToCart({
+    id: 1,
+    slug: 'butter-chicken-kit',
+    type: 'recipe-kit',
+    isRecipeKit: true,
+    name: 'Butter Chicken Kit',
+    price: 24.99,
+    quantity: 1,
+    size: 'Recipe Kit',
+  });
+
+  assert.equal(store.cartItems.length, 1);
+  assert.equal(store.cartItems[0].id, 'butter-chicken-kit');
+  assert.equal(store.cartItems[0].type, 'recipe-kit');
+  assert.equal(store.cartItems[0].name, 'Butter Chicken Kit');
+  assert.equal(store.subtotal, 24.99);
+});
+

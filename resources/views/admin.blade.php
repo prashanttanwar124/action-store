@@ -6,16 +6,15 @@
 
         <title inertia>{{ config('app.name', 'Masala Mart') }} Admin</title>
 
-        <!-- Preload Local Self-Hosted Fonts -->
+        <!-- Preload Local Self-Hosted Sans Font -->
         <link rel="preload" href="/fonts/plus-jakarta-sans.woff2" as="font" type="font/woff2" crossorigin>
-        <link rel="preload" href="/fonts/newsreader.woff2" as="font" type="font/woff2" crossorigin>
 
         <!-- Admin Backoffice Assets (Completely Isolated from Storefront) -->
         @routes
         @vite(['resources/css/admin.css', 'resources/js/admin.js', "resources/js/Pages/{$page['component']}.vue"])
         @inertiaHead
     </head>
-    <body class="font-sans antialiased bg-[#fbf9f5] text-[#1d1d1f]">
+    <body class="font-sans antialiased bg-zinc-50 text-zinc-900">
         @inertia
     </body>
 </html>
