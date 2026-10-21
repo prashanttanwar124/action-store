@@ -118,9 +118,13 @@ class Product extends Model
      */
     public function getStockBadgeAttribute(?string $value): string
     {
+        if (! array_key_exists('stock', $this->attributes) && ! empty($value)) {
+            return $value;
+        }
+
         $stock = (int) ($this->stock ?? 50);
 
-        if ($stock <= 0) {
+        if ($stock <= 0 || (! empty($value) && stripos($value, 'out') !== false && $stock <= 0)) {
             return 'Out of stock';
         }
 

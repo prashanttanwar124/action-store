@@ -8,6 +8,7 @@ use App\Http\Requests\Admin\UpdateProductRequest;
 use App\Models\Category;
 use App\Models\Product;
 use App\Models\Supplier;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -36,10 +37,19 @@ class AdminProductController extends Controller
      *
      * @return array<string, string>
      */
-    protected function getCategoriesList(): array
+    protected function getCategoriesList(?string $includeSlug = null): array
     {
-        $dbCategories = Category::where('is_active', true)->orderBy('sort_order')->pluck('name', 'slug')->toArray();
+        $query = Category::where('is_active', true);
+        if ($includeSlug) {
+            $query->orWhere('slug', $includeSlug);
+        }
+
+        $dbCategories = $query->orderBy('sort_order')->limit(20)->pluck('name', 'slug')->toArray();
         if (! empty($dbCategories)) {
+            if ($includeSlug && ! isset($dbCategories[$includeSlug]) && isset($this->defaultCategories[$includeSlug])) {
+                $dbCategories[$includeSlug] = $this->defaultCategories[$includeSlug];
+            }
+
             return $dbCategories;
         }
 
@@ -113,13 +123,55 @@ class AdminProductController extends Controller
     }
 
     /**
+     * Search catalog products with a limit for dropdown selectors.
+     */
+    public function search(Request $request): JsonResponse
+    {
+        $q = trim((string) $request->input('q', ''));
+        $limit = min(max((int) $request->input('limit', 10), 1), 25);
+
+        $products = Product::query()
+            ->select('id', 'name', 'slug', 'price', 'image', 'size_main', 'category')
+            ->when($q !== '', function ($query) use ($q) {
+                $query->where(function ($sub) use ($q) {
+                    $sub->where('name', 'like', "%{$q}%")
+                        ->orWhere('slug', 'like', "%{$q}%")
+                        ->orWhere('category', 'like', "%{$q}%");
+                });
+            })
+            ->orderBy('name')
+            ->limit($limit)
+            ->get()
+            ->map(fn (Product $p) => [
+                'id' => $p->id,
+                'value' => (string) $p->id,
+                'label' => $p->name,
+                'sublabel' => '($'.number_format((float) $p->price, 2).')',
+                'badge' => $p->size_main ?: $p->category,
+                'name' => $p->name,
+                'slug' => $p->slug,
+                'price' => (float) $p->price,
+                'image' => $p->image,
+                'size_main' => $p->size_main,
+                'category' => $p->category,
+            ]);
+
+        return response()->json([
+            'items' => $products,
+        ]);
+    }
+
+    /**
      * Show the form for creating a new product.
      */
     public function create(): Response
     {
         return Inertia::render('Admin/Products/Create', [
             'defaultCategories' => $this->getCategoriesList(),
-            'suppliers' => Supplier::where('status', 'active')->orderBy('name')->get(['id', 'name', 'code']),
+            'suppliers' => Supplier::where('status', 'active')
+                ->orderBy('name')
+                ->limit(15)
+                ->get(['id', 'name', 'code']),
         ]);
     }
 
@@ -151,7 +203,7 @@ class AdminProductController extends Controller
         }
         $validated['slug'] = $slug;
 
-        $categoriesList = $this->getCategoriesList();
+        $categoriesList = $this->getCategoriesList($validated['category'] ?? null);
         if (empty($validated['category_title']) && isset($categoriesList[$validated['category']])) {
             $validated['category_title'] = $categoriesList[$validated['category']];
         }
@@ -203,6 +255,18 @@ class AdminProductController extends Controller
      */
     public function edit(Product $product): Response
     {
+        $suppliers = Supplier::where('status', 'active')
+            ->orderBy('name')
+            ->limit(15)
+            ->get(['id', 'name', 'code']);
+
+        if ($product->supplier_id && ! $suppliers->contains('id', $product->supplier_id)) {
+            $currentSupplier = Supplier::find($product->supplier_id, ['id', 'name', 'code']);
+            if ($currentSupplier) {
+                $suppliers->prepend($currentSupplier);
+            }
+        }
+
         return Inertia::render('Admin/Products/Edit', [
             'product' => [
                 'id' => $product->id,
@@ -226,11 +290,8 @@ class AdminProductController extends Controller
                 'description' => $product->description,
                 'buy_again' => (bool) $product->buy_again,
             ],
-            'defaultCategories' => $this->getCategoriesList(),
-            'suppliers' => Supplier::where('status', 'active')
-                ->when($product->supplier_id, fn ($q) => $q->orWhere('id', $product->supplier_id))
-                ->orderBy('name')
-                ->get(['id', 'name', 'code']),
+            'defaultCategories' => $this->getCategoriesList($product->category),
+            'suppliers' => $suppliers,
         ]);
     }
 

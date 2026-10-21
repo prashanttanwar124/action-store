@@ -24,6 +24,7 @@ Route::get('/products/{slug}', [ProductController::class, 'show'])->name('produc
 
 // 1d: Smart Cart & Checkout (Requires Authentication - No Guest Orders)
 Route::get('/cart', [CartController::class, 'index'])->name('cart');
+Route::post('/cart/stock-check', [CartController::class, 'stockCheck'])->name('cart.stock-check');
 
 Route::middleware('auth')->group(function () {
     Route::get('/checkout', [CartController::class, 'checkout'])->name('checkout');

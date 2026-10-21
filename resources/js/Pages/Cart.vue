@@ -1,5 +1,6 @@
 <script setup>
-import { Head, Link } from '@inertiajs/vue3';
+import { computed, onMounted } from 'vue';
+import { Head, Link, usePage } from '@inertiajs/vue3';
 import StoreLayout from '../Layouts/StoreLayout.vue';
 import { useStore } from '../stores/cart';
 import { 
@@ -13,7 +14,8 @@ import {
   CheckCircle2, 
   Clock,
   Store,
-  ShoppingBag
+  ShoppingBag,
+  AlertTriangle
 } from 'lucide-vue-next';
 
 const props = defineProps({
@@ -24,10 +26,17 @@ const props = defineProps({
 });
 
 const store = useStore();
+const page = usePage();
+const storeInfo = computed(() => page.props.storeInfo || {});
+const storeBrandName = computed(() => storeInfo.value?.brand_name || (storeInfo.value?.name ? storeInfo.value.name.split(/\s*[—–]\s*|\s+-\s+/)[0].trim() : 'Store'));
+
+onMounted(() => {
+  store.refreshCartStock();
+});
 </script>
 
 <template>
-  <Head title="Shopping Cart — Masala Mart" />
+  <Head :title="`Shopping Cart — ${storeBrandName}`" />
 
   <StoreLayout 
     headerMode="cart" 
@@ -69,7 +78,7 @@ const store = useStore();
                 100% Free In-Store & Curbside Pickup
               </h1>
               <p class="text-xs text-stone-400 font-normal mt-0.5">
-                Packaged fresh in thermal insulated bags at <strong class="text-stone-200">Masala Mart — Main St.</strong> (Bay 3 or Front Counter).
+                Packaged fresh in thermal insulated bags at <strong class="text-stone-200">{{ storeInfo.name || storeBrandName }}</strong> (Bay 3 or Front Counter).
               </p>
             </div>
           </div>
@@ -78,6 +87,42 @@ const store = useStore();
             <span class="text-[#e4b97a] font-serif font-bold text-sm tracking-wide sm:mt-0.5">ALWAYS FREE</span>
           </div>
         </div>
+      </div>
+
+      <!-- Out-of-Stock / Insufficient Stock Warning Banner -->
+      <div
+        v-if="store.hasStockIssues"
+        class="bg-rose-50 border border-rose-200 rounded-lg p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-xs"
+      >
+        <div class="flex items-start gap-3">
+          <div class="w-9 h-9 rounded-md bg-rose-100 text-rose-700 flex items-center justify-center shrink-0 border border-rose-200 mt-0.5">
+            <AlertTriangle class="w-4.5 h-4.5 stroke-[2.2]" />
+          </div>
+          <div class="space-y-1">
+            <h2 class="text-xs sm:text-sm font-bold text-rose-950">
+              Some items in your cart are out of stock or have limited availability
+            </h2>
+            <p class="text-xs text-rose-800 leading-relaxed">
+              Please remove unavailable items or adjust their quantities before proceeding to checkout:
+            </p>
+            <ul class="text-xs text-rose-900 font-medium space-y-0.5 pt-0.5">
+              <li v-for="issueItem in store.stockIssues" :key="issueItem.id" class="flex items-center gap-1.5">
+                <span class="w-1.5 h-1.5 rounded-full bg-rose-600 shrink-0"></span>
+                <span>
+                  <strong>{{ issueItem.name }}</strong> — {{ issueItem.stockIssueLabel }}
+                </span>
+              </li>
+            </ul>
+          </div>
+        </div>
+
+        <button
+          type="button"
+          @click="store.resolveStockIssues()"
+          class="px-4 py-2.5 bg-rose-700 hover:bg-rose-800 text-white text-xs font-semibold rounded-md transition-colors cursor-pointer shrink-0 shadow-xs active:scale-98"
+        >
+          Remove / Adjust Unavailable Items
+        </button>
       </div>
 
       <!-- Main Cart Layout: 2 Columns on Desktop -->
@@ -109,7 +154,8 @@ const store = useStore();
             <div 
               v-for="item in store.cartItems" 
               :key="item.id"
-              class="p-4 sm:p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4"
+              class="p-4 sm:p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4 transition-colors"
+              :class="item.isOutOfStock ? 'bg-rose-50/40' : (item.exceedsStock ? 'bg-amber-50/40' : '')"
             >
               <!-- Item Details -->
               <div class="flex items-center gap-3 sm:gap-4 w-full sm:w-auto">
@@ -118,12 +164,31 @@ const store = useStore();
                     :src="item.image || (item.name.toLowerCase().includes('atta') ? '/images/products/atta.jpg' : (item.name.toLowerCase().includes('ghee') ? '/images/products/ghee.jpg' : (item.name.toLowerCase().includes('paneer') ? '/images/products/paneer.jpg' : (item.name.toLowerCase().includes('rice') ? '/images/products/rice.jpg' : (item.name.toLowerCase().includes('biscuit') ? '/images/products/biscuits.jpg' : (item.name.toLowerCase().includes('masala') ? '/images/products/garam_masala.jpg' : '/images/products/sweets.jpg'))))))" 
                     :alt="item.name" 
                     class="w-full h-full object-cover object-center"
+                    :class="item.isOutOfStock ? 'grayscale opacity-65' : ''"
                   />
                 </div>
                 
-                <div class="flex-1">
-                  <div class="flex items-center gap-2">
-                    <h3 class="font-semibold text-sm text-[#1d1d1f]">{{ item.name }}</h3>
+                <div class="flex-1 min-w-0">
+                  <div class="flex flex-wrap items-center gap-2">
+                    <h3 class="font-semibold text-sm text-[#1d1d1f]" :class="item.isOutOfStock ? 'line-through text-stone-500' : ''">{{ item.name }}</h3>
+                    <span
+                      v-if="item.isOutOfStock"
+                      class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold bg-rose-100 text-rose-800 border border-rose-200"
+                    >
+                      {{ item.stockIssueLabel || 'Out of Stock' }}
+                    </span>
+                    <span
+                      v-else-if="item.exceedsStock"
+                      class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold bg-amber-100 text-amber-900 border border-amber-200"
+                    >
+                      {{ item.stockIssueLabel }}
+                    </span>
+                    <span
+                      v-else-if="item.stock !== null && item.stock <= 5"
+                      class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-semibold bg-[#f5eee2] text-[#7a5620] border border-[#e0d9cc]"
+                    >
+                      Only {{ item.stock }} left
+                    </span>
                   </div>
                   <div class="text-xs text-[#6e6e73] font-normal mt-0.5">{{ item.weight }}</div>
                   <div class="text-xs font-serif font-medium text-[#1d1d1f] mt-1">
@@ -137,7 +202,10 @@ const store = useStore();
 
               <!-- Quantity Controls & Delete -->
               <div class="flex items-center justify-between sm:justify-end gap-3 w-full sm:w-auto pt-2 sm:pt-0 border-t sm:border-t-0 border-[#e0d9cc]/60">
-                <div class="w-24 sm:w-28 h-9 bg-[#ece7de] rounded-md flex items-center justify-between px-2.5 border border-[#e0d9cc]">
+                <div
+                  v-if="!item.isOutOfStock"
+                  class="w-24 sm:w-28 h-9 bg-[#ece7de] rounded-md flex items-center justify-between px-2.5 border border-[#e0d9cc]"
+                >
                   <button 
                     @click="store.removeFromCart(item.id)" 
                     class="p-1 hover:text-[#1a1a1a] cursor-pointer flex items-center justify-center text-[#1d1d1f]"
@@ -147,16 +215,25 @@ const store = useStore();
                   </button>
                   <span class="text-xs font-bold text-[#1d1d1f]">{{ item.quantity }}</span>
                   <button 
-                    @click="store.addToCart({ id: item.id, name: item.name, weight: item.weight, price: item.price, originalPrice: item.originalPrice, image: item.image })" 
-                    class="p-1 hover:text-[#1a1a1a] cursor-pointer flex items-center justify-center text-[#1d1d1f]"
+                    @click="store.addToCart({ id: item.id, type: item.type, isRecipeKit: item.isRecipeKit, name: item.name, weight: item.weight, price: item.price, originalPrice: item.originalPrice, image: item.image })" 
+                    :disabled="!store.canAddMore(item, 1)"
+                    class="p-1 flex items-center justify-center transition-opacity"
+                    :class="store.canAddMore(item, 1) ? 'hover:text-[#1a1a1a] cursor-pointer text-[#1d1d1f]' : 'opacity-35 cursor-not-allowed text-stone-400'"
+                    :title="store.canAddMore(item, 1) ? 'Increase quantity' : 'Maximum available stock reached'"
                     aria-label="Increase quantity"
                   >
                     <Plus class="w-3.5 h-3.5 stroke-[2.5]" />
                   </button>
                 </div>
+                <span
+                  v-else
+                  class="px-2.5 py-1.5 rounded-md bg-rose-100 text-rose-800 border border-rose-200 text-[11px] font-bold"
+                >
+                  Unavailable
+                </span>
 
                 <div class="text-right min-w-[65px]">
-                  <div class="text-base font-serif font-medium text-[#1d1d1f]">
+                  <div class="text-base font-serif font-medium text-[#1d1d1f]" :class="item.isOutOfStock ? 'line-through text-stone-400' : ''">
                     ${{ (item.price * item.quantity).toFixed(2) }}
                   </div>
                 </div>
@@ -187,14 +264,24 @@ const store = useStore();
                 v-for="impulse in (props.impulseItems.length ? props.impulseItems : store.impulseItems)" 
                 :key="impulse.id"
                 class="border border-[#e0d9cc] rounded-lg p-3 bg-[#f3efe7] flex items-center justify-between gap-2"
+                :class="store.isOutOfStock(impulse) ? 'opacity-60' : ''"
               >
-                <div>
+                <div class="min-w-0">
                   <div class="font-semibold text-xs text-[#1d1d1f] line-clamp-1">{{ impulse.name }}</div>
                   <div class="text-[11px] text-[#6e6e73] font-normal">{{ impulse.size_main || impulse.size }} · ${{ Number(impulse.price).toFixed(2) }}</div>
                 </div>
+                <span
+                  v-if="store.isOutOfStock(impulse)"
+                  class="text-[10px] font-bold text-rose-700 bg-rose-50 border border-rose-200 px-2 py-1 rounded-md shrink-0"
+                >
+                  Out of Stock
+                </span>
                 <button 
-                  @click="store.addToCart({ id: impulse.id, name: impulse.name, price: Number(impulse.price), size: impulse.size_main || impulse.size, image: impulse.image }, 1)"
-                  class="w-7 h-7 bg-[#1a1a1a] hover:bg-black text-white rounded-md flex items-center justify-center transition-colors shrink-0 active:scale-95 cursor-pointer shadow-xs"
+                  v-else
+                  @click="store.addToCart({ id: impulse.id, slug: impulse.slug, name: impulse.name, price: Number(impulse.price), size: impulse.size_main || impulse.size, image: impulse.image, stock: impulse.stock, stock_badge: impulse.stock_badge }, 1)"
+                  :disabled="!store.canAddMore(impulse, 1)"
+                  class="w-7 h-7 bg-[#1a1a1a] hover:bg-black text-white rounded-md flex items-center justify-center transition-colors shrink-0 active:scale-95 shadow-xs"
+                  :class="store.canAddMore(impulse, 1) ? 'cursor-pointer' : 'opacity-40 cursor-not-allowed'"
                   aria-label="Add impulse item"
                 >
                   <Plus class="w-3.5 h-3.5 stroke-[2.5]" />
@@ -236,14 +323,24 @@ const store = useStore();
               </div>
             </div>
 
-            <!-- Masala Points Box -->
+            <!-- Points Box -->
             <div class="bg-[#f5eee2] border border-[#e0d9cc] rounded-lg p-3 text-xs text-[#7a5620] flex items-center gap-2">
               <Sparkles class="w-4 h-4 shrink-0 text-[#a47a3c]" />
-              <span class="font-normal">You will earn <strong class="font-bold text-[#7a5620]">+{{ Math.floor(store.subtotal) }} Masala Points</strong> on this order.</span>
+              <span class="font-normal">You will earn <strong class="font-bold text-[#7a5620]">+{{ Math.floor(store.subtotal) }} {{ storeBrandName }} Points</strong> on this order.</span>
             </div>
 
             <!-- Desktop Checkout CTA Button -->
+            <button
+              v-if="store.hasStockIssues"
+              type="button"
+              disabled
+              class="hidden sm:flex w-full py-4 bg-stone-300 text-stone-600 font-semibold text-center text-xs rounded-md cursor-not-allowed items-center justify-center gap-2 px-4"
+            >
+              <AlertTriangle class="w-4 h-4 text-rose-600 shrink-0" />
+              <span>Resolve Stock Issues Above to Checkout</span>
+            </button>
             <Link 
+              v-else-if="store.cartItems.length > 0"
               href="/checkout"
               class="hidden sm:flex w-full py-4 bg-[#1a1a1a] hover:bg-black text-white font-semibold text-center text-sm rounded-md transition-colors shadow-md cursor-pointer items-center justify-between px-6"
             >
@@ -287,7 +384,17 @@ const store = useStore();
           </div>
         </div>
 
+        <button
+          v-if="store.hasStockIssues"
+          type="button"
+          @click="store.resolveStockIssues()"
+          class="flex-1 py-3 bg-rose-700 active:bg-rose-800 text-white font-semibold text-xs rounded-md text-center cursor-pointer flex items-center justify-center gap-1.5 px-4 shadow-md"
+        >
+          <AlertTriangle class="w-3.5 h-3.5 shrink-0" />
+          <span>Remove / Adjust Unavailable</span>
+        </button>
         <Link 
+          v-else
           href="/checkout"
           class="flex-1 py-3 bg-[#1a1a1a] active:bg-black text-white font-semibold text-xs rounded-md text-center cursor-pointer flex items-center justify-between px-5 shadow-md"
         >

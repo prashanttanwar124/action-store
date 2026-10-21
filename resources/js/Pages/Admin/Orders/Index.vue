@@ -134,12 +134,15 @@ const orderToPrint = ref(null);
 const isCancelModalOpen = ref(false);
 const orderToCancel = ref(null);
 const isCancelling = ref(false);
+const isItemRefundModalOpen = ref(false);
+const orderForItemRefund = ref(null);
+const itemToRefund = ref(null);
+const refundQtyInput = ref(1);
+const zeroProductStockInput = ref(true);
+const refundReasonInput = ref('Out of stock during packing');
+const isRefundingItem = ref(false);
 const isReverbConnected = ref(false);
 const updatingOrderId = ref(null);
-
-// Reactive clock tick (every 30s) so wait times and relative timestamps update live without page reload
-const nowTick = ref(Date.now());
-let clockIntervalId = null;
 
 // Track which cards have expanded item lists (> 4 items)
 const expandedOrderCards = ref({});
@@ -180,12 +183,49 @@ function setViewMode(mode) {
   }
 }
 
+// Per-item refund & active quantity helpers
+function isItemFullyRefunded(item) {
+  return Number(item?.refunded_quantity || 0) >= Number(item?.quantity || 1);
+}
+
+function isItemPartiallyRefunded(item) {
+  const refunded = Number(item?.refunded_quantity || 0);
+  return refunded > 0 && refunded < Number(item?.quantity || 1);
+}
+
+function activeItemQuantity(item) {
+  return Math.max(0, Number(item?.quantity || 1) - Number(item?.refunded_quantity || 0));
+}
+
+function packableItemsForOrder(order) {
+  if (!order?.items?.length) return [];
+  return order.items.filter((item) => !isItemFullyRefunded(item));
+}
+
+function effectiveOrderTotal(order) {
+  return Math.max(0, Number(order?.total || 0) - Number(order?.refunded_total || 0));
+}
+
+function isOrderFullyRefunded(order) {
+  return effectiveOrderTotal(order) <= 0 && Number(order?.refunded_total || 0) > 0;
+}
+
+function displayOrderTotal(order) {
+  return isOrderFullyRefunded(order) ? Number(order?.total || 0) : effectiveOrderTotal(order);
+}
+
 // Item packing checklist helpers (DB-backed + real-time multi-packer sync)
 function isItemPacked(orderId, itemId) {
   return Boolean(packedItemsMap.value[`${orderId}:${itemId}`]);
 }
 
 async function toggleItemPacked(orderId, itemId) {
+  const targetOrder = ordersList.value.find((o) => o.id === orderId);
+  const targetItem = targetOrder?.items?.find((i) => i.id === itemId);
+  if (targetItem && isItemFullyRefunded(targetItem)) {
+    return;
+  }
+
   const key = `${orderId}:${itemId}`;
   const nextPacked = !packedItemsMap.value[key];
 
@@ -196,8 +236,6 @@ async function toggleItemPacked(orderId, itemId) {
   }
   packedItemsMap.value = { ...packedItemsMap.value };
 
-  const targetOrder = ordersList.value.find((o) => o.id === orderId);
-  const targetItem = targetOrder?.items?.find((i) => i.id === itemId);
   if (targetItem) {
     targetItem.is_packed = nextPacked;
   }
@@ -223,12 +261,13 @@ async function toggleItemPacked(orderId, itemId) {
 }
 
 async function markAllItemsPacked(order) {
-  if (!order?.items?.length) return;
-  const allPacked = packedCountForOrder(order) === order.items.length;
+  const packable = packableItemsForOrder(order);
+  if (!packable.length) return;
+  const allPacked = packedCountForOrder(order) === packable.length;
   const nextPacked = !allPacked;
   const previousMap = { ...packedItemsMap.value };
 
-  order.items.forEach((item) => {
+  packable.forEach((item) => {
     const key = `${order.id}:${item.id}`;
     item.is_packed = nextPacked;
     if (nextPacked) {
@@ -246,7 +285,7 @@ async function markAllItemsPacked(order) {
   } catch (err) {
     console.error('Failed to update all items packed state:', err);
     packedItemsMap.value = previousMap;
-    order.items.forEach((item) => {
+    packable.forEach((item) => {
       item.is_packed = Boolean(previousMap[`${order.id}:${item.id}`]);
     });
     showToast('Could not save packing checklist. Please try again.', 'error');
@@ -254,18 +293,22 @@ async function markAllItemsPacked(order) {
 }
 
 function packedCountForOrder(order) {
-  if (!order?.items?.length) return 0;
-  return order.items.filter((item) => isItemPacked(order.id, item.id)).length;
+  const packable = packableItemsForOrder(order);
+  if (!packable.length) return 0;
+  return packable.filter((item) => isItemPacked(order.id, item.id)).length;
 }
 
 function packingProgressPercent(order) {
-  if (!order?.items?.length) return 0;
-  return Math.round((packedCountForOrder(order) / order.items.length) * 100);
+  const packable = packableItemsForOrder(order);
+  if (!packable.length) return 0;
+  return Math.round((packedCountForOrder(order) / packable.length) * 100);
 }
 
 function totalUnitsForOrder(order) {
   if (!order?.items?.length) return order?.items_count || 0;
-  return order.items.reduce((sum, item) => sum + (Number(item.quantity) || 1), 0);
+  const activeSum = order.items.reduce((sum, item) => sum + activeItemQuantity(item), 0);
+  if (activeSum > 0) return activeSum;
+  return order.items.reduce((sum, item) => sum + Number(item.quantity || 1), 0);
 }
 
 // Helper: detect ASAP vs Scheduled
@@ -274,17 +317,18 @@ function isAsapOrder(order) {
   return String(order.pickup_slot || '').toUpperCase().includes('ASAP');
 }
 
-// Helper: live elapsed minutes & urgency for active orders
+// Helper: elapsed minutes & urgency for active ASAP orders (no background timer loop)
 function getElapsedMinutes(order) {
   if (!order?.created_at) return null;
   const createdMs = new Date(order.created_at).getTime();
   if (Number.isNaN(createdMs)) return null;
-  return Math.max(0, Math.floor((nowTick.value - createdMs) / 60000));
+  return Math.max(0, Math.floor((Date.now() - createdMs) / 60000));
 }
 
 function getLiveRelativeTime(order) {
+  if (order?.created_at_human) return order.created_at_human;
   const mins = getElapsedMinutes(order);
-  if (mins === null) return order?.created_at_human || 'Recently';
+  if (mins === null) return 'Recently';
   if (mins < 1) return 'Just now';
   if (mins < 60) return `${mins}m ago`;
   const hrs = Math.floor(mins / 60);
@@ -292,15 +336,18 @@ function getLiveRelativeTime(order) {
     const remMins = mins % 60;
     return remMins > 0 ? `${hrs}h ${remMins}m ago` : `${hrs}h ago`;
   }
-  return order?.created_at_human || `${Math.floor(hrs / 24)}d ago`;
+  return `${Math.floor(hrs / 24)}d ago`;
 }
 
 function getOrderUrgency(order) {
   if (!order?.created_at || ['completed', 'cancelled'].includes(order.status)) {
     return null;
   }
+  if (!isAsapOrder(order)) {
+    return null;
+  }
   const diffMins = getElapsedMinutes(order);
-  if (diffMins === null || diffMins >= 240) return null;
+  if (diffMins === null || diffMins >= 60) return null;
   if (diffMins >= 25) {
     return {
       label: `${diffMins}m wait`,
@@ -529,6 +576,14 @@ function handleGlobalKeydown(e) {
   }
 }
 
+const handlePusherConnected = () => {
+  isReverbConnected.value = true;
+};
+
+const handlePusherDisconnected = () => {
+  isReverbConnected.value = false;
+};
+
 // Load preferences from localStorage & connect WebSocket
 onMounted(() => {
   const savedSound = localStorage.getItem('masala_order_sound');
@@ -540,10 +595,6 @@ onMounted(() => {
     viewMode.value = savedViewMode;
   }
 
-  clockIntervalId = setInterval(() => {
-    nowTick.value = Date.now();
-  }, 30000);
-
   if (typeof window !== 'undefined') {
     window.addEventListener('keydown', handleGlobalKeydown);
   }
@@ -551,14 +602,13 @@ onMounted(() => {
   // Connect to Laravel Reverb via Echo
   if (typeof window !== 'undefined' && window.Echo) {
     try {
-      window.Echo.connector.pusher.connection.bind('connected', () => {
-        isReverbConnected.value = true;
-      });
-      window.Echo.connector.pusher.connection.bind('disconnected', () => {
-        isReverbConnected.value = false;
-      });
-      if (window.Echo.connector.pusher.connection.state === 'connected') {
-        isReverbConnected.value = true;
+      const pusherConnection = window.Echo.connector?.pusher?.connection;
+      if (pusherConnection) {
+        pusherConnection.bind('connected', handlePusherConnected);
+        pusherConnection.bind('disconnected', handlePusherDisconnected);
+        if (pusherConnection.state === 'connected') {
+          isReverbConnected.value = true;
+        }
       }
 
       // Listen on private channel 'admin.orders' for new orders, status changes, and multi-packer checklist updates
@@ -581,10 +631,18 @@ onMounted(() => {
 onUnmounted(() => {
   stopOrderAlarm();
   if (toastTimeoutId) clearTimeout(toastTimeoutId);
-  if (clockIntervalId) clearInterval(clockIntervalId);
   if (typeof window !== 'undefined') {
     window.removeEventListener('keydown', handleGlobalKeydown);
     if (window.Echo) {
+      try {
+        const pusherConnection = window.Echo.connector?.pusher?.connection;
+        if (pusherConnection) {
+          pusherConnection.unbind('connected', handlePusherConnected);
+          pusherConnection.unbind('disconnected', handlePusherDisconnected);
+        }
+      } catch (e) {
+        console.warn('Reverb Echo unbind error:', e);
+      }
       window.Echo.leave('admin.orders');
     }
   }
@@ -785,17 +843,38 @@ function handleStatusUpdated(payload) {
   }
 }
 
-// Handle real-time packing checklist update from another staff member via Laravel Reverb
+// Handle real-time packing checklist & item refund update from another staff member via Laravel Reverb
 function handleItemsPackedUpdated(payload) {
   if (!payload?.order_id) return;
   const orderId = payload.order_id;
   const packedIds = new Set((payload.packed_item_ids || []).map((id) => Number(id)));
+  const payloadItemsById = new Map((payload.items || []).map((i) => [Number(i.id), i]));
 
   const targetOrder = ordersList.value.find((o) => o.id === orderId);
   const nextMap = { ...packedItemsMap.value };
 
+  if (targetOrder) {
+    if (typeof payload.refunded_total !== 'undefined') {
+      targetOrder.refunded_total = Number(payload.refunded_total || 0);
+    }
+    if (typeof payload.notes !== 'undefined') {
+      targetOrder.notes = payload.notes;
+    }
+    if (payload.status && targetOrder.status !== payload.status) {
+      const prev = targetOrder.status;
+      targetOrder.status = payload.status;
+      updateLocalStats(prev, payload.status, effectiveOrderTotal(targetOrder));
+    }
+  }
+
   if (targetOrder?.items?.length) {
     targetOrder.items.forEach((item) => {
+      const incomingItem = payloadItemsById.get(Number(item.id));
+      if (incomingItem) {
+        item.refunded_quantity = Number(incomingItem.refunded_quantity || 0);
+        item.refunded_amount = Number(incomingItem.refunded_amount || 0);
+        item.refund_reason = incomingItem.refund_reason || null;
+      }
       const isPacked = packedIds.has(Number(item.id));
       item.is_packed = isPacked;
       const key = `${orderId}:${item.id}`;
@@ -847,7 +926,7 @@ async function updateOrderStatus(order, nextStatus) {
   const previousStatus = order.status;
 
   order.status = nextStatus;
-  updateLocalStats(previousStatus, nextStatus, order.total);
+  updateLocalStats(previousStatus, nextStatus, effectiveOrderTotal(order));
   updatingOrderId.value = order.id;
 
   try {
@@ -864,7 +943,7 @@ async function updateOrderStatus(order, nextStatus) {
     return true;
   } catch (error) {
     order.status = previousStatus;
-    updateLocalStats(nextStatus, previousStatus, order.total);
+    updateLocalStats(nextStatus, previousStatus, effectiveOrderTotal(order));
     console.error('Failed to update order status:', error);
     const serverMessage = error.response?.data?.errors?.status?.[0] || error.response?.data?.message;
     showToast(serverMessage || 'Could not update the order status. Please try again.', 'error');
@@ -907,6 +986,7 @@ async function executeCancelOrder() {
   try {
     const ok = await updateOrderStatus(order, 'cancelled');
     if (ok) {
+      order.refunded_total = Number(order.total || 0);
       isCancelModalOpen.value = false;
       if (selectedOrderForModal.value?.id === order.id) {
         isDetailsModalOpen.value = false;
@@ -915,6 +995,94 @@ async function executeCancelOrder() {
     }
   } finally {
     isCancelling.value = false;
+  }
+}
+
+// Per-Item Out-of-Stock & Partial Refund Modal Actions
+const maxRefundableItemQty = computed(() => {
+  if (!itemToRefund.value) return 1;
+  return Math.max(1, activeItemQuantity(itemToRefund.value));
+});
+
+const estimatedItemRefundAmount = computed(() => {
+  if (!itemToRefund.value || !orderForItemRefund.value) return 0;
+  const remainingOrderBal = effectiveOrderTotal(orderForItemRefund.value);
+  const raw = Number(itemToRefund.value.unit_price || 0) * Number(refundQtyInput.value || 1);
+  return Math.min(remainingOrderBal, raw);
+});
+
+function openItemRefundModal(order, item) {
+  if (!order || !item || isItemFullyRefunded(item)) return;
+  acknowledgeOrder(order);
+  orderForItemRefund.value = order;
+  itemToRefund.value = item;
+  refundQtyInput.value = activeItemQuantity(item);
+  zeroProductStockInput.value = true;
+  refundReasonInput.value = 'Out of stock during packing';
+  isItemRefundModalOpen.value = true;
+}
+
+async function executeItemRefund() {
+  if (!orderForItemRefund.value || !itemToRefund.value || isRefundingItem.value) return;
+  isRefundingItem.value = true;
+
+  const order = orderForItemRefund.value;
+  const item = itemToRefund.value;
+  const prevRefundedTotal = Number(order.refunded_total || 0);
+  const prevStatus = order.status;
+
+  try {
+    const { data } = await axios.post(`/admin/orders/${order.id}/items/${item.id}/refund`, {
+      quantity: Number(refundQtyInput.value || 1),
+      zero_product_stock: Boolean(zeroProductStockInput.value),
+      reason: refundReasonInput.value || 'Out of stock during packing',
+    });
+
+    if (data?.order) {
+      const refundDiff = Math.max(0, Number(data.order.refunded_total || 0) - prevRefundedTotal);
+      const listOrder = ordersList.value.find((o) => o.id === order.id) || order;
+
+      const applyOrderPatch = (target) => {
+        if (!target) return;
+        target.refunded_total = Number(data.order.refunded_total || 0);
+        target.notes = data.order.notes;
+        if (Array.isArray(data.order.items)) {
+          target.items = data.order.items;
+        }
+        if (data.order.status) {
+          target.status = data.order.status;
+        }
+      };
+
+      applyOrderPatch(listOrder);
+      if (selectedOrderForModal.value?.id === order.id) {
+        applyOrderPatch(selectedOrderForModal.value);
+      }
+      hydratePackedItemsFromOrders([listOrder]);
+
+      if (data.order.status && data.order.status !== prevStatus) {
+        updateLocalStats(prevStatus, data.order.status, 0);
+      }
+
+      if (refundDiff > 0) {
+        liveStats.value.revenue_today = Math.max(0, Number(liveStats.value.revenue_today || 0) - refundDiff);
+      }
+    }
+
+    isItemRefundModalOpen.value = false;
+    itemToRefund.value = null;
+    orderForItemRefund.value = null;
+    showToast(data?.message || 'Item refunded and marked out of stock.', 'success');
+  } catch (error) {
+    console.error('Failed to refund order item:', error);
+    const serverMessage =
+      error.response?.data?.errors?.item?.[0] ||
+      error.response?.data?.errors?.quantity?.[0] ||
+      error.response?.data?.message ||
+      'Could not process partial refund. Please try again.';
+    showToast(serverMessage, 'error');
+  } finally {
+    isRefundingItem.value = false;
   }
 }
 
@@ -1619,8 +1787,17 @@ function getStatusBadge(status, fulfillmentType = '') {
 
                 <!-- Total Price, Payment Method & Unit Summary -->
                 <div class="text-right shrink-0">
-                  <div class="font-semibold text-xl text-[#09090b] leading-none">
-                    ${{ Number(order.total).toFixed(2) }}
+                  <div
+                    class="font-semibold text-xl leading-none"
+                    :class="isOrderFullyRefunded(order) ? 'line-through text-rose-500' : 'text-[#09090b]'"
+                  >
+                    ${{ displayOrderTotal(order).toFixed(2) }}
+                  </div>
+                  <div
+                    v-if="Boolean(Number(order.refunded_total || 0))"
+                    class="text-[10px] font-bold text-rose-700 mt-0.5"
+                  >
+                    Refunded -${{ Number(order.refunded_total).toFixed(2) }}
                   </div>
                   <div class="text-[10px] text-[#71717a] font-semibold uppercase tracking-wider inline-flex items-center justify-end gap-1 mt-1.5 bg-white px-2 py-0.5 rounded-md border border-[#e4e4e7]/70">
                     <CreditCard class="w-2.5 h-2.5 text-zinc-500" />
@@ -1736,20 +1913,21 @@ function getStatusBadge(status, fulfillmentType = '') {
             <CardContent class="p-4 flex-1 space-y-2.5">
               <div class="flex items-center justify-between text-[11px] font-bold uppercase tracking-wider text-[#71717a]">
                 <span class="inline-flex items-center gap-1.5">
-                  <span>Packing List ({{ packedCountForOrder(order) }}/{{ order.items?.length || order.items_count }})</span>
+                  <span>Packing List ({{ packedCountForOrder(order) }}/{{ packableItemsForOrder(order).length }})</span>
                   <span
-                    v-if="packingProgressPercent(order) === 100 && order.items?.length"
+                    v-if="packingProgressPercent(order) === 100 && packableItemsForOrder(order).length"
                     class="text-[10px] bg-emerald-100 text-emerald-800 border border-emerald-300 px-1.5 py-0.2 rounded-md normal-case font-bold"
                   >
                     All Packed ✓
                   </span>
                 </span>
                 <button
+                  v-if="packableItemsForOrder(order).length > 0"
                   type="button"
                   @click="markAllItemsPacked(order)"
                   class="text-[11px] font-bold text-[#18181b] hover:text-[#27272a] hover:underline cursor-pointer normal-case transition-colors"
                 >
-                  {{ packedCountForOrder(order) === order.items?.length ? 'Uncheck all' : 'Check all ✓' }}
+                  {{ packedCountForOrder(order) === packableItemsForOrder(order).length ? 'Uncheck all' : 'Check all ✓' }}
                 </button>
               </div>
 
@@ -1765,18 +1943,27 @@ function getStatusBadge(status, fulfillmentType = '') {
                 ></div>
               </div>
 
-              <!-- Item Checklist Rows (With Thumbnails & Multi-Quantity Callouts) -->
+              <!-- Item Checklist Rows (With Thumbnails, Multi-Quantity Callouts & OOS Refund Action) -->
               <div class="space-y-1 pt-0.5">
-                <button
+                <div
                   v-for="item in (expandedOrderCards[order.id] ? order.items : order.items.slice(0, 4))"
                   :key="item.id"
-                  type="button"
-                  @click="toggleItemPacked(order.id, item.id)"
-                  class="w-full flex items-center justify-between gap-2 text-xs py-1.5 px-2 rounded-md hover:bg-[#fafafa] transition-colors cursor-pointer group text-left border border-transparent"
-                  :class="isItemPacked(order.id, item.id) ? 'bg-emerald-50/40 border-emerald-100' : ''"
+                  class="w-full flex items-center justify-between gap-2 text-xs py-1.5 px-2 rounded-md transition-colors group border"
+                  :class="isItemFullyRefunded(item)
+                    ? 'bg-rose-50/50 border-rose-200/80 opacity-80'
+                    : isItemPacked(order.id, item.id)
+                      ? 'bg-emerald-50/40 border-emerald-100 hover:bg-emerald-50/70'
+                      : 'border-transparent hover:bg-[#fafafa]'"
                 >
-                  <div class="flex items-center gap-2 min-w-0">
-                    <CheckSquare v-if="isItemPacked(order.id, item.id)" class="w-4 h-4 text-emerald-600 shrink-0" />
+                  <button
+                    type="button"
+                    :disabled="isItemFullyRefunded(item)"
+                    @click="toggleItemPacked(order.id, item.id)"
+                    class="flex items-center gap-2 min-w-0 flex-1 text-left"
+                    :class="isItemFullyRefunded(item) ? 'cursor-default' : 'cursor-pointer'"
+                  >
+                    <Ban v-if="isItemFullyRefunded(item)" class="w-4 h-4 text-rose-500 shrink-0" />
+                    <CheckSquare v-else-if="isItemPacked(order.id, item.id)" class="w-4 h-4 text-emerald-600 shrink-0" />
                     <Square v-else class="w-4 h-4 text-zinc-300 group-hover:text-[#18181b] shrink-0" />
 
                     <!-- Product Thumbnail -->
@@ -1791,32 +1978,67 @@ function getStatusBadge(status, fulfillmentType = '') {
                       <Package v-else class="w-3.5 h-3.5 text-[#18181b]" />
                     </div>
 
-                    <!-- Quantity Badge (Highlighted in bold amber when qty > 1 so packers never miss multiples) -->
+                    <!-- Quantity Badge -->
                     <span
                       class="px-1.5 h-5 rounded-md border text-[11px] font-mono font-bold flex items-center justify-center shrink-0"
-                      :class="Number(item.quantity) > 1
-                        ? 'bg-amber-100 text-amber-950 border-amber-400 shadow-2xs'
-                        : 'bg-[#f4f4f5] text-[#09090b] border-[#e4e4e7]'"
+                      :class="isItemFullyRefunded(item)
+                        ? 'bg-rose-100 text-rose-800 border-rose-300 line-through'
+                        : activeItemQuantity(item) > 1
+                          ? 'bg-amber-100 text-amber-950 border-amber-400 shadow-2xs'
+                          : 'bg-[#f4f4f5] text-[#09090b] border-[#e4e4e7]'"
                     >
-                      {{ item.quantity }}×
+                      {{ isItemFullyRefunded(item) ? item.quantity : isItemPartiallyRefunded(item) ? `${activeItemQuantity(item)}/${item.quantity}` : activeItemQuantity(item) }}×
                     </span>
 
                     <div class="min-w-0">
                       <span
                         class="font-semibold block truncate"
-                        :class="isItemPacked(order.id, item.id) ? 'line-through text-zinc-400' : 'text-[#09090b]'"
+                        :class="isItemFullyRefunded(item)
+                          ? 'line-through text-rose-800'
+                          : isItemPacked(order.id, item.id)
+                            ? 'line-through text-zinc-400'
+                            : 'text-[#09090b]'"
                       >
                         {{ item.name }}
                       </span>
-                      <span v-if="item.size" class="text-[10px] text-zinc-400 block leading-none mt-0.5">
-                        {{ item.size }}
-                      </span>
+                      <div class="flex items-center gap-1.5 flex-wrap mt-0.5">
+                        <span v-if="item.size" class="text-[10px] text-zinc-400 leading-none">
+                          {{ item.size }}
+                        </span>
+                        <span
+                          v-if="isItemFullyRefunded(item)"
+                          class="text-[9px] font-bold px-1.5 py-0.2 rounded bg-rose-100 text-rose-800 border border-rose-200 leading-tight"
+                        >
+                          OOS · {{ item.refunded_quantity || item.quantity }}× Refunded (-${{ Number(item.refunded_amount || item.total_price).toFixed(2) }})
+                        </span>
+                        <span
+                          v-else-if="isItemPartiallyRefunded(item)"
+                          class="text-[9px] font-bold px-1.5 py-0.2 rounded bg-amber-100 text-amber-900 border border-amber-300 leading-tight"
+                        >
+                          {{ item.refunded_quantity }}× OOS Refunded (-${{ Number(item.refunded_amount).toFixed(2) }})
+                        </span>
+                      </div>
                     </div>
+                  </button>
+
+                  <div class="flex items-center gap-1.5 shrink-0">
+                    <button
+                      v-if="['confirmed', 'packing', 'ready_for_pickup'].includes(order.status) && !isItemFullyRefunded(item)"
+                      type="button"
+                      @click.stop="openItemRefundModal(order, item)"
+                      class="px-1.5 py-0.5 rounded text-[10px] font-bold text-rose-700 bg-rose-50 hover:bg-rose-600 hover:text-white border border-rose-200 hover:border-rose-600 transition-colors cursor-pointer"
+                      title="Mark item Out of Stock & issue partial Stripe refund"
+                    >
+                      {{ isItemPartiallyRefunded(item) ? `OOS (${activeItemQuantity(item)})` : 'OOS' }}
+                    </button>
+                    <span
+                      class="font-mono text-[11px] shrink-0"
+                      :class="isItemFullyRefunded(item) ? 'line-through text-rose-400' : 'text-zinc-600'"
+                    >
+                      ${{ (isItemFullyRefunded(item) ? Number(item.total_price) : Math.max(0, Number(item.total_price) - Number(item.refunded_amount || 0))).toFixed(2) }}
+                    </span>
                   </div>
-                  <span class="text-zinc-600 font-mono text-[11px] shrink-0">
-                    ${{ Number(item.total_price).toFixed(2) }}
-                  </span>
-                </button>
+                </div>
 
                 <!-- Expand / Collapse Toggle when order has > 4 items -->
                 <button
@@ -1984,7 +2206,15 @@ function getStatusBadge(status, fulfillmentType = '') {
                     <div class="text-[10px] text-zinc-500">{{ getLiveRelativeTime(order) }}</div>
                   </div>
                   <div class="text-right shrink-0">
-                    <div class="font-semibold text-base text-[#09090b]">${{ Number(order.total).toFixed(2) }}</div>
+                    <div
+                      class="font-semibold text-base"
+                      :class="isOrderFullyRefunded(order) ? 'line-through text-rose-500' : 'text-[#09090b]'"
+                    >
+                      ${{ displayOrderTotal(order).toFixed(2) }}
+                    </div>
+                    <div v-if="Boolean(Number(order.refunded_total || 0))" class="text-[9px] font-bold text-rose-700">
+                      Refunded -${{ Number(order.refunded_total).toFixed(2) }}
+                    </div>
                     <div class="text-[10px] text-zinc-500">{{ totalUnitsForOrder(order) }} units</div>
                   </div>
                 </div>
@@ -2000,27 +2230,51 @@ function getStatusBadge(status, fulfillmentType = '') {
 
                 <!-- Compact Item Checklist -->
                 <div class="space-y-1 max-h-40 overflow-y-auto pr-0.5">
-                  <button
+                  <div
                     v-for="item in order.items"
                     :key="item.id"
-                    type="button"
-                    @click="toggleItemPacked(order.id, item.id)"
-                    class="w-full flex items-center justify-between gap-1.5 text-[11px] py-1 px-1.5 rounded-lg hover:bg-[#fafafa] text-left cursor-pointer"
+                    class="w-full flex items-center justify-between gap-1.5 text-[11px] py-1 px-1.5 rounded-lg hover:bg-[#fafafa]"
                   >
-                    <div class="flex items-center gap-1.5 min-w-0">
-                      <CheckSquare v-if="isItemPacked(order.id, item.id)" class="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                    <button
+                      type="button"
+                      :disabled="isItemFullyRefunded(item)"
+                      @click="toggleItemPacked(order.id, item.id)"
+                      class="flex items-center gap-1.5 min-w-0 flex-1 text-left"
+                      :class="isItemFullyRefunded(item) ? 'cursor-default' : 'cursor-pointer'"
+                    >
+                      <Ban v-if="isItemFullyRefunded(item)" class="w-3.5 h-3.5 text-rose-500 shrink-0" />
+                      <CheckSquare v-else-if="isItemPacked(order.id, item.id)" class="w-3.5 h-3.5 text-emerald-600 shrink-0" />
                       <Square v-else class="w-3.5 h-3.5 text-zinc-300 shrink-0" />
                       <span
                         class="px-1 rounded text-[10px] font-mono font-bold shrink-0"
-                        :class="Number(item.quantity) > 1 ? 'bg-amber-100 text-amber-950 border border-amber-300' : 'bg-[#f4f4f5] text-zinc-800'"
+                        :class="isItemFullyRefunded(item)
+                          ? 'bg-rose-100 text-rose-800 border border-rose-300 line-through'
+                          : activeItemQuantity(item) > 1
+                            ? 'bg-amber-100 text-amber-950 border border-amber-300'
+                            : 'bg-[#f4f4f5] text-zinc-800'"
                       >
-                        {{ item.quantity }}×
+                        {{ isItemFullyRefunded(item) ? item.quantity : isItemPartiallyRefunded(item) ? `${activeItemQuantity(item)}/${item.quantity}` : activeItemQuantity(item) }}×
                       </span>
-                      <span class="truncate font-medium" :class="isItemPacked(order.id, item.id) ? 'line-through text-zinc-400' : 'text-zinc-900'">
+                      <span
+                        class="truncate font-medium"
+                        :class="isItemFullyRefunded(item)
+                          ? 'line-through text-rose-800'
+                          : isItemPacked(order.id, item.id)
+                            ? 'line-through text-zinc-400'
+                            : 'text-zinc-900'"
+                      >
                         {{ item.name }}
                       </span>
-                    </div>
-                  </button>
+                    </button>
+                    <button
+                      v-if="['confirmed', 'packing', 'ready_for_pickup'].includes(order.status) && !isItemFullyRefunded(item)"
+                      type="button"
+                      @click.stop="openItemRefundModal(order, item)"
+                      class="px-1.5 py-0.2 rounded text-[9px] font-bold text-rose-700 bg-rose-50 hover:bg-rose-600 hover:text-white border border-rose-200 transition-colors cursor-pointer shrink-0"
+                    >
+                      {{ isItemPartiallyRefunded(item) ? `OOS (${activeItemQuantity(item)})` : 'OOS' }}
+                    </button>
+                  </div>
                 </div>
 
                 <!-- Ticket Actions -->
@@ -2145,13 +2399,21 @@ function getStatusBadge(status, fulfillmentType = '') {
                       {{ order.items?.length || order.items_count }} items ({{ totalUnitsForOrder(order) }} units)
                     </div>
                     <div class="text-[11px] text-zinc-500">
-                      {{ packedCountForOrder(order) }}/{{ order.items?.length || order.items_count }} packed
+                      {{ packedCountForOrder(order) }}/{{ packableItemsForOrder(order).length }} packed
                     </div>
                   </td>
 
                   <!-- Total -->
                   <td class="py-3.5 px-4 whitespace-nowrap">
-                    <div class="font-semibold text-sm text-[#09090b]">${{ Number(order.total).toFixed(2) }}</div>
+                    <div
+                      class="font-semibold text-sm"
+                      :class="isOrderFullyRefunded(order) ? 'line-through text-rose-500' : 'text-[#09090b]'"
+                    >
+                      ${{ displayOrderTotal(order).toFixed(2) }}
+                    </div>
+                    <div v-if="Boolean(Number(order.refunded_total || 0))" class="text-[10px] font-bold text-rose-700">
+                      Refunded -${{ Number(order.refunded_total).toFixed(2) }}
+                    </div>
                     <div class="text-[10px] text-zinc-500 uppercase">{{ order.payment_method }}</div>
                   </td>
 
@@ -2433,26 +2695,33 @@ function getStatusBadge(status, fulfillmentType = '') {
             <div>
               <div class="font-bold text-xs uppercase tracking-wider text-zinc-500 mb-2 flex items-center justify-between">
                 <span>
-                  Order Items ({{ packedCountForOrder(selectedOrderForModal) }}/{{ selectedOrderForModal.items?.length || selectedOrderForModal.items_count }} Packed · {{ totalUnitsForOrder(selectedOrderForModal) }} Units)
+                  Order Items ({{ packedCountForOrder(selectedOrderForModal) }}/{{ packableItemsForOrder(selectedOrderForModal).length }} Packed · {{ totalUnitsForOrder(selectedOrderForModal) }} Active Units)
                 </span>
                 <button
+                  v-if="packableItemsForOrder(selectedOrderForModal).length > 0"
                   type="button"
                   @click="markAllItemsPacked(selectedOrderForModal)"
                   class="text-[11px] text-[#18181b] hover:underline font-bold normal-case cursor-pointer"
                 >
-                  {{ packedCountForOrder(selectedOrderForModal) === selectedOrderForModal.items?.length ? 'Uncheck All' : 'Mark All Packed ✓' }}
+                  {{ packedCountForOrder(selectedOrderForModal) === packableItemsForOrder(selectedOrderForModal).length ? 'Uncheck All' : 'Mark All Packed ✓' }}
                 </button>
               </div>
               <div class="border border-[#e4e4e7] rounded-lg divide-y divide-[#e4e4e7] overflow-hidden">
-                <button
+                <div
                   v-for="item in selectedOrderForModal.items"
                   :key="item.id"
-                  type="button"
-                  @click="toggleItemPacked(selectedOrderForModal.id, item.id)"
-                  class="w-full p-3 flex items-center justify-between bg-white hover:bg-[#fafafa] text-xs gap-3 text-left transition-colors cursor-pointer"
+                  class="w-full p-3 flex items-center justify-between text-xs gap-3 transition-colors"
+                  :class="isItemFullyRefunded(item) ? 'bg-rose-50/40' : 'bg-white hover:bg-[#fafafa]'"
                 >
-                  <div class="flex items-center gap-3 min-w-0">
-                    <CheckSquare v-if="isItemPacked(selectedOrderForModal.id, item.id)" class="w-4 h-4 text-emerald-600 shrink-0" />
+                  <button
+                    type="button"
+                    :disabled="isItemFullyRefunded(item)"
+                    @click="toggleItemPacked(selectedOrderForModal.id, item.id)"
+                    class="flex items-center gap-3 min-w-0 flex-1 text-left"
+                    :class="isItemFullyRefunded(item) ? 'cursor-default' : 'cursor-pointer'"
+                  >
+                    <Ban v-if="isItemFullyRefunded(item)" class="w-4 h-4 text-rose-500 shrink-0" />
+                    <CheckSquare v-else-if="isItemPacked(selectedOrderForModal.id, item.id)" class="w-4 h-4 text-emerald-600 shrink-0" />
                     <Square v-else class="w-4 h-4 text-zinc-300 shrink-0" />
                     <div class="w-9 h-9 rounded-md bg-[#f4f4f5] border border-[#e4e4e7] overflow-hidden shrink-0 flex items-center justify-center">
                       <img
@@ -2464,27 +2733,60 @@ function getStatusBadge(status, fulfillmentType = '') {
                       <Package v-else class="w-4 h-4 text-[#18181b]" />
                     </div>
                     <span
-                      class="font-mono font-bold px-2 h-7 rounded-lg flex items-center justify-center text-xs shrink-0 border"
-                      :class="Number(item.quantity) > 1
-                        ? 'bg-amber-100 text-amber-950 border-amber-400'
-                        : 'bg-[#f4f4f5] text-zinc-900 border-zinc-200'"
+                      class="font-mono font-bold px-2 h-7 rounded-md flex items-center justify-center text-xs shrink-0 border"
+                      :class="isItemFullyRefunded(item)
+                        ? 'bg-rose-100 text-rose-800 border-rose-300 line-through'
+                        : activeItemQuantity(item) > 1
+                          ? 'bg-amber-100 text-amber-950 border-amber-400'
+                          : 'bg-[#f4f4f5] text-zinc-900 border-zinc-200'"
                     >
-                      {{ item.quantity }}×
+                      {{ isItemFullyRefunded(item) ? item.quantity : isItemPartiallyRefunded(item) ? `${activeItemQuantity(item)}/${item.quantity}` : activeItemQuantity(item) }}×
                     </span>
                     <div class="truncate">
                       <div
                         class="font-bold truncate"
-                        :class="isItemPacked(selectedOrderForModal.id, item.id) ? 'line-through text-zinc-400' : 'text-zinc-900'"
+                        :class="isItemFullyRefunded(item)
+                          ? 'line-through text-rose-800'
+                          : isItemPacked(selectedOrderForModal.id, item.id)
+                            ? 'line-through text-zinc-400'
+                            : 'text-zinc-900'"
                       >
                         {{ item.name }}
                       </div>
-                      <div class="text-[11px] text-zinc-500">{{ item.size || 'Standard package' }} · ${{ Number(item.unit_price).toFixed(2) }} each</div>
+                      <div class="text-[11px] text-zinc-500 flex items-center gap-1.5 flex-wrap mt-0.5">
+                        <span>{{ item.size || 'Standard package' }} · ${{ Number(item.unit_price).toFixed(2) }} each</span>
+                        <span
+                          v-if="isItemFullyRefunded(item)"
+                          class="text-[10px] font-bold px-1.5 py-0.2 rounded bg-rose-100 text-rose-800 border border-rose-200"
+                        >
+                          Out of Stock · {{ item.refunded_quantity || item.quantity }}× Refunded (-${{ Number(item.refunded_amount || item.total_price).toFixed(2) }})
+                        </span>
+                        <span
+                          v-else-if="isItemPartiallyRefunded(item)"
+                          class="text-[10px] font-bold px-1.5 py-0.2 rounded bg-amber-100 text-amber-900 border border-amber-300"
+                        >
+                          {{ item.refunded_quantity }}× OOS Refunded (-${{ Number(item.refunded_amount).toFixed(2) }})
+                        </span>
+                      </div>
+                    </div>
+                  </button>
+                  <div class="flex items-center gap-2 shrink-0">
+                    <button
+                      v-if="['confirmed', 'packing', 'ready_for_pickup'].includes(selectedOrderForModal.status) && !isItemFullyRefunded(item)"
+                      type="button"
+                      @click.stop="openItemRefundModal(selectedOrderForModal, item)"
+                      class="h-7 px-2.5 rounded-md text-[11px] font-bold text-rose-700 bg-rose-50 hover:bg-rose-600 hover:text-white border border-rose-200 hover:border-rose-600 transition-colors cursor-pointer"
+                    >
+                      {{ isItemPartiallyRefunded(item) ? `OOS / Refund (${activeItemQuantity(item)} left)` : 'OOS / Refund' }}
+                    </button>
+                    <div
+                      class="font-mono font-medium text-right shrink-0"
+                      :class="isItemFullyRefunded(item) ? 'line-through text-rose-400' : 'text-zinc-900'"
+                    >
+                      ${{ (isItemFullyRefunded(item) ? Number(item.total_price) : Math.max(0, Number(item.total_price) - Number(item.refunded_amount || 0))).toFixed(2) }}
                     </div>
                   </div>
-                  <div class="font-mono font-medium text-right text-zinc-900 shrink-0">
-                    ${{ Number(item.total_price).toFixed(2) }}
-                  </div>
-                </button>
+                </div>
               </div>
             </div>
 
@@ -2504,6 +2806,10 @@ function getStatusBadge(status, fulfillmentType = '') {
                 <span>Discount:</span>
                 <span class="font-mono">-${{ Number(selectedOrderForModal.discount).toFixed(2) }}</span>
               </div>
+              <div v-if="Number(selectedOrderForModal.refunded_total || 0) > 0" class="flex justify-between text-rose-700 font-semibold">
+                <span>Refunded (Out-of-Stock / Cancelled):</span>
+                <span class="font-mono">-${{ Number(selectedOrderForModal.refunded_total).toFixed(2) }}</span>
+              </div>
               <div v-if="selectedOrderForModal.points_earned" class="flex justify-between text-[#27272a]">
                 <span class="inline-flex items-center gap-1">
                   <Award class="w-3.5 h-3.5 text-[#18181b]" />
@@ -2513,8 +2819,8 @@ function getStatusBadge(status, fulfillmentType = '') {
               </div>
               <Separator class="my-1.5" />
               <div class="flex justify-between text-sm font-bold text-zinc-950">
-                <span>Total Charged:</span>
-                <span class="font-semibold text-base text-[#18181b]">${{ Number(selectedOrderForModal.total).toFixed(2) }}</span>
+                <span>{{ Number(selectedOrderForModal.refunded_total || 0) > 0 ? 'Net Charged (After Refund):' : 'Total Charged:' }}</span>
+                <span class="font-semibold text-base text-[#18181b]">${{ effectiveOrderTotal(selectedOrderForModal).toFixed(2) }}</span>
               </div>
             </div>
 
@@ -2597,11 +2903,20 @@ function getStatusBadge(status, fulfillmentType = '') {
                   class="pt-1.5 flex justify-between items-start"
                 >
                   <div>
-                    <span class="font-bold text-base mr-1.5">[{{ item.quantity }}×]</span>
-                    <span class="font-sans font-bold">{{ item.name }}</span>
-                    <div class="text-[10px] text-zinc-500 font-sans pl-6">{{ item.size }}</div>
+                    <span class="font-bold text-base mr-1.5">
+                      [{{ isItemFullyRefunded(item) ? 'OOS' : `${activeItemQuantity(item)}×` }}]
+                    </span>
+                    <span class="font-sans font-bold" :class="isItemFullyRefunded(item) ? 'line-through text-zinc-500' : ''">
+                      {{ item.name }}
+                    </span>
+                    <div class="text-[10px] text-zinc-500 font-sans pl-6">
+                      {{ item.size }}
+                      <span v-if="Number(item.refunded_quantity || 0) > 0" class="font-bold text-rose-700">
+                        ({{ item.refunded_quantity }}× OOS Refunded -${{ Number(item.refunded_amount).toFixed(2) }})
+                      </span>
+                    </div>
                   </div>
-                  <span class="shrink-0">${{ Number(item.total_price).toFixed(2) }}</span>
+                  <span class="shrink-0">${{ Number(item.total_price - Number(item.refunded_amount || 0)).toFixed(2) }}</span>
                 </div>
               </div>
             </div>
@@ -2610,9 +2925,15 @@ function getStatusBadge(status, fulfillmentType = '') {
               <strong>Note:</strong> {{ orderToPrint.notes }}
             </div>
 
-            <div class="pt-2 border-t border-dashed border-zinc-300 flex justify-between items-center font-bold text-sm">
-              <span>Total Amount:</span>
-              <span>${{ Number(orderToPrint.total).toFixed(2) }} (PAID)</span>
+            <div class="pt-2 border-t border-dashed border-zinc-300 space-y-1 text-xs">
+              <div v-if="Number(orderToPrint.refunded_total || 0) > 0" class="flex justify-between text-rose-700 font-semibold">
+                <span>OOS Refunded:</span>
+                <span>-${{ Number(orderToPrint.refunded_total).toFixed(2) }}</span>
+              </div>
+              <div class="flex justify-between items-center font-bold text-sm">
+                <span>Total Amount:</span>
+                <span>${{ effectiveOrderTotal(orderToPrint).toFixed(2) }} (PAID)</span>
+              </div>
             </div>
           </div>
 
@@ -2641,7 +2962,7 @@ function getStatusBadge(status, fulfillmentType = '') {
             <DialogDescription class="text-xs text-zinc-600 pt-1">
               Cancelling this order will immediately return its reserved items back to inventory stock
               {{ orderToCancel.stripe_payment_id
-                ? "and issue a full automatic refund to the customer's card via Stripe."
+                ? "and issue an automatic refund of the remaining balance to the customer's card via Stripe."
                 : 'and mark the order as cancelled.' }}
             </DialogDescription>
           </DialogHeader>
@@ -2653,11 +2974,11 @@ function getStatusBadge(status, fulfillmentType = '') {
             </div>
             <div class="flex justify-between">
               <span class="text-rose-700">Refund Amount:</span>
-              <span class="font-semibold text-sm">${{ Number(orderToCancel.total).toFixed(2) }}</span>
+              <span class="font-semibold text-sm">${{ effectiveOrderTotal(orderToCancel).toFixed(2) }}</span>
             </div>
             <div class="flex justify-between">
               <span class="text-rose-700">Inventory Action:</span>
-              <span class="font-semibold">{{ orderToCancel.items_count }} item(s) ({{ totalUnitsForOrder(orderToCancel) }} units) restocked</span>
+              <span class="font-semibold">{{ totalUnitsForOrder(orderToCancel) }} active unit(s) restocked</span>
             </div>
             <div v-if="orderToCancel.stripe_payment_id" class="flex justify-between">
               <span class="text-rose-700">Stripe Payment ID:</span>
@@ -2684,6 +3005,114 @@ function getStatusBadge(status, fulfillmentType = '') {
               <Loader2 v-if="isCancelling" class="w-3.5 h-3.5 animate-spin" />
               <Ban v-else class="w-3.5 h-3.5" />
               <span>{{ orderToCancel?.stripe_payment_id ? 'Confirm & Refund via Stripe' : 'Confirm Cancellation' }}</span>
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <!-- ========================================================= -->
+      <!-- ITEM OUT-OF-STOCK & PARTIAL STRIPE REFUND MODAL           -->
+      <!-- ========================================================= -->
+      <Dialog :open="isItemRefundModalOpen" @update:open="isItemRefundModalOpen = $event">
+        <DialogContent class="max-w-md rounded-lg">
+          <DialogHeader v-if="itemToRefund && orderForItemRefund">
+            <DialogTitle class="text-base font-bold text-rose-800 flex items-center gap-2">
+              <AlertCircle class="w-5 h-5 text-rose-600" />
+              <span>Item Out of Stock · Partial Refund</span>
+            </DialogTitle>
+            <DialogDescription class="text-xs text-zinc-600 pt-1">
+              Issue a partial refund for <strong>{{ itemToRefund.name }}</strong> on order <strong>{{ orderForItemRefund.order_number }}</strong> and keep the rest of the order moving.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div v-if="itemToRefund && orderForItemRefund" class="space-y-3.5 text-xs">
+            <!-- Item Summary Box -->
+            <div class="p-3 bg-zinc-50 border border-zinc-200 rounded-lg flex items-center justify-between gap-3">
+              <div class="flex items-center gap-2.5 min-w-0">
+                <div class="w-9 h-9 rounded-md bg-white border border-zinc-200 overflow-hidden shrink-0 flex items-center justify-center">
+                  <img v-if="itemToRefund.image" :src="itemToRefund.image" :alt="itemToRefund.name" class="w-full h-full object-cover" />
+                  <Package v-else class="w-4 h-4 text-zinc-700" />
+                </div>
+                <div class="min-w-0">
+                  <div class="font-bold text-zinc-900 truncate">{{ itemToRefund.name }}</div>
+                  <div class="text-[11px] text-zinc-500">
+                    {{ activeItemQuantity(itemToRefund) }}× active · ${{ Number(itemToRefund.unit_price).toFixed(2) }} each
+                  </div>
+                </div>
+              </div>
+              <div class="text-right shrink-0">
+                <div class="text-[10px] uppercase font-bold text-rose-600">Refund</div>
+                <div class="font-mono font-bold text-sm text-rose-700">${{ estimatedItemRefundAmount.toFixed(2) }}</div>
+              </div>
+            </div>
+
+            <!-- Quantity Selector (when customer ordered > 1 of this item) -->
+            <div v-if="maxRefundableItemQty > 1" class="space-y-1.5">
+              <label class="block text-[11px] font-bold uppercase tracking-wider text-zinc-700">
+                How many units are Out of Stock?
+              </label>
+              <div class="flex items-center gap-2">
+                <button
+                  v-for="qty in maxRefundableItemQty"
+                  :key="qty"
+                  type="button"
+                  @click="refundQtyInput = qty"
+                  class="px-3 py-1.5 rounded-md font-mono font-bold text-xs border transition-colors cursor-pointer"
+                  :class="refundQtyInput === qty
+                    ? 'bg-rose-600 text-white border-rose-600'
+                    : 'bg-white text-zinc-800 border-zinc-200 hover:border-zinc-400'"
+                >
+                  {{ qty }}× (${{ Math.min(effectiveOrderTotal(orderForItemRefund), Number(itemToRefund.unit_price) * qty).toFixed(2) }})
+                </button>
+              </div>
+            </div>
+
+            <!-- Auto-Zero Store Stock Checkbox -->
+            <label class="flex items-start gap-2.5 p-3 rounded-lg bg-amber-50/80 border border-amber-200 cursor-pointer">
+              <input
+                v-model="zeroProductStockInput"
+                type="checkbox"
+                class="mt-0.5 rounded border-amber-400 text-zinc-900 focus:ring-zinc-900"
+              />
+              <div class="text-[11px] leading-snug text-amber-950">
+                <span class="font-bold block">Mark product as Out of Stock (0 inventory) on storefront</span>
+                <span class="text-amber-800">Prevents new customers from ordering this item until restocked.</span>
+              </div>
+            </label>
+
+            <!-- Reason Input -->
+            <div class="space-y-1">
+              <label class="block text-[11px] font-bold uppercase tracking-wider text-zinc-700">
+                Reason / Order Note
+              </label>
+              <Input
+                v-model="refundReasonInput"
+                type="text"
+                placeholder="Out of stock during packing"
+                class="h-9 text-xs rounded-md"
+              />
+            </div>
+          </div>
+
+          <DialogFooter class="flex gap-2 pt-2">
+            <Button
+              type="button"
+              variant="outline"
+              :disabled="isRefundingItem"
+              @click="isItemRefundModalOpen = false"
+              class="rounded-md text-xs cursor-pointer"
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              :disabled="isRefundingItem"
+              @click="executeItemRefund"
+              class="rounded-md text-xs font-bold bg-rose-600 hover:bg-rose-700 text-white gap-1.5 cursor-pointer"
+            >
+              <Loader2 v-if="isRefundingItem" class="w-3.5 h-3.5 animate-spin" />
+              <Ban v-else class="w-3.5 h-3.5" />
+              <span>Refund ${{ estimatedItemRefundAmount.toFixed(2) }} &amp; Mark OOS</span>
             </Button>
           </DialogFooter>
         </DialogContent>

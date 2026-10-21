@@ -5,6 +5,7 @@ namespace Database\Seeders;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\Product;
+use App\Models\RewardPoint;
 use App\Models\User;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Schema;
@@ -17,6 +18,7 @@ class OrderSeeder extends Seeder
     public function run(): void
     {
         Schema::disableForeignKeyConstraints();
+        RewardPoint::truncate();
         OrderItem::truncate();
         Order::truncate();
         Schema::enableForeignKeyConstraints();
@@ -237,6 +239,26 @@ class OrderSeeder extends Seeder
                 'is_subscribed' => false,
                 'image' => $dal->image,
             ]);
+        }
+
+        // Ensure all users have welcome bonus and accurate order points ledger entries & balance
+        $users = User::all();
+        foreach ($users as $user) {
+            RewardPoint::firstOrCreate(
+                ['user_id' => $user->id, 'order_id' => null],
+                [
+                    'points' => 100,
+                    'description' => 'Welcome bonus',
+                    'created_at' => $user->created_at ?? now(),
+                    'updated_at' => $user->created_at ?? now(),
+                ]
+            );
+
+            Order::where('user_id', $user->id)->each(function (Order $order) {
+                $order->syncRewardPoints();
+            });
+
+            $user->refreshRewardPointsBalance();
         }
     }
 }

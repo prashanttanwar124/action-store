@@ -26,8 +26,11 @@ class OrderItemsPackedUpdated implements ShouldBroadcastNow
      */
     public function broadcastOn(): array
     {
+        $channelKey = ltrim($this->order->order_number, '#');
+
         return [
             new PrivateChannel('admin.orders'),
+            new Channel('orders.'.$channelKey),
         ];
     }
 
@@ -49,11 +52,21 @@ class OrderItemsPackedUpdated implements ShouldBroadcastNow
         return [
             'order_id' => $this->order->id,
             'order_number' => $this->order->order_number,
+            'status' => $this->order->status,
+            'refunded_total' => (float) ($this->order->refunded_total ?? 0),
+            'notes' => $this->order->notes,
             'packed_item_ids' => $this->order->items
                 ->where('is_packed', true)
                 ->pluck('id')
                 ->values()
                 ->all(),
+            'items' => $this->order->items->map(fn ($item) => [
+                'id' => $item->id,
+                'is_packed' => (bool) $item->is_packed,
+                'refunded_quantity' => (int) ($item->refunded_quantity ?? 0),
+                'refunded_amount' => (float) ($item->refunded_amount ?? 0),
+                'refund_reason' => $item->refund_reason,
+            ])->values()->all(),
             'updated_at' => now()->toISOString(),
         ];
     }

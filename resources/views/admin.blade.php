@@ -11,7 +11,7 @@
 
         <!-- Admin Backoffice Assets (Completely Isolated from Storefront) -->
         @routes
-        @vite(['resources/css/admin.css', 'resources/js/admin.js', "resources/js/Pages/{$page['component']}.vue"])
+        @vite(['resources/js/admin.js', "resources/js/Pages/{$page['component']}.vue"])
         @inertiaHead
     </head>
     <body class="font-sans antialiased bg-zinc-50 text-zinc-900">

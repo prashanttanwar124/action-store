@@ -55,13 +55,17 @@ class AdminCustomerController extends Controller
             default => $query->latest('created_at'),
         };
 
-        // Eager load recent 5 orders for fast preview drawer
-        $query->with(['orders' => function ($q) {
-            $q->latest()
-                ->select('id', 'order_number', 'user_id', 'total', 'status', 'pickup_slot', 'created_at');
-        }]);
+        $paginated = $query->paginate(15)->withQueryString();
 
-        $customers = $query->paginate(15)->withQueryString()->through(function (User $user) {
+        // Eager-load at most 5 recent orders per customer on the current page without cross-customer starvation
+        $paginated->load([
+            'orders' => fn ($q) => $q
+                ->select('id', 'order_number', 'user_id', 'total', 'status', 'pickup_slot', 'created_at')
+                ->latest()
+                ->limit(5),
+        ]);
+
+        $customers = $paginated->through(function (User $user) {
             return [
                 'id' => $user->id,
                 'name' => $user->name,
@@ -81,14 +85,17 @@ class AdminCustomerController extends Controller
                         'pickup_slot' => $order->pickup_slot,
                         'created_at' => $order->created_at?->format('M d, Y · g:i A'),
                     ];
-                }),
+                })->values(),
             ];
         });
 
         // Store customer metrics
         $totalCustomers = User::count();
-        $totalOrders = Order::count();
-        $totalRevenue = (float) Order::where('status', '!=', 'cancelled')->sum('total');
+        $orderAgg = Order::query()
+            ->selectRaw("COUNT(*) as total_orders, COALESCE(SUM(CASE WHEN status != 'cancelled' THEN total ELSE 0 END), 0) as total_revenue")
+            ->first();
+        $totalOrders = (int) ($orderAgg->total_orders ?? 0);
+        $totalRevenue = (float) ($orderAgg->total_revenue ?? 0);
 
         $metrics = [
             'total_customers' => $totalCustomers,
@@ -110,12 +117,21 @@ class AdminCustomerController extends Controller
     }
 
     /**
-     * Display specific customer details with full order history.
+     * Display specific customer details with bounded order history and optional search.
      */
     public function show(Request $request, User $customer): JsonResponse|Response
     {
         $customer->loadCount('orders')->loadSum('orders as total_spent', 'total');
-        $orders = $customer->orders()->with('items')->latest()->get();
+
+        $search = trim((string) $request->input('search', ''));
+        $limit = min(max((int) $request->input('limit', 25), 1), 100);
+
+        $orders = $customer->orders()
+            ->with('items')
+            ->when($search !== '', fn ($q) => $q->where('order_number', 'like', "%{$search}%"))
+            ->latest()
+            ->limit($limit)
+            ->get();
 
         $data = [
             'customer' => [

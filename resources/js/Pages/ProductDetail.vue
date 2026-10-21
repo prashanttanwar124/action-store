@@ -1,6 +1,6 @@
 <script setup>
 import { ref, computed, watch } from 'vue';
-import { Head, Link } from '@inertiajs/vue3';
+import { Head, Link, usePage } from '@inertiajs/vue3';
 import StoreLayout from '../Layouts/StoreLayout.vue';
 import { useStore } from '../stores/cart';
 import { ChevronLeft, ChevronRight, Clock, Plus, Minus, Sparkles, RefreshCw, CheckCircle2, ShieldCheck, Snowflake, Check, ShoppingBag, X } from 'lucide-vue-next';
@@ -21,6 +21,9 @@ const props = defineProps({
 });
 
 const store = useStore();
+const page = usePage();
+const storeInfo = computed(() => page.props.storeInfo || {});
+const storeBrandName = computed(() => storeInfo.value?.brand_name || (storeInfo.value?.name ? storeInfo.value.name.split(/\s*[—–]\s*|\s+-\s+/)[0].trim() : 'Store'));
 
 const product = computed(() => {
   let base;
@@ -35,6 +38,7 @@ const product = computed(() => {
       price: Number(props.product.price),
       originalPrice: Number(props.product.original_price || props.product.price),
       unitPrice: props.product.unit_price,
+      stock: (props.product.stock !== undefined && props.product.stock !== null) ? Number(props.product.stock) : null,
       stockBadge: props.product.stock_badge,
       photoLabel: props.product.photo_label,
       image: props.product.image,
@@ -73,6 +77,8 @@ const product = computed(() => {
         price: Number(p.price),
         label: p.photoLabel || p.name,
         image: p.image,
+        stock: p.stock,
+        stock_badge: p.stockBadge,
       }));
   }
 
@@ -95,6 +101,33 @@ const notificationImage = ref('');
 const notificationKey = ref(0);
 let notificationTimeoutId = null;
 
+const availableStock = computed(() => store.getAvailableStock(product.value));
+const isProductOutOfStock = computed(() => store.isOutOfStock(product.value));
+const inCartQuantity = computed(() => store.getItemQuantity(product.value.id || product.value.slug));
+const remainingStock = computed(() => {
+  if (availableStock.value === Infinity) return Infinity;
+  return Math.max(0, availableStock.value - inCartQuantity.value);
+});
+const canAddMainProduct = computed(() => !isProductOutOfStock.value && remainingStock.value >= quantity.value && remainingStock.value > 0);
+
+watch(remainingStock, (rem) => {
+  if (rem !== Infinity && rem > 0 && quantity.value > rem) {
+    quantity.value = rem;
+  }
+});
+
+function incrementQuantity() {
+  if (remainingStock.value !== Infinity && quantity.value >= remainingStock.value) {
+    store.showStockToast(
+      'Maximum Stock Reached',
+      `Only ${availableStock.value} of ${product.value.name} available in stock.`,
+      'warning'
+    );
+    return;
+  }
+  quantity.value += 1;
+}
+
 function triggerAddedNotification({ title, subtext, image }) {
   if (notificationTimeoutId) {
     clearTimeout(notificationTimeoutId);
@@ -114,48 +147,52 @@ const fbtSelected = ref({});
 
 const fbtItems = computed(() => {
   const items = product.value.frequentlyBoughtTogether || [];
-  if (Array.isArray(items) && items.length > 0) {
-    return items.map(item => ({
+  const rawList = (Array.isArray(items) && items.length > 0)
+    ? items
+    : store.products
+        .filter(p => !p.isRecipeKit && p.id !== product.value.id && p.slug !== product.value.slug)
+        .slice(0, 3);
+
+  return rawList.map(item => {
+    const isOut = store.isOutOfStock(item);
+    const avail = store.getAvailableStock(item);
+    return {
       id: item.id || item.slug,
       slug: item.slug || String(item.id),
       name: item.name,
-      size: item.size || item.size_main || item.weight || '',
+      size: item.size || item.size_main || item.sizeMain || item.weight || '',
       price: Number(item.price),
-      originalPrice: Number(item.original_price || item.price),
+      originalPrice: Number(item.original_price || item.originalPrice || item.price),
       image: item.image || '/images/products/garam_masala.jpg',
-    }));
-  }
-  return store.products
-    .filter(p => p.id !== product.value.id && p.slug !== product.value.slug)
-    .slice(0, 3)
-    .map(p => ({
-      id: p.id,
-      slug: p.slug,
-      name: p.name,
-      size: p.sizeMain || p.size || '',
-      price: Number(p.price),
-      originalPrice: Number(p.originalPrice || p.price),
-      image: p.image,
-    }));
+      stock: item.stock,
+      stock_badge: item.stock_badge || item.stockBadge,
+      isOutOfStock: isOut,
+      availableStock: avail,
+    };
+  });
 });
 
-// Default all companion items selected
+// Default only in-stock companion items selected
 watch(fbtItems, (items) => {
   if (items.length > 0) {
     const initial = {};
     items.forEach(item => {
-      initial[item.id] = true;
+      initial[item.id] = !item.isOutOfStock;
     });
     fbtSelected.value = initial;
   }
 }, { immediate: true });
 
-function toggleFbtItem(id) {
-  fbtSelected.value[id] = !fbtSelected.value[id];
+function toggleFbtItem(item) {
+  if (item.isOutOfStock) {
+    store.showStockToast('Out of Stock', `${item.name} is currently out of stock and cannot be added to the bundle.`, 'error');
+    return;
+  }
+  fbtSelected.value[item.id] = !fbtSelected.value[item.id];
 }
 
 const selectedFbtItems = computed(() => {
-  return fbtItems.value.filter(item => Boolean(fbtSelected.value[item.id]));
+  return fbtItems.value.filter(item => Boolean(fbtSelected.value[item.id]) && !item.isOutOfStock);
 });
 
 const selectedFbtCount = computed(() => {
@@ -171,13 +208,22 @@ const displayPrice = computed(() => {
 });
 
 const totalFbtAll = computed(() => {
+  const mainSum = isProductOutOfStock.value ? 0 : (unitPrice.value * quantity.value);
   const companionSum = selectedFbtItems.value.reduce((acc, item) => acc + Number(item.price), 0);
-  return ((unitPrice.value * quantity.value) + companionSum).toFixed(2);
+  return (mainSum + companionSum).toFixed(2);
+});
+
+const canAddFbtBundle = computed(() => {
+  return (!isProductOutOfStock.value && canAddMainProduct.value) || selectedFbtCount.value > 0;
 });
 
 const fbtButtonText = computed(() => {
   const count = selectedFbtCount.value;
-  if (count === fbtItems.value.length && count > 0) {
+  if (isProductOutOfStock.value) {
+    return count > 0 ? `Add ${count} available pairing${count > 1 ? 's' : ''}` : 'All bundle items out of stock';
+  }
+  const availableFbtCount = fbtItems.value.filter(i => !i.isOutOfStock).length;
+  if (count === availableFbtCount && count > 0) {
     return `Add ${product.value.name} + all ${count}`;
   } else if (count > 0) {
     return `Add ${product.value.name} + ${count} selected`;
@@ -187,7 +233,11 @@ const fbtButtonText = computed(() => {
 });
 
 function handleAction() {
-  store.addToCart({
+  if (isProductOutOfStock.value) {
+    store.showStockToast('Out of Stock', `${product.value.name} is currently out of stock.`, 'error');
+    return;
+  }
+  const added = store.addToCart({
     id: product.value.id,
     slug: product.value.slug,
     name: product.value.name,
@@ -196,17 +246,21 @@ function handleAction() {
     originalPrice: product.value.price,
     quantity: quantity.value,
     image: product.value.image,
+    stock: product.value.stock,
+    stock_badge: product.value.stockBadge,
   });
 
-  triggerAddedNotification({
-    title: `${quantity.value}× ${product.value.name}`,
-    subtext: `${product.value.sizeMain ? product.value.sizeMain + ' · ' : ''}Cart subtotal $${store.subtotal.toFixed(2)}`,
-    image: activeImage.value || product.value.image,
-  });
+  if (added) {
+    triggerAddedNotification({
+      title: `${quantity.value}× ${product.value.name}`,
+      subtext: `${product.value.sizeMain ? product.value.sizeMain + ' · ' : ''}Cart subtotal $${store.subtotal.toFixed(2)}`,
+      image: activeImage.value || product.value.image,
+    });
+  }
 }
 
 function handleAddPairingItem(item) {
-  store.addToCart({
+  const added = store.addToCart({
     id: item.id,
     slug: item.slug,
     name: item.name,
@@ -214,31 +268,41 @@ function handleAddPairingItem(item) {
     price: item.price,
     originalPrice: item.price,
     image: item.image,
+    stock: item.stock,
+    stock_badge: item.stock_badge || item.stockBadge,
   });
 
-  triggerAddedNotification({
-    title: `1× ${item.name}`,
-    subtext: `${item.size || item.weight ? (item.size || item.weight) + ' · ' : ''}Cart subtotal $${store.subtotal.toFixed(2)}`,
-    image: item.image,
-  });
+  if (added) {
+    triggerAddedNotification({
+      title: `1× ${item.name}`,
+      subtext: `${item.size || item.weight ? (item.size || item.weight) + ' · ' : ''}Cart subtotal $${store.subtotal.toFixed(2)}`,
+      image: item.image,
+    });
+  }
 }
 
 function handleAddAllFbt() {
-  // Add main product to cart
-  store.addToCart({
-    id: product.value.id,
-    slug: product.value.slug,
-    name: product.value.name,
-    weight: product.value.sizeMain,
-    price: unitPrice.value,
-    originalPrice: product.value.price,
-    quantity: quantity.value,
-    image: product.value.image,
-  });
+  if (!canAddFbtBundle.value) return;
 
-  // Add all selected companion items
+  let addedMain = false;
+  if (!isProductOutOfStock.value && remainingStock.value > 0) {
+    addedMain = store.addToCart({
+      id: product.value.id,
+      slug: product.value.slug,
+      name: product.value.name,
+      weight: product.value.sizeMain,
+      price: unitPrice.value,
+      originalPrice: product.value.price,
+      quantity: quantity.value,
+      image: product.value.image,
+      stock: product.value.stock,
+      stock_badge: product.value.stockBadge,
+    });
+  }
+
+  let addedPairings = 0;
   selectedFbtItems.value.forEach(item => {
-    store.addToCart({
+    const ok = store.addToCart({
       id: item.id,
       slug: item.slug,
       name: item.name,
@@ -246,23 +310,27 @@ function handleAddAllFbt() {
       price: item.price,
       originalPrice: item.originalPrice || item.price,
       image: item.image,
+      stock: item.stock,
+      stock_badge: item.stock_badge,
       quantity: 1,
     });
+    if (ok) addedPairings += 1;
   });
 
-  const count = selectedFbtCount.value;
-  triggerAddedNotification({
-    title: count > 0
-      ? `${product.value.name} + ${count} pairing${count > 1 ? 's' : ''}`
-      : `${quantity.value}× ${product.value.name}`,
-    subtext: `${store.totalItemCount} items in cart · $${store.subtotal.toFixed(2)} subtotal`,
-    image: activeImage.value || product.value.image,
-  });
+  if (addedMain || addedPairings > 0) {
+    triggerAddedNotification({
+      title: addedMain && addedPairings > 0
+        ? `${product.value.name} + ${addedPairings} pairing${addedPairings > 1 ? 's' : ''}`
+        : (addedMain ? `${quantity.value}× ${product.value.name}` : `${addedPairings} pairing${addedPairings > 1 ? 's' : ''}`),
+      subtext: `${store.totalItemCount} items in cart · $${store.subtotal.toFixed(2)} subtotal`,
+      image: activeImage.value || product.value.image,
+    });
+  }
 }
 </script>
 
 <template>
-  <Head :title="`${product.name} — Masala Mart`" />
+  <Head :title="`${product.name} — ${storeBrandName}`" />
 
   <StoreLayout 
     headerMode="pdp" 
@@ -307,8 +375,13 @@ function handleAddAllFbt() {
 
             <!-- Top Row Badges (Screen 1b & 1c match) -->
             <div class="relative z-10 flex items-center justify-between">
-              <span class="bg-white/90 backdrop-blur-xs text-stone-800 border border-stone-200 px-3 py-1 text-xs font-semibold rounded-md shadow-xs">
-                {{ product.stockBadge }}
+              <span
+                class="backdrop-blur-xs px-3 py-1 text-xs font-semibold rounded-md shadow-xs border"
+                :class="isProductOutOfStock
+                  ? 'bg-rose-600 text-white border-rose-700'
+                  : 'bg-white/90 text-stone-800 border-stone-200'"
+              >
+                {{ isProductOutOfStock ? 'Out of Stock' : (product.stockBadge || (availableStock !== Infinity && availableStock <= 5 ? `Only ${availableStock} left` : 'In Stock')) }}
               </span>
               <span class="photo-label text-[11px] text-white/90 bg-black/60 backdrop-blur-xs px-2.5 py-0.5 rounded-md font-normal">
                 {{ product.photoLabel }}
@@ -394,6 +467,18 @@ function handleAddAllFbt() {
                 <span v-if="product.unitPrice" class="text-xs text-[#6e6e73] font-normal">
                   {{ product.unitPrice }}
                 </span>
+                <span
+                  v-if="isProductOutOfStock"
+                  class="px-2.5 py-0.5 rounded-md text-xs font-bold bg-rose-100 text-rose-800 border border-rose-200"
+                >
+                  Out of Stock
+                </span>
+                <span
+                  v-else-if="availableStock !== Infinity && availableStock <= 5"
+                  class="px-2.5 py-0.5 rounded-md text-xs font-semibold bg-[#f5eee2] text-[#7a5620] border border-[#e0d9cc]"
+                >
+                  Only {{ availableStock }} left in stock
+                </span>
               </div>
             </div>
 
@@ -426,31 +511,51 @@ function handleAddAllFbt() {
                   v-for="item in fbtItems"
                   :key="item.id"
                   class="py-3.5 first:pt-1 last:pb-1 flex items-center justify-between gap-3"
+                  :class="item.isOutOfStock ? 'opacity-65' : ''"
                 >
                   <Link :href="'/products/' + item.slug" class="flex items-center gap-3.5 flex-1 min-w-0 group cursor-pointer">
                     <div class="w-14 h-14 rounded-lg bg-white/80 overflow-hidden shrink-0 border border-[#e0d9cc] shadow-2xs group-hover:border-[#a47a3c] transition-colors">
-                      <img :src="item.image" :alt="item.name" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+                      <img
+                        :src="item.image"
+                        :alt="item.name"
+                        class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                        :class="item.isOutOfStock ? 'grayscale' : ''"
+                      />
                     </div>
                     <div class="min-w-0">
-                      <div class="font-serif font-medium text-sm sm:text-base text-[#1d1d1f] leading-snug truncate group-hover:text-[#a47a3c] transition-colors">{{ item.name }}</div>
+                      <div class="flex flex-wrap items-center gap-1.5">
+                        <div class="font-serif font-medium text-sm sm:text-base text-[#1d1d1f] leading-snug truncate group-hover:text-[#a47a3c] transition-colors" :class="item.isOutOfStock ? 'line-through text-stone-500' : ''">{{ item.name }}</div>
+                        <span
+                          v-if="item.isOutOfStock"
+                          class="px-2 py-0.5 rounded-md text-[10px] font-bold bg-rose-100 text-rose-800 border border-rose-200"
+                        >
+                          Out of Stock
+                        </span>
+                      </div>
                       <div class="text-xs text-[#6e6e73] font-normal mt-0.5 truncate">{{ item.size }}</div>
                     </div>
                   </Link>
 
                   <div class="flex items-center gap-3 shrink-0">
-                    <span class="font-serif font-medium text-base text-[#1d1d1f]">${{ Number(item.price).toFixed(2) }}</span>
-                    <!-- Action Button: solid filled checkmark when selected, outline plus when unselected -->
+                    <span class="font-serif font-medium text-base text-[#1d1d1f]" :class="item.isOutOfStock ? 'line-through text-stone-400' : ''">${{ Number(item.price).toFixed(2) }}</span>
+                    <!-- Action Button: solid filled checkmark when selected, outline plus when unselected, disabled when OOS -->
                     <button 
                       type="button"
-                      @click="toggleFbtItem(item.id)"
+                      :disabled="item.isOutOfStock"
+                      @click="toggleFbtItem(item)"
                       :class="[
-                        'w-8 h-8 rounded-md flex items-center justify-center transition-all cursor-pointer active:scale-95',
-                        fbtSelected[item.id] ? 'bg-[#1a1a1a] text-white shadow-xs' : 'border-2 border-[#1a1a1a] text-[#1a1a1a] bg-transparent hover:bg-stone-200'
+                        'w-8 h-8 rounded-md flex items-center justify-center transition-all',
+                        item.isOutOfStock
+                          ? 'bg-stone-200 text-stone-400 border border-stone-300 cursor-not-allowed'
+                          : (fbtSelected[item.id]
+                              ? 'bg-[#1a1a1a] text-white shadow-xs cursor-pointer active:scale-95'
+                              : 'border-2 border-[#1a1a1a] text-[#1a1a1a] bg-transparent hover:bg-stone-200 cursor-pointer active:scale-95')
                       ]"
                       :aria-label="'Include ' + item.name + ' in bundle'"
-                      :title="fbtSelected[item.id] ? 'Included in bundle (click to uncheck)' : 'Click to include in bundle'"
+                      :title="item.isOutOfStock ? 'Out of stock' : (fbtSelected[item.id] ? 'Included in bundle (click to uncheck)' : 'Click to include in bundle')"
                     >
-                      <Check v-if="fbtSelected[item.id]" class="w-4 h-4 stroke-[3]" />
+                      <X v-if="item.isOutOfStock" class="w-4 h-4 stroke-[2.5]" />
+                      <Check v-else-if="fbtSelected[item.id]" class="w-4 h-4 stroke-[3]" />
                       <Plus v-else class="w-4 h-4 stroke-[2.5]" />
                     </button>
                   </div>
@@ -460,11 +565,15 @@ function handleAddAllFbt() {
               <!-- Combined Add All Pill -->
               <button 
                 type="button"
+                :disabled="!canAddFbtBundle"
                 @click="handleAddAllFbt"
-                class="w-full py-4 px-6 bg-[#ece7de] hover:bg-[#e0d9cc] text-[#1d1d1f] font-semibold text-xs sm:text-sm rounded-md flex items-center justify-between cursor-pointer transition-colors shadow-2xs mt-3 active:scale-[0.99]"
+                class="w-full py-4 px-6 font-semibold text-xs sm:text-sm rounded-md flex items-center justify-between transition-colors shadow-2xs mt-3"
+                :class="canAddFbtBundle
+                  ? 'bg-[#ece7de] hover:bg-[#e0d9cc] text-[#1d1d1f] cursor-pointer active:scale-[0.99]'
+                  : 'bg-stone-200 text-stone-500 cursor-not-allowed opacity-70'"
               >
                 <span>{{ fbtButtonText }}</span>
-                <span class="font-serif font-medium text-base sm:text-lg text-[#1d1d1f]">${{ totalFbtAll }}</span>
+                <span class="font-serif font-medium text-base sm:text-lg">{{ canAddFbtBundle ? `$${totalFbtAll}` : 'Unavailable' }}</span>
               </button>
             </div>
 
@@ -494,7 +603,10 @@ function handleAddAllFbt() {
 
             <!-- Desktop Inline Action Bar -->
             <div class="hidden sm:block pt-4 border-t border-[#e0d9cc]/60 space-y-3">
-              <div class="flex items-center gap-3">
+              <div v-if="isProductOutOfStock" class="w-full h-12 bg-rose-50 border border-rose-200 text-rose-800 font-semibold text-sm rounded-md flex items-center justify-center gap-2 px-6">
+                <span>Currently Out of Stock — Unavailable for Purchase</span>
+              </div>
+              <div v-else class="flex items-center gap-3">
                 <!-- Stepper -->
                 <div class="w-32 h-12 bg-[#ece7de] rounded-md flex items-center justify-between px-3 border border-[#e0d9cc]">
                   <button 
@@ -506,8 +618,10 @@ function handleAddAllFbt() {
                   </button>
                   <span class="text-sm font-bold text-[#1d1d1f]">{{ quantity }}</span>
                   <button 
-                    @click="quantity = quantity + 1" 
-                    class="p-1 hover:text-[#1a1a1a] cursor-pointer flex items-center justify-center text-[#1d1d1f]"
+                    @click="incrementQuantity" 
+                    :disabled="remainingStock !== Infinity && quantity >= remainingStock"
+                    class="p-1 flex items-center justify-center transition-opacity"
+                    :class="(remainingStock !== Infinity && quantity >= remainingStock) ? 'opacity-35 cursor-not-allowed text-stone-400' : 'hover:text-[#1a1a1a] cursor-pointer text-[#1d1d1f]'"
                     aria-label="Increase quantity"
                   >
                     <Plus class="w-4 h-4 stroke-[2.5]" />
@@ -517,9 +631,18 @@ function handleAddAllFbt() {
                 <!-- Primary CTA Button -->
                 <button 
                   @click="handleAction"
-                  class="flex-1 h-12 bg-[#1a1a1a] hover:bg-black text-white font-semibold text-sm rounded-md flex items-center justify-between px-6 transition-all cursor-pointer active:scale-[0.99] shadow-md"
+                  :disabled="!canAddMainProduct"
+                  class="flex-1 h-12 font-semibold text-sm rounded-md flex items-center justify-between px-6 transition-all shadow-md"
+                  :class="canAddMainProduct
+                    ? 'bg-[#1a1a1a] hover:bg-black text-white cursor-pointer active:scale-[0.99]'
+                    : 'bg-stone-300 text-stone-600 cursor-not-allowed'"
                 >
-                  <span>{{ store.getItemQuantity(product.slug) > 0 ? 'Add another' : 'Add to cart' }}</span>
+                  <span>
+                    {{ !canAddMainProduct
+                      ? `Max Stock in Cart (${availableStock})`
+                      : (store.getItemQuantity(product.slug) > 0 ? 'Add another' : 'Add to cart')
+                    }}
+                  </span>
                   <span class="font-serif font-medium text-base">${{ displayPrice }}</span>
                 </button>
               </div>
@@ -587,12 +710,22 @@ function handleAddAllFbt() {
                 :src="item.image || '/images/products/atta.jpg'" 
                 :alt="item.name" 
                 class="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-300"
+                :class="store.isOutOfStock(item) ? 'grayscale opacity-75' : ''"
               />
               <span class="photo-label absolute top-2.5 left-2.5 text-[11px] text-[#1d1d1f] font-mono bg-white/80 backdrop-blur-xs px-2 py-0.5 rounded-md z-10 shadow-2xs">{{ item.label || item.photoLabel || 'item' }}</span>
 
+              <!-- When item is out of stock: show Out of Stock badge -->
+              <div
+                v-if="store.isOutOfStock(item)"
+                class="absolute bottom-2.5 inset-x-2.5 bg-rose-700/95 text-white h-8 rounded-md flex items-center justify-center px-2.5 shadow-md z-10 text-[11px] font-bold"
+                @click.stop.prevent
+              >
+                Out of Stock
+              </div>
+
               <!-- When item is in cart: show Primary [- qty +] stepper pill -->
               <div 
-                v-if="store.getItemQuantity(item.id) > 0"
+                v-else-if="store.getItemQuantity(item.id) > 0"
                 class="absolute bottom-2.5 inset-x-2.5 bg-[#1a1a1a] text-white h-8 sm:h-9 rounded-md flex items-center justify-between px-2.5 shadow-md z-10"
                 @click.stop.prevent
               >
@@ -607,8 +740,10 @@ function handleAddAllFbt() {
                 <span class="text-xs font-bold">{{ store.getItemQuantity(item.id) }}</span>
                 <button 
                   type="button"
+                  :disabled="!store.canAddMore(item, 1)"
                   @click.stop.prevent="handleAddPairingItem(item)" 
-                  class="p-1 hover:opacity-80 cursor-pointer flex items-center justify-center"
+                  class="p-1 flex items-center justify-center"
+                  :class="store.canAddMore(item, 1) ? 'hover:opacity-80 cursor-pointer' : 'opacity-35 cursor-not-allowed'"
                   aria-label="Increase quantity"
                 >
                   <Plus class="w-3.5 h-3.5 stroke-[2.5]" />
@@ -638,33 +773,50 @@ function handleAddAllFbt() {
 
       <!-- Mobile Sticky Bottom Action Bar -->
       <div class="sm:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-[#e0d9cc] p-3 shadow-2xl flex items-center gap-3">
-        <!-- Quantity Stepper -->
-        <div class="w-28 h-11 bg-[#ece7de] rounded-md flex items-center justify-between px-3 border border-[#e0d9cc]">
-          <button 
-            @click="quantity = Math.max(1, quantity - 1)" 
-            class="p-1 hover:text-[#1a1a1a] flex items-center justify-center text-[#1d1d1f]"
-            aria-label="Decrease quantity"
-          >
-            <Minus class="w-4 h-4 stroke-[2.5]" />
-          </button>
-          <span class="text-xs font-bold text-[#1d1d1f]">{{ quantity }}</span>
-          <button 
-            @click="quantity = quantity + 1" 
-            class="p-1 hover:text-[#1a1a1a] flex items-center justify-center text-[#1d1d1f]"
-            aria-label="Increase quantity"
-          >
-            <Plus class="w-4 h-4 stroke-[2.5]" />
-          </button>
-        </div>
-
-        <!-- Add to cart CTA -->
-        <button 
-          @click="handleAction"
-          class="flex-1 h-11 bg-[#1a1a1a] active:bg-black text-white font-semibold text-xs rounded-md flex items-center justify-between px-5 shadow-md"
+        <div
+          v-if="isProductOutOfStock"
+          class="w-full h-11 bg-rose-50 border border-rose-200 text-rose-800 font-semibold text-xs rounded-md flex items-center justify-center px-4"
         >
-          <span>{{ store.getItemQuantity(product.slug) > 0 ? 'Add another' : 'Add to cart' }}</span>
-          <span class="font-serif font-medium text-sm">${{ displayPrice }}</span>
-        </button>
+          Currently Out of Stock
+        </div>
+        <template v-else>
+          <!-- Quantity Stepper -->
+          <div class="w-28 h-11 bg-[#ece7de] rounded-md flex items-center justify-between px-3 border border-[#e0d9cc]">
+            <button 
+              @click="quantity = Math.max(1, quantity - 1)" 
+              class="p-1 hover:text-[#1a1a1a] flex items-center justify-center text-[#1d1d1f]"
+              aria-label="Decrease quantity"
+            >
+              <Minus class="w-4 h-4 stroke-[2.5]" />
+            </button>
+            <span class="text-xs font-bold text-[#1d1d1f]">{{ quantity }}</span>
+            <button 
+              @click="incrementQuantity" 
+              :disabled="remainingStock !== Infinity && quantity >= remainingStock"
+              class="p-1 flex items-center justify-center"
+              :class="(remainingStock !== Infinity && quantity >= remainingStock) ? 'opacity-35 cursor-not-allowed text-stone-400' : 'hover:text-[#1a1a1a] text-[#1d1d1f]'"
+              aria-label="Increase quantity"
+            >
+              <Plus class="w-4 h-4 stroke-[2.5]" />
+            </button>
+          </div>
+
+          <!-- Add to cart CTA -->
+          <button 
+            @click="handleAction"
+            :disabled="!canAddMainProduct"
+            class="flex-1 h-11 font-semibold text-xs rounded-md flex items-center justify-between px-5 shadow-md"
+            :class="canAddMainProduct ? 'bg-[#1a1a1a] active:bg-black text-white' : 'bg-stone-300 text-stone-600 cursor-not-allowed'"
+          >
+            <span>
+              {{ !canAddMainProduct
+                ? `Max Stock (${availableStock})`
+                : (store.getItemQuantity(product.slug) > 0 ? 'Add another' : 'Add to cart')
+              }}
+            </span>
+            <span class="font-serif font-medium text-sm">${{ displayPrice }}</span>
+          </button>
+        </template>
       </div>
 
       <!-- Rich Floating Add-to-Cart Toast (Docked cleanly above bottom bar on mobile, bottom-right on desktop; never covers product photo badges) -->

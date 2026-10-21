@@ -23,6 +23,7 @@ class AdminSliderController extends Controller
         $sliders = Slider::query()
             ->orderBy('sort_order')
             ->latest('id')
+            ->limit(50)
             ->get();
 
         return Inertia::render('Admin/Sliders/Index', [
@@ -35,8 +36,8 @@ class AdminSliderController extends Controller
      */
     public function create(): Response
     {
-        $products = Product::select('id', 'name', 'slug')->get();
-        $recipeKits = RecipeKit::select('id', 'name', 'slug')->get();
+        $products = Product::select('id', 'name', 'slug', 'price')->orderBy('name')->limit(12)->get();
+        $recipeKits = RecipeKit::select('id', 'name', 'slug', 'price')->orderBy('name')->limit(12)->get();
 
         return Inertia::render('Admin/Sliders/Create', [
             'products' => $products,
@@ -74,8 +75,8 @@ class AdminSliderController extends Controller
      */
     public function edit(Slider $slider): Response
     {
-        $products = Product::select('id', 'name', 'slug')->get();
-        $recipeKits = RecipeKit::select('id', 'name', 'slug')->get();
+        $products = Product::select('id', 'name', 'slug', 'price')->orderBy('name')->limit(12)->get();
+        $recipeKits = RecipeKit::select('id', 'name', 'slug', 'price')->orderBy('name')->limit(12)->get();
 
         return Inertia::render('Admin/Sliders/Edit', [
             'slider' => $slider,

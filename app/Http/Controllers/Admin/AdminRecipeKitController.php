@@ -7,6 +7,7 @@ use App\Http\Requests\Admin\StoreRecipeKitRequest;
 use App\Http\Requests\Admin\UpdateRecipeKitRequest;
 use App\Models\Product;
 use App\Models\RecipeKit;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -79,12 +80,47 @@ class AdminRecipeKitController extends Controller
     }
 
     /**
+     * Search recipe kits with a limit for dropdown selectors.
+     */
+    public function search(Request $request): JsonResponse
+    {
+        $q = trim((string) $request->input('q', ''));
+        $limit = min(max((int) $request->input('limit', 10), 1), 25);
+
+        $kits = RecipeKit::query()
+            ->select('id', 'name', 'slug', 'price')
+            ->when($q !== '', function ($query) use ($q) {
+                $query->where(function ($sub) use ($q) {
+                    $sub->where('name', 'like', "%{$q}%")
+                        ->orWhere('slug', 'like', "%{$q}%");
+                });
+            })
+            ->orderBy('name')
+            ->limit($limit)
+            ->get()
+            ->map(fn (RecipeKit $k) => [
+                'id' => $k->id,
+                'value' => '/recipe-kits/'.$k->slug,
+                'label' => $k->name,
+                'sublabel' => '($'.number_format((float) $k->price, 2).')',
+                'badge' => 'Recipe Kit',
+                'name' => $k->name,
+                'slug' => $k->slug,
+            ]);
+
+        return response()->json([
+            'items' => $kits,
+        ]);
+    }
+
+    /**
      * Show the form for creating a new recipe kit.
      */
     public function create(): Response
     {
         $availableProducts = Product::select('id', 'name', 'price', 'image', 'size_main', 'category')
             ->orderBy('name')
+            ->limit(15)
             ->get();
 
         return Inertia::render('Admin/RecipeKits/Create', [
@@ -175,6 +211,7 @@ class AdminRecipeKitController extends Controller
 
         $availableProducts = Product::select('id', 'name', 'price', 'image', 'size_main', 'category')
             ->orderBy('name')
+            ->limit(15)
             ->get();
 
         return Inertia::render('Admin/RecipeKits/Edit', [

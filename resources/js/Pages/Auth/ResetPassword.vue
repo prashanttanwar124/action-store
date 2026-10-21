@@ -1,7 +1,7 @@
 <script setup>
-import { ref } from 'vue';
+import { ref, computed } from 'vue';
 import GuestLayout from '@/Layouts/GuestLayout.vue';
-import { Head, Link, useForm } from '@inertiajs/vue3';
+import { Head, Link, useForm, usePage } from '@inertiajs/vue3';
 import { Mail, Lock, Eye, EyeOff, ArrowRight, KeyRound } from 'lucide-vue-next';
 
 const props = defineProps({
@@ -14,6 +14,10 @@ const props = defineProps({
     required: true,
   },
 });
+
+const page = usePage();
+const storeInfo = computed(() => page.props.storeInfo || {});
+const storeBrandName = computed(() => storeInfo.value?.brand_name || (storeInfo.value?.name ? storeInfo.value.name.split(/\s*[—–]\s*|\s+-\s+/)[0].trim() : 'Store'));
 
 const showPassword = ref(false);
 
@@ -33,7 +37,7 @@ const submit = () => {
 
 <template>
   <GuestLayout>
-    <Head title="Set New Password — Masala Mart" />
+    <Head :title="`Set New Password — ${storeBrandName}`" />
 
     <div class="space-y-6">
       

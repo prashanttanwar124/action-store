@@ -84,6 +84,40 @@ class AdminCategoryController extends Controller
     }
 
     /**
+     * Search active categories with a limit for dropdown selectors.
+     */
+    public function search(Request $request): JsonResponse
+    {
+        $q = trim((string) $request->input('q', ''));
+        $limit = min(max((int) $request->input('limit', 10), 1), 25);
+
+        $categories = Category::query()
+            ->where('is_active', true)
+            ->when($q !== '', function ($query) use ($q) {
+                $query->where(function ($sub) use ($q) {
+                    $sub->where('name', 'like', "%{$q}%")
+                        ->orWhere('slug', 'like', "%{$q}%")
+                        ->orWhere('hindi_title', 'like', "%{$q}%");
+                });
+            })
+            ->orderBy('sort_order')
+            ->orderBy('name')
+            ->limit($limit)
+            ->get(['id', 'name', 'slug'])
+            ->map(fn (Category $c) => [
+                'value' => $c->slug,
+                'label' => $c->name,
+                'sublabel' => "({$c->slug})",
+                'name' => $c->name,
+                'slug' => $c->slug,
+            ]);
+
+        return response()->json([
+            'items' => $categories,
+        ]);
+    }
+
+    /**
      * Store a newly created category in storage.
      */
     public function store(StoreCategoryRequest $request): RedirectResponse

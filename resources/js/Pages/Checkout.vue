@@ -51,6 +51,7 @@ const page = usePage();
 const store = useStore();
 
 const storeInfo = computed(() => page.props.storeInfo || {});
+const storeBrandName = computed(() => storeInfo.value?.brand_name || (storeInfo.value?.name ? storeInfo.value.name.split(/\s*[—–]\s*|\s+-\s+/)[0].trim() : 'Store'));
 const pickupSlotWindowLabel = computed(() => {
   if (storeInfo.value?.pickup_slot_window_label) {
     return storeInfo.value.pickup_slot_window_label;
@@ -120,26 +121,133 @@ async function initStripe() {
       mode: 'payment',
       amount: Math.max(50, Math.round(total * 100)),
       currency: 'cad',
+      fonts: [
+        {
+          cssSrc: 'https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap',
+        },
+      ],
       appearance: {
         theme: 'stripe',
         variables: {
-          colorPrimary: '#a47a3c',
-          colorBackground: '#ffffff',
-          colorText: '#1a1a1a',
-          colorDanger: '#e11d48',
-          fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
-          borderRadius: '12px',
+          colorPrimary: '#1a1a1a',
+          colorBackground: '#fbf9f5',
+          colorText: '#1d1d1f',
+          colorTextSecondary: '#57534e',
+          colorTextPlaceholder: '#a8a29e',
+          colorIcon: '#78716c',
+          colorIconTab: '#78716c',
+          colorIconTabHover: '#1d1d1f',
+          colorIconTabSelected: '#a47a3c',
+          colorDanger: '#be123c',
+          fontFamily: '"Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+          fontSizeBase: '14px',
+          fontSizeSm: '12px',
+          fontWeightNormal: '500',
+          fontWeightMedium: '600',
+          fontWeightBold: '700',
+          borderRadius: '6px',
           spacingUnit: '4px',
+           spacingGridRow: '14px',
+          spacingGridColumn: '12px',
         },
         rules: {
-          '.Input': {
-            backgroundColor: '#ffffff',
-            borderColor: '#e0d9cc',
+          '.Tab': {
+            backgroundColor: '#fbf9f5',
+            border: '1px solid #e0d9cc',
+            borderRadius: '6px',
             boxShadow: 'none',
+            padding: '10px 12px',
+            color: '#57534e',
+            transition: 'all 0.15s ease',
+          },
+          '.Tab:hover': {
+            backgroundColor: '#f3efe7',
+            borderColor: '#d5cbb8',
+            color: '#1d1d1f',
+          },
+          '.Tab--selected': {
+            backgroundColor: '#ffffff',
+            borderColor: '#1a1a1a',
+            color: '#1d1d1f',
+            boxShadow: '0 0 0 1px #1a1a1a, 0 1px 2px 0 rgba(26, 26, 26, 0.05)',
+          },
+          '.Tab--selected:hover': {
+            backgroundColor: '#ffffff',
+            borderColor: '#1a1a1a',
+            color: '#1d1d1f',
+          },
+          '.TabIcon': {
+            fill: '#78716c',
+          },
+          '.TabIcon--selected': {
+            fill: '#a47a3c',
+          },
+          '.TabLabel': {
+            fontWeight: '600',
+            fontSize: '12px',
+          },
+          '.TabLabel--selected': {
+            fontWeight: '700',
+            color: '#1d1d1f',
+          },
+          '.Label': {
+            color: '#292524',
+            fontSize: '11px',
+            fontWeight: '700',
+            textTransform: 'uppercase',
+            letterSpacing: '0.06em',
+            marginBottom: '6px',
+          },
+          '.Input': {
+            backgroundColor: '#fbf9f5',
+            border: '1px solid #e0d9cc',
+            borderRadius: '6px',
+            color: '#1d1d1f',
+            fontWeight: '600',
+            fontSize: '14px',
+            padding: '11px 13px',
+            boxShadow: '0 1px 2px 0 rgba(26, 26, 26, 0.03)',
+            transition: 'background-color 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease',
+          },
+          '.Input:hover': {
+            backgroundColor: '#ffffff',
+            borderColor: '#d0c7b6',
           },
           '.Input:focus': {
+            backgroundColor: '#ffffff',
             borderColor: '#1a1a1a',
             boxShadow: '0 0 0 1px #1a1a1a',
+          },
+          '.Input::placeholder': {
+            color: '#a8a29e',
+            fontWeight: '400',
+          },
+          '.Input--invalid': {
+            backgroundColor: '#fff1f2',
+            borderColor: '#fda4af',
+            color: '#881337',
+            boxShadow: 'none',
+          },
+          '.Error': {
+            color: '#be123c',
+            fontSize: '12px',
+            fontWeight: '600',
+            marginTop: '4px',
+          },
+          '.Block': {
+            backgroundColor: '#fbf9f5',
+            borderColor: '#e0d9cc',
+            borderRadius: '6px',
+            boxShadow: 'none',
+          },
+          '.CheckboxInput': {
+            backgroundColor: '#fbf9f5',
+            borderColor: '#e0d9cc',
+            borderRadius: '4px',
+          },
+          '.CheckboxInput--checked': {
+            backgroundColor: '#1a1a1a',
+            borderColor: '#1a1a1a',
           },
         },
       },
@@ -218,7 +326,7 @@ function scrollToError() {
 watch([selectedScheduledTime, scheduledDay, scheduledTimingType, customHour, customMinute, customPeriod], () => {
   pickupError.value = '';
   if (errorMessage.value) errorMessage.value = '';
-});
+}); 
 
 watch(deliveryAddress, () => {
   deliveryError.value = '';
@@ -314,6 +422,7 @@ const effectiveFulfillmentSlotLabel = computed(() => {
 });
 
 onMounted(() => {
+  store.refreshCartStock();
   if (isStripeConfigured.value && Number(checkoutTotal.value) >= 0.5) {
     initStripe();
   }
@@ -338,6 +447,11 @@ watch(
 
 async function completeOrder() {
   if (isProcessing.value || store.cartItems.length === 0) {
+    return;
+  }
+  if (store.hasStockIssues) {
+    generalError.value = 'Some items in your cart are out of stock or exceed available inventory. Please remove or adjust them before completing your order.';
+    errorMessage.value = generalError.value;
     return;
   }
   isProcessing.value = true;
@@ -587,28 +701,9 @@ async function completeOrder() {
     ? (order.delivery_address || formattedDeliveryAddress || deliveryAddress.value)
     : (order.pickup_location || storeInfo.value.address || '214 Main St.');
 
-  store.masalaPoints += pointsEarned;
-
-  const orderItems = (order?.items && order.items.length > 0)
-    ? order.items.map(i => ({
-        id: i.product_id || i.id,
-        name: i.name,
-        price: Number(i.unit_price),
-        quantity: i.quantity,
-        size: i.size,
-        image: i.image,
-      }))
-    : store.cartItems.map(i => ({ ...i }));
-
-  store.pastOrders.unshift({
-    id: orderNumber,
-    date: 'Today',
-    type: order?.fulfillment_type || (isDelivery ? 'Home Delivery' : 'Store Pickup'),
-    total: totalPaid,
-    itemCount: orderItems.reduce((acc, i) => acc + (i.quantity || 1), 0),
-    summary: orderItems.map(i => i.name).join(', '),
-    items: orderItems,
-  });
+  if (Number.isFinite(pointsEarned) && pointsEarned > 0) {
+    store.rewardPoints = (store.rewardPoints || 0) + pointsEarned;
+  }
 
   store.clearCart();
   isProcessing.value = false;
@@ -653,7 +748,7 @@ async function collectPayment(clientSecret) {
 </script>
 
 <template>
-  <Head title="Checkout — Masala Mart" />
+  <Head :title="`Checkout — ${storeBrandName}`" />
 
   <StoreLayout 
     headerMode="cart" 
@@ -770,7 +865,7 @@ async function collectPayment(clientSecret) {
             <span class="font-serif font-bold text-lg text-[#1d1d1f]">${{ confirmedTotalPaid }}</span>
           </div>
           <div class="flex justify-between items-center">
-            <span class="text-stone-600 font-normal">Masala Points Earned:</span>
+            <span class="text-stone-600 font-normal">{{ storeBrandName }} Points Earned:</span>
             <span class="font-bold text-[#7a5620]">+{{ confirmedPointsEarned }} pts</span>
           </div>
         </div>
@@ -870,6 +965,36 @@ async function collectPayment(clientSecret) {
 
         <!-- LEFT COLUMN: Form Steps -->
         <div class="lg:col-span-7 space-y-4 sm:space-y-5">
+
+          <!-- Out-of-Stock / Insufficient Stock Alert Banner -->
+          <div
+            v-if="store.hasStockIssues"
+            class="p-4 sm:p-5 bg-rose-50 border border-rose-200 text-rose-950 rounded-lg flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-xs"
+          >
+            <div class="flex items-start gap-3">
+              <div class="w-8 h-8 rounded-md bg-rose-100 flex items-center justify-center shrink-0 text-rose-600 mt-0.5 border border-rose-200">
+                <AlertCircle class="w-4.5 h-4.5 stroke-[2.2]" />
+              </div>
+              <div class="text-xs space-y-1">
+                <div class="font-bold text-rose-950">Stock Update Required Before Checkout</div>
+                <p class="text-rose-800 leading-relaxed">
+                  One or more items in your cart are out of stock or exceed available quantity:
+                </p>
+                <ul class="text-rose-900 font-semibold space-y-0.5 pt-0.5">
+                  <li v-for="issue in store.stockIssues" :key="issue.id">
+                    • {{ issue.name }} — {{ issue.stockIssueLabel }}
+                  </li>
+                </ul>
+              </div>
+            </div>
+            <button
+              type="button"
+              @click="store.resolveStockIssues()"
+              class="px-4 py-2.5 bg-rose-700 hover:bg-rose-800 text-white text-xs font-semibold rounded-md transition-colors cursor-pointer shrink-0 shadow-xs"
+            >
+              Remove / Adjust Items
+            </button>
+          </div>
 
           <!-- STEP 01: FULFILLMENT METHOD & TIMINGS -->
           <div id="fulfillment-section" class="space-y-4 scroll-mt-6">
@@ -1091,61 +1216,96 @@ async function collectPayment(clientSecret) {
           </div>
 
           <!-- STEP 02: PAYMENT -->
-          <div id="payment-section" class="bg-white rounded-lg border border-[#e0d9cc] p-4 sm:p-6 space-y-4 shadow-xs scroll-mt-6">
+          <div id="payment-section" class="space-y-3 scroll-mt-6">
             <div class="flex items-center justify-between">
-              <div class="text-xs font-bold text-stone-900 uppercase tracking-wider flex items-center gap-2">
-                <Lock class="w-4 h-4 text-[#a47a3c]" />
-                <span>02 · PAYMENT</span>
+              <div class="text-[11px] font-semibold text-stone-500 uppercase tracking-wider">
+                02 · PAYMENT METHOD
               </div>
-              <span class="text-[11px] font-semibold text-stone-500 uppercase tracking-wider">
-                256-Bit Encrypted
+              <span class="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-[#7a5620] bg-[#f5eee2] px-2.5 py-0.5 rounded-md border border-[#e0d9cc]">
+                <Lock class="w-3 h-3 text-[#a47a3c]" />
+                <span>256-Bit SSL Encrypted</span>
               </span>
             </div>
 
-            <!-- Dynamic Device-Aware Payment Method Selector -->
-            <div class="flex items-center justify-between p-3.5 bg-[#fbf9f5] rounded-lg border border-[#e0d9cc]">
-              <div class="flex items-center gap-2">
-                <CreditCard class="w-4 h-4 text-[#a47a3c]" />
-                <span class="text-xs font-bold text-stone-900">Card & Express Payment</span>
-              </div>
-              <div class="flex items-center gap-2 text-stone-500">
-                <IconApplePay :width="32" :height="14" class="text-stone-700" />
-                <IconGooglePay :width="32" :height="14" />
-                <span class="text-[10px] font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">Encrypted</span>
-              </div>
-            </div>
-
-            <!-- PAYMENT FORM -->
-            <div class="space-y-3">
-              <!-- Stripe Live Elements (when STRIPE_KEY is set in .env) -->
-              <div v-if="isStripeConfigured" class="space-y-3">
-                <!-- Loading State (Sibling, never mounted inside Stripe target) -->
-                <div v-if="isStripeLoading" class="flex flex-col items-center justify-center py-8 space-y-2 min-h-[120px]">
-                  <Loader2 class="w-6 h-6 animate-spin text-[#a47a3c]" />
-                  <span class="text-xs text-stone-500 font-semibold">Loading Stripe payment fields...</span>
-                </div>
-
-                <!-- Pure Stripe Container: Always kept completely clean of Vue template children -->
-                <div
-                  id="stripe-payment-element-mount"
-                  class="min-h-[120px] pt-1"
-                  :class="{ hidden: isStripeLoading }"
-                ></div>
-
-                <div v-if="stripeError" class="p-3 bg-rose-50 border border-rose-200 text-rose-900 text-xs rounded-md flex items-center justify-between gap-2">
-                  <div class="flex items-center gap-2">
-                    <AlertCircle class="w-4 h-4 text-rose-600 shrink-0" />
-                    <span>{{ stripeError }}</span>
+            <div class="bg-white rounded-lg border border-[#e0d9cc] p-4 sm:p-5 space-y-4 shadow-xs">
+              <!-- Card Header matching Step 01 Store Card -->
+              <div class="flex items-center justify-between gap-3">
+                <div class="flex items-center gap-3 min-w-0">
+                  <div class="w-10 h-10 rounded-lg bg-[#fbf9f5] border border-[#e0d9cc] flex items-center justify-center shrink-0 text-[#a47a3c]">
+                    <CreditCard class="w-5 h-5 stroke-[2]" />
                   </div>
-                  <button
-                    type="button"
-                    @click="isStripeMounted = false; initStripe()"
-                    class="px-2.5 py-1 text-[11px] font-bold bg-rose-100 hover:bg-rose-200 text-rose-900 rounded-lg shrink-0 cursor-pointer"
-                  >
-                    Retry
-                  </button>
+                  <div class="min-w-0">
+                    <div class="font-serif font-bold text-sm sm:text-base text-[#1d1d1f] truncate">
+                      Card &amp; Express Checkout
+                    </div>
+                    <div class="text-xs text-stone-500 truncate">
+                      Credit, Debit, Apple Pay &amp; Google Pay
+                    </div>
+                  </div>
+                </div>
+                <div class="flex items-center gap-1.5 shrink-0">
+                  <div class="px-2 py-1 rounded-md bg-[#fbf9f5] border border-[#e0d9cc] flex items-center justify-center">
+                    <IconApplePay :width="30" :height="13" class="text-[#1d1d1f]" />
+                  </div>
+                  <div class="px-2 py-1 rounded-md bg-[#fbf9f5] border border-[#e0d9cc] flex items-center justify-center">
+                    <IconGooglePay :width="30" :height="13" />
+                  </div>
                 </div>
               </div>
+
+              <div class="border-t border-stone-200/70"></div>
+
+              <!-- PAYMENT FORM -->
+              <div class="space-y-3">
+                <!-- Stripe Live Elements (when STRIPE_KEY is set in .env) -->
+                <div v-if="isStripeConfigured" class="space-y-3">
+                  <!-- Warm Stone Skeleton State (Sibling, never mounted inside Stripe target) -->
+                  <div v-if="isStripeLoading" class="space-y-3 py-1 animate-pulse">
+                    <div class="grid grid-cols-2 gap-2.5">
+                      <div class="h-11 rounded-md bg-[#fbf9f5] border border-[#e0d9cc]"></div>
+                      <div class="h-11 rounded-md bg-[#fbf9f5] border border-[#e0d9cc]/60"></div>
+                    </div>
+                    <div class="space-y-1.5">
+                      <div class="h-3 w-24 rounded-xs bg-[#f3efe7]"></div>
+                      <div class="h-11 rounded-md bg-[#fbf9f5] border border-[#e0d9cc]"></div>
+                    </div>
+                    <div class="grid grid-cols-2 gap-2.5">
+                      <div class="space-y-1.5">
+                        <div class="h-3 w-20 rounded-xs bg-[#f3efe7]"></div>
+                        <div class="h-11 rounded-md bg-[#fbf9f5] border border-[#e0d9cc]"></div>
+                      </div>
+                      <div class="space-y-1.5">
+                        <div class="h-3 w-16 rounded-xs bg-[#f3efe7]"></div>
+                        <div class="h-11 rounded-md bg-[#fbf9f5] border border-[#e0d9cc]"></div>
+                      </div>
+                    </div>
+                    <div class="flex items-center justify-center gap-2 pt-1 text-[11px] text-stone-500 font-semibold">
+                      <Loader2 class="w-3.5 h-3.5 animate-spin text-[#a47a3c]" />
+                      <span>Preparing secure payment terminal...</span>
+                    </div>
+                  </div>
+
+                  <!-- Pure Stripe Container: Always kept completely clean of Vue template children -->
+                  <div
+                    id="stripe-payment-element-mount"
+                    class="min-h-[120px]"
+                    :class="{ hidden: isStripeLoading }"
+                  ></div>
+
+                  <div v-if="stripeError" class="p-3 bg-rose-50 border border-rose-200 text-rose-900 text-xs rounded-md flex items-center justify-between gap-2">
+                    <div class="flex items-center gap-2">
+                      <AlertCircle class="w-4 h-4 text-rose-600 shrink-0" />
+                      <span>{{ stripeError }}</span>
+                    </div>
+                    <button
+                      type="button"
+                      @click="isStripeMounted = false; initStripe()"
+                      class="px-2.5 py-1 text-[11px] font-bold bg-rose-100 hover:bg-rose-200 text-rose-900 rounded-md shrink-0 cursor-pointer transition-colors"
+                    >
+                      Retry
+                    </button>
+                  </div>
+                </div>
 
               <!-- Stripe Direct Card Fields (Clean minimal fields when Stripe key not set) -->
               <div v-else class="space-y-3">
@@ -1210,25 +1370,26 @@ async function collectPayment(clientSecret) {
               </div>
             </div>
 
-            <!-- Desktop Pay Button -->
-            <div class="pt-1 hidden sm:block">
-              <Button
-                type="button"
-                @click="completeOrder"
-                :disabled="isProcessing || (fulfillmentMode === 'pickup' && Boolean(scheduleError)) || (fulfillmentMode === 'delivery' && storeInfo.is_delivery_available_today === false) || (Number(page.props.minOrderAmount || 0) > 0 && store.subtotal < Number(page.props.minOrderAmount))"
-                class="w-full h-13 bg-[#1a1a1a] hover:bg-black text-white font-bold text-sm rounded-md transition-all cursor-pointer flex items-center justify-between px-6 shadow-md active:scale-[0.99] disabled:opacity-60"
-              >
-                <div class="flex items-center gap-2">
-                  <Loader2 v-if="isProcessing" key="desktop-loading-spinner" class="w-4 h-4 animate-spin" />
-                  <Lock v-else key="desktop-lock-icon" class="w-4 h-4 stroke-[2.2] text-[#e4b97a]" />
-                  <span>
-                    {{ isProcessing ? 'Authorizing Payment...' : `Complete Order · ${effectiveFulfillmentSlotLabel}` }}
-                  </span>
-                </div>
-                <span class="font-serif font-bold text-base text-[#e4b97a]">${{ checkoutTotal }}</span>
-              </Button>
-            </div>
+              <!-- Desktop Pay Button -->
+              <div class="pt-1 hidden sm:block">
+                <Button
+                  type="button"
+                  @click="completeOrder"
+                  :disabled="isProcessing || store.hasStockIssues || (fulfillmentMode === 'pickup' && Boolean(scheduleError)) || (fulfillmentMode === 'delivery' && storeInfo.is_delivery_available_today === false) || (Number(page.props.minOrderAmount || 0) > 0 && store.subtotal < Number(page.props.minOrderAmount))"
+                  class="w-full h-13 bg-[#1a1a1a] hover:bg-black text-white font-bold text-sm rounded-md transition-all cursor-pointer flex items-center justify-between px-6 shadow-md active:scale-[0.99] disabled:opacity-60"
+                >
+                  <div class="flex items-center gap-2">
+                    <Loader2 v-if="isProcessing" key="desktop-loading-spinner" class="w-4 h-4 animate-spin" />
+                    <Lock v-else key="desktop-lock-icon" class="w-4 h-4 stroke-[2.2] text-[#e4b97a]" />
+                    <span>
+                      {{ isProcessing ? 'Authorizing Payment...' : (store.hasStockIssues ? 'Resolve Stock Issues Above to Pay' : `Complete Order · ${effectiveFulfillmentSlotLabel}`) }}
+                    </span>
+                  </div>
+                  <span class="font-serif font-bold text-base text-[#e4b97a]">${{ checkoutTotal }}</span>
+                </Button>
+              </div>
 
+            </div>
           </div>
 
         </div>
@@ -1252,14 +1413,14 @@ async function collectPayment(clientSecret) {
         <button
           type="button"
           @click="completeOrder"
-          :disabled="isProcessing || (fulfillmentMode === 'pickup' && Boolean(scheduleError)) || (fulfillmentMode === 'delivery' && storeInfo.is_delivery_available_today === false) || (Number(page.props.minOrderAmount || 0) > 0 && store.subtotal < Number(page.props.minOrderAmount))"
+          :disabled="isProcessing || store.hasStockIssues || (fulfillmentMode === 'pickup' && Boolean(scheduleError)) || (fulfillmentMode === 'delivery' && storeInfo.is_delivery_available_today === false) || (Number(page.props.minOrderAmount || 0) > 0 && store.subtotal < Number(page.props.minOrderAmount))"
           class="w-full h-13 py-3.5 bg-[#1a1a1a] active:bg-black text-white font-semibold text-sm rounded-md cursor-pointer flex items-center justify-between px-6 shadow-md disabled:opacity-60"
         >
           <div class="flex items-center gap-2">
             <Loader2 v-if="isProcessing" key="mobile-loading-spinner" class="w-4 h-4 animate-spin" />
             <Lock v-else key="mobile-lock-icon" class="w-4 h-4 stroke-[2.2] text-[#e4b97a]" />
             <span>
-              {{ isProcessing ? 'Authorizing Payment...' : `Pay · $${checkoutTotal}` }}
+              {{ isProcessing ? 'Authorizing Payment...' : (store.hasStockIssues ? 'Resolve Stock Issues to Pay' : `Pay · $${checkoutTotal}`) }}
             </span>
           </div>
           <span class="text-xs text-[#e4b97a] font-semibold truncate max-w-[140px]">

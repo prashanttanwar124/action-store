@@ -20,7 +20,10 @@ class OrderItem extends Model
         'size',
         'unit_price',
         'quantity',
+        'refunded_quantity',
         'total_price',
+        'refunded_amount',
+        'refund_reason',
         'is_subscribed',
         'is_packed',
         'image',
@@ -32,7 +35,9 @@ class OrderItem extends Model
     protected $casts = [
         'unit_price' => 'decimal:2',
         'total_price' => 'decimal:2',
+        'refunded_amount' => 'decimal:2',
         'quantity' => 'integer',
+        'refunded_quantity' => 'integer',
         'is_subscribed' => 'boolean',
         'is_packed' => 'boolean',
     ];

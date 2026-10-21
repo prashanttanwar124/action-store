@@ -31,6 +31,7 @@ import {
   SelectContent, 
   SelectItem 
 } from '@/Components/ui/select';
+import { SearchableSelect } from '@/Components/ui/searchable-select';
 
 const props = defineProps({
   availableProducts: {
@@ -44,6 +45,21 @@ const previewImages = ref([]);
 const manualUrlInput = ref('');
 const fileInputRef = ref(null);
 const selectedProductToAdd = ref('');
+const selectedProductRaw = ref(null);
+
+const productOptions = computed(() =>
+  (props.availableProducts || []).map((p) => ({
+    value: String(p.id),
+    label: p.name,
+    sublabel: `($${Number(p.price).toFixed(2)})`,
+    badge: p.size_main || p.category || '',
+    raw: p,
+  })),
+);
+
+const handleProductOptionSelect = (opt) => {
+  selectedProductRaw.value = opt?.raw || null;
+};
 
 const form = useForm({
   name: '',
@@ -134,7 +150,11 @@ const removePreviewImage = (index) => {
 const addProductToKit = () => {
   if (!selectedProductToAdd.value) return;
 
-  const product = props.availableProducts.find(p => p.id === Number(selectedProductToAdd.value));
+  const product =
+    (selectedProductRaw.value && Number(selectedProductRaw.value.id) === Number(selectedProductToAdd.value)
+      ? selectedProductRaw.value
+      : null) ||
+    props.availableProducts.find((p) => p.id === Number(selectedProductToAdd.value));
   if (!product) return;
 
   // Check if already in list
@@ -142,6 +162,7 @@ const addProductToKit = () => {
   if (existing) {
     existing.quantity += 1;
     selectedProductToAdd.value = '';
+    selectedProductRaw.value = null;
     return;
   }
 
@@ -157,6 +178,7 @@ const addProductToKit = () => {
   });
 
   selectedProductToAdd.value = '';
+  selectedProductRaw.value = null;
 };
 
 const removeProductFromKit = (index) => {
@@ -384,20 +406,16 @@ const submit = () => {
 
             <!-- Add Product Selector -->
             <div class="flex items-center gap-2 shrink-0">
-              <Select v-model="selectedProductToAdd">
-                <SelectTrigger class="w-[230px] h-9 bg-[#fafafa] rounded-md text-xs">
-                  <SelectValue placeholder="Select catalog product..." />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem 
-                    v-for="p in availableProducts" 
-                    :key="p.id" 
-                    :value="String(p.id)"
-                  >
-                    {{ p.name }} (${{ Number(p.price).toFixed(2) }})
-                  </SelectItem>
-                </SelectContent>
-              </Select>
+              <SearchableSelect
+                v-model="selectedProductToAdd"
+                :options="productOptions"
+                :limit="8"
+                :search-url="route('admin.products.search')"
+                placeholder="Select catalog product..."
+                search-placeholder="Search products by name..."
+                trigger-class="w-[250px]"
+                @select="handleProductOptionSelect"
+              />
 
               <Button
                 type="button"

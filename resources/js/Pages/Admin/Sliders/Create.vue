@@ -1,5 +1,5 @@
 <script setup>
-import { ref } from 'vue';
+import { ref, computed } from 'vue';
 import { Head, Link, useForm } from '@inertiajs/vue3';
 import AdminLayout from '@/Layouts/AdminLayout.vue';
 import { 
@@ -16,6 +16,7 @@ import { Textarea } from '@/Components/ui/textarea';
 import { Label } from '@/Components/ui/label';
 import { Button } from '@/Components/ui/button';
 import { Checkbox } from '@/Components/ui/checkbox';
+import { SearchableSelect } from '@/Components/ui/searchable-select';
 
 const props = defineProps({
   products: {
@@ -30,6 +31,22 @@ const props = defineProps({
 
 const imagePreview = ref('');
 const fileInputRef = ref(null);
+const selectedQuickDestination = ref('');
+
+const quickLinkOptions = computed(() => [
+  ...(props.recipeKits || []).map((kit) => ({
+    value: `/recipe-kits/${kit.slug}`,
+    label: kit.name,
+    sublabel: `/recipe-kits/${kit.slug}`,
+    badge: 'Recipe Kit',
+  })),
+  ...(props.products || []).map((p) => ({
+    value: `/products/${p.slug}`,
+    label: p.name,
+    sublabel: `/products/${p.slug}`,
+    badge: 'Product',
+  })),
+]);
 
 const bgPresets = [
   { label: 'Deep Charcoal', value: '#1a1a1a' },
@@ -84,6 +101,15 @@ const setPresetBg = (color) => {
 
 const setQuickLink = (url) => {
   form.link_url = url;
+  selectedQuickDestination.value = url;
+};
+
+const handleQuickDestinationSelect = (opt) => {
+  if (opt?.raw?.slug) {
+    form.link_url = opt.badge === 'Recipe Kit' ? `/recipe-kits/${opt.raw.slug}` : `/products/${opt.raw.slug}`;
+  } else if (opt?.value) {
+    form.link_url = opt.value;
+  }
 };
 
 const submit = () => {
@@ -233,16 +259,29 @@ const submit = () => {
             <Label class="mb-1.5 block">
               Target Destination Link <span class="text-rose-500">*</span>
             </Label>
-            <div class="relative">
-              <Input
-                type="text"
-                v-model="form.link_url"
-                placeholder="e.g. /recipe-kits/paneer-curry or /products/atta"
-                class="pl-9 font-mono text-xs"
-                :class="{ 'border-rose-400 focus-visible:border-rose-500 focus-visible:ring-rose-500/15 focus:border-rose-500 focus:ring-rose-500/15': form.errors.link_url }"
-                required
-              />
-              <LinkIcon class="w-4 h-4 text-zinc-400 absolute left-3 top-3" />
+            <div class="grid grid-cols-1 sm:grid-cols-12 gap-2.5">
+              <div class="relative sm:col-span-7">
+                <Input
+                  type="text"
+                  v-model="form.link_url"
+                  placeholder="e.g. /recipe-kits/paneer-curry or /products/atta"
+                  class="pl-9 font-mono text-xs"
+                  :class="{ 'border-rose-400 focus-visible:border-rose-500 focus-visible:ring-rose-500/15 focus:border-rose-500 focus:ring-rose-500/15': form.errors.link_url }"
+                  required
+                />
+                <LinkIcon class="w-4 h-4 text-zinc-400 absolute left-3 top-2.5" />
+              </div>
+              <div class="sm:col-span-5">
+                <SearchableSelect
+                  v-model="selectedQuickDestination"
+                  :options="quickLinkOptions"
+                  :limit="8"
+                  :search-url="route('admin.products.search')"
+                  placeholder="Search product or recipe kit..."
+                  search-placeholder="Type name to search..."
+                  @select="handleQuickDestinationSelect"
+                />
+              </div>
             </div>
 
             <!-- Quick link suggestions -->

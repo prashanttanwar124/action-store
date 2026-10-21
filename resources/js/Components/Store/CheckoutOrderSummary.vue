@@ -38,12 +38,26 @@ defineProps({
             </div>
 
             <div>
-              <div class="font-bold text-[#1d1d1f] leading-snug">{{ item.name }}</div>
+              <div class="flex flex-wrap items-center gap-1.5">
+                <div class="font-bold text-[#1d1d1f] leading-snug" :class="item.isOutOfStock ? 'line-through text-stone-400' : ''">{{ item.name }}</div>
+                <span
+                  v-if="item.isOutOfStock"
+                  class="px-1.5 py-0.5 rounded text-[9.5px] font-bold bg-rose-100 text-rose-800 border border-rose-200"
+                >
+                  {{ item.stockIssueLabel || 'Out of Stock' }}
+                </span>
+                <span
+                  v-else-if="item.exceedsStock"
+                  class="px-1.5 py-0.5 rounded text-[9.5px] font-bold bg-amber-100 text-amber-900 border border-amber-200"
+                >
+                  {{ item.stockIssueLabel }}
+                </span>
+              </div>
               <div class="text-[11px] text-stone-600 font-medium mt-0.5">{{ item.quantity }}x · {{ item.weight }}</div>
             </div>
           </div>
 
-          <div class="font-serif font-bold text-[#1d1d1f] shrink-0 text-right text-sm">
+          <div class="font-serif font-bold text-[#1d1d1f] shrink-0 text-right text-sm" :class="item.isOutOfStock ? 'line-through text-stone-400' : ''">
             ${{ (item.price * item.quantity).toFixed(2) }}
           </div>
         </div>

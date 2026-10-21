@@ -33,10 +33,12 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::get('/orders', [AdminOrderController::class, 'index'])->name('orders.index');
         Route::patch('/orders/{order}/status', [AdminOrderController::class, 'updateStatus'])->name('orders.status.update');
         Route::patch('/orders/{order}/items/packed', [AdminOrderController::class, 'updateItemsPacked'])->name('orders.items.packed');
+        Route::post('/orders/{order}/items/{item}/refund', [AdminOrderController::class, 'refundOrderItem'])->name('orders.items.refund');
 
         // Product Management (with Multi-Image Uploads)
         Route::middleware('permission:manage products,admin')->group(function () {
             Route::get('/products', [AdminProductController::class, 'index'])->name('products.index');
+            Route::get('/products/search', [AdminProductController::class, 'search'])->name('products.search');
             Route::get('/products/create', [AdminProductController::class, 'create'])->name('products.create');
             Route::post('/products', [AdminProductController::class, 'store'])->name('products.store');
             Route::get('/products/{product}/edit', [AdminProductController::class, 'edit'])->name('products.edit');
@@ -46,6 +48,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
 
             // Category Management
             Route::get('/categories', [AdminCategoryController::class, 'index'])->name('categories.index');
+            Route::get('/categories/search', [AdminCategoryController::class, 'search'])->name('categories.search');
             Route::post('/categories', [AdminCategoryController::class, 'store'])->name('categories.store');
             Route::post('/categories/{category}', [AdminCategoryController::class, 'update'])->name('categories.update');
             Route::patch('/categories/{category}', [AdminCategoryController::class, 'update']);
@@ -55,6 +58,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
 
             // Supplier & Vendor Management
             Route::get('/suppliers', [AdminSupplierController::class, 'index'])->name('suppliers.index');
+            Route::get('/suppliers/search', [AdminSupplierController::class, 'search'])->name('suppliers.search');
             Route::post('/suppliers', [AdminSupplierController::class, 'store'])->name('suppliers.store');
             Route::post('/suppliers/{supplier}', [AdminSupplierController::class, 'update'])->name('suppliers.update');
             Route::patch('/suppliers/{supplier}', [AdminSupplierController::class, 'update']);
@@ -65,6 +69,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
 
             // Recipe Kits & Group Buy Product Bundles
             Route::get('/recipe-kits', [AdminRecipeKitController::class, 'index'])->name('recipe-kits.index');
+            Route::get('/recipe-kits/search', [AdminRecipeKitController::class, 'search'])->name('recipe-kits.search');
             Route::get('/recipe-kits/create', [AdminRecipeKitController::class, 'create'])->name('recipe-kits.create');
             Route::post('/recipe-kits', [AdminRecipeKitController::class, 'store'])->name('recipe-kits.store');
             Route::get('/recipe-kits/{recipe_kit}/edit', [AdminRecipeKitController::class, 'edit'])->name('recipe-kits.edit');
@@ -80,7 +85,10 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::post('/sliders/{slider}', [AdminSliderController::class, 'update'])->name('sliders.update');
             Route::put('/sliders/{slider}', [AdminSliderController::class, 'update']);
             Route::delete('/sliders/{slider}', [AdminSliderController::class, 'destroy'])->name('sliders.destroy');
+        });
 
+        // Store Information & Pickup Settings Management
+        Route::middleware('permission:manage settings,admin')->group(function () {
             // Store Information & Branding
             Route::get('/store-info', [AdminStoreSettingController::class, 'edit'])->name('store-info.edit');
             Route::put('/store-info', [AdminStoreSettingController::class, 'update'])->name('store-info.update');

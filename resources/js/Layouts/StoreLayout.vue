@@ -10,7 +10,7 @@ import StoreInfoModal from '@/Components/Store/StoreInfoModal.vue';
 import StoreFloatingCartBar from '@/Components/Store/StoreFloatingCartBar.vue';
 import StoreBottomNav from '@/Components/Store/StoreBottomNav.vue';
 import StoreFooter from '@/Components/Store/StoreFooter.vue';
-import { Home, Search, RefreshCw, User } from 'lucide-vue-next';
+import { Home, Search, RefreshCw, User, AlertTriangle, X, Info } from 'lucide-vue-next';
 
 const props = defineProps({
   title: {
@@ -58,7 +58,7 @@ const storeInfoModalOpen = ref(false);
 // Removed all dummy hardcoded fallback objects
 const storeInfo = computed(() => page.props.storeInfo || {});
 
-// Reactively keep Pinia cart store in sync with DB store settings & active user account
+// Reactively keep Pinia cart store in sync with DB store settings, products, recipe kits & active user account
 watchEffect(() => {
   if (storeInfo.value?.name) {
     store.selectedStore = storeInfo.value.name;
@@ -69,8 +69,23 @@ watchEffect(() => {
   if (storeInfo.value?.address) {
     store.pickupLocation = `${storeInfo.value.address} · ${storeInfo.value.name || 'Masala Mart'}`;
   }
-  if (page.props.products && Array.isArray(page.props.products) && page.props.products.length > 0) {
+  if (page.props.products) {
     store.setProducts(page.props.products);
+  }
+  if (page.props.product) {
+    store.setProducts([page.props.product]);
+  }
+  if (page.props.impulseItems && Array.isArray(page.props.impulseItems)) {
+    store.setProducts(page.props.impulseItems);
+  }
+  if (page.props.frequentlyBoughtTogether && Array.isArray(page.props.frequentlyBoughtTogether)) {
+    store.setProducts(page.props.frequentlyBoughtTogether);
+  }
+  if (page.props.recipeKits) {
+    store.setRecipeKits(page.props.recipeKits);
+  }
+  if (page.props.kit) {
+    store.setRecipeKits(page.props.kit);
   }
   store.syncUser(page.props.auth?.user);
 });
@@ -116,6 +131,48 @@ const navTabs = computed(() => [
         <slot />
       </div>
     </main>
+
+    <!-- Global Stock Notification Toast -->
+    <Transition
+      enter-active-class="transform transition ease-out duration-200"
+      enter-from-class="translate-y-3 opacity-0 scale-95"
+      enter-to-class="translate-y-0 opacity-100 scale-100"
+      leave-active-class="transform transition ease-in duration-150"
+      leave-from-class="translate-y-0 opacity-100 scale-100"
+      leave-to-class="translate-y-2 opacity-0 scale-95"
+    >
+      <div
+        v-if="store.stockToast.visible"
+        class="fixed top-20 right-4 left-4 sm:left-auto sm:w-96 z-50 rounded-lg shadow-xl border p-3.5 flex items-start justify-between gap-3 backdrop-blur-md"
+        :class="store.stockToast.type === 'error'
+          ? 'bg-rose-950/95 text-white border-rose-500/40'
+          : (store.stockToast.type === 'info' ? 'bg-[#1a1a1a]/95 text-white border-[#a47a3c]/40' : 'bg-amber-950/95 text-white border-amber-500/40')"
+      >
+        <div class="flex items-start gap-2.5 min-w-0">
+          <div
+            class="w-7 h-7 rounded-md flex items-center justify-center shrink-0 mt-0.5"
+            :class="store.stockToast.type === 'error'
+              ? 'bg-rose-500/20 text-rose-300'
+              : (store.stockToast.type === 'info' ? 'bg-[#a47a3c]/25 text-[#e4b97a]' : 'bg-amber-500/20 text-amber-300')"
+          >
+            <Info v-if="store.stockToast.type === 'info'" class="w-4 h-4 stroke-[2.2]" />
+            <AlertTriangle v-else class="w-4 h-4 stroke-[2.2]" />
+          </div>
+          <div class="min-w-0">
+            <div class="text-xs font-bold leading-snug">{{ store.stockToast.title }}</div>
+            <div class="text-[11px] text-stone-200 mt-0.5 leading-relaxed">{{ store.stockToast.message }}</div>
+          </div>
+        </div>
+        <button
+          type="button"
+          @click="store.dismissStockToast()"
+          class="p-1 text-stone-300 hover:text-white rounded-md cursor-pointer shrink-0"
+          aria-label="Dismiss notification"
+        >
+          <X class="w-3.5 h-3.5" />
+        </button>
+      </div>
+    </Transition>
 
     <!-- Store Information & Pickup Guide Modal -->
     <StoreInfoModal 

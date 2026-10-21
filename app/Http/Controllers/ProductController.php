@@ -106,6 +106,8 @@ class ProductController extends Controller
         }
 
         return $matchedProducts->slice(0, 3)->map(function (Product $p) {
+            $isOutOfStock = ((int) $p->stock <= 0) || str_contains(strtolower((string) $p->stock_badge), 'out');
+
             return [
                 'id' => $p->id,
                 'slug' => $p->slug,
@@ -115,7 +117,9 @@ class ProductController extends Controller
                 'size' => $p->size_main ?? ($p->size_sub ?? ''),
                 'image' => $p->image,
                 'category' => $p->category,
-                'checked' => true,
+                'stock' => (int) $p->stock,
+                'stock_badge' => $p->stock_badge,
+                'checked' => ! $isOutOfStock,
             ];
         })->values()->all();
     }

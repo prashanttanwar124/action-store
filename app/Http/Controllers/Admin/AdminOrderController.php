@@ -6,11 +6,14 @@ use App\Events\OrderItemsPackedUpdated;
 use App\Events\OrderStatusUpdated;
 use App\Http\Controllers\Controller;
 use App\Models\Order;
+use App\Models\OrderItem;
+use App\Models\Product;
 use App\Services\StripePayments;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
@@ -59,6 +62,7 @@ class AdminOrderController extends Controller
                 'subtotal' => (float) $order->subtotal,
                 'discount' => (float) $order->discount,
                 'total' => (float) $order->total,
+                'refunded_total' => (float) ($order->refunded_total ?? 0),
                 'points_earned' => $order->points_earned,
                 'payment_method' => $order->payment_method,
                 'stripe_payment_id' => $order->stripe_payment_id,
@@ -75,11 +79,15 @@ class AdminOrderController extends Controller
                 'items' => $order->items->map(function ($item) {
                     return [
                         'id' => $item->id,
+                        'product_id' => $item->product_id,
                         'name' => $item->name,
                         'size' => $item->size,
                         'unit_price' => (float) $item->unit_price,
-                        'quantity' => $item->quantity,
+                        'quantity' => (int) $item->quantity,
+                        'refunded_quantity' => (int) ($item->refunded_quantity ?? 0),
                         'total_price' => (float) $item->total_price,
+                        'refunded_amount' => (float) ($item->refunded_amount ?? 0),
+                        'refund_reason' => $item->refund_reason,
                         'is_packed' => (bool) $item->is_packed,
                         'image' => $item->image,
                     ];
@@ -87,21 +95,34 @@ class AdminOrderController extends Controller
             ];
         });
 
-        // Compute live KDS summary metrics for today
-        $today = Carbon::today();
-        $todayOrders = Order::whereDate('created_at', $today);
+        // Compute live KDS summary metrics in a single aggregate SQL query
+        $todayDate = Carbon::today()->toDateString();
+        $agg = Order::query()
+            ->selectRaw("
+                COUNT(*) as total_all,
+                SUM(CASE WHEN DATE(created_at) = ? THEN 1 ELSE 0 END) as total_today,
+                SUM(CASE WHEN status = 'confirmed' THEN 1 ELSE 0 END) as confirmed,
+                SUM(CASE WHEN status = 'packing' THEN 1 ELSE 0 END) as packing,
+                SUM(CASE WHEN status = 'ready_for_pickup' THEN 1 ELSE 0 END) as ready_for_pickup,
+                SUM(CASE WHEN status = 'completed' THEN 1 ELSE 0 END) as completed,
+                SUM(CASE WHEN DATE(created_at) = ? AND status = 'completed' THEN 1 ELSE 0 END) as completed_today,
+                SUM(CASE WHEN status = 'cancelled' THEN 1 ELSE 0 END) as cancelled,
+                SUM(CASE WHEN DATE(created_at) = ? AND status = 'cancelled' THEN 1 ELSE 0 END) as cancelled_today,
+                COALESCE(SUM(CASE WHEN DATE(created_at) = ? AND status != 'cancelled' THEN total - COALESCE(refunded_total, 0) ELSE 0 END), 0) as revenue_today
+            ", [$todayDate, $todayDate, $todayDate, $todayDate])
+            ->first();
 
         $stats = [
-            'total_all' => Order::count(),
-            'total_today' => (clone $todayOrders)->count(),
-            'confirmed' => Order::where('status', 'confirmed')->count(),
-            'packing' => Order::where('status', 'packing')->count(),
-            'ready_for_pickup' => Order::where('status', 'ready_for_pickup')->count(),
-            'completed' => Order::where('status', 'completed')->count(),
-            'completed_today' => (clone $todayOrders)->where('status', 'completed')->count(),
-            'cancelled' => Order::where('status', 'cancelled')->count(),
-            'cancelled_today' => (clone $todayOrders)->where('status', 'cancelled')->count(),
-            'revenue_today' => (float) (clone $todayOrders)->where('status', '!=', 'cancelled')->sum('total'),
+            'total_all' => (int) ($agg->total_all ?? 0),
+            'total_today' => (int) ($agg->total_today ?? 0),
+            'confirmed' => (int) ($agg->confirmed ?? 0),
+            'packing' => (int) ($agg->packing ?? 0),
+            'ready_for_pickup' => (int) ($agg->ready_for_pickup ?? 0),
+            'completed' => (int) ($agg->completed ?? 0),
+            'completed_today' => (int) ($agg->completed_today ?? 0),
+            'cancelled' => (int) ($agg->cancelled ?? 0),
+            'cancelled_today' => (int) ($agg->cancelled_today ?? 0),
+            'revenue_today' => (float) ($agg->revenue_today ?? 0),
         ];
 
         return Inertia::render('Admin/Orders/Index', [
@@ -170,7 +191,9 @@ class AdminOrderController extends Controller
                 ->whereKey($validated['item_id'])
                 ->update(['is_packed' => $validated['is_packed']]);
         } else {
-            $order->items()->update(['is_packed' => $validated['is_packed']]);
+            $order->items()
+                ->whereRaw('COALESCE(refunded_quantity, 0) < quantity')
+                ->update(['is_packed' => $validated['is_packed']]);
         }
 
         $order->load('items');
@@ -193,6 +216,162 @@ class AdminOrderController extends Controller
     }
 
     /**
+     * Mark a single order item (or partial quantity) as Out of Stock during packing and issue a partial Stripe refund.
+     */
+    public function refundOrderItem(Request $request, Order $order, OrderItem $item, StripePayments $payments): JsonResponse|RedirectResponse
+    {
+        if ((int) $item->order_id !== (int) $order->id) {
+            abort(404);
+        }
+
+        if (in_array($order->status, ['cancelled', 'completed'], true)) {
+            throw ValidationException::withMessages([
+                'item' => 'Items can only be refunded for active orders before completion or cancellation.',
+            ]);
+        }
+
+        $alreadyRefundedQty = (int) ($item->refunded_quantity ?? 0);
+        $remainingQty = max(0, (int) $item->quantity - $alreadyRefundedQty);
+
+        if ($remainingQty <= 0) {
+            throw ValidationException::withMessages([
+                'item' => "'{$item->name}' has already been fully refunded.",
+            ]);
+        }
+
+        $validated = $request->validate([
+            'quantity' => ['required', 'integer', 'min:1', "max:{$remainingQty}"],
+            'zero_product_stock' => ['nullable', 'boolean'],
+            'reason' => ['nullable', 'string', 'max:120'],
+        ]);
+
+        $qtyToRefund = (int) $validated['quantity'];
+        $zeroProductStock = (bool) ($validated['zero_product_stock'] ?? true);
+        $reason = trim((string) ($validated['reason'] ?? 'Out of stock')) ?: 'Out of stock';
+
+        $remainingOrderBalance = max(0.0, round((float) $order->total - (float) ($order->refunded_total ?? 0), 2));
+        $refundAmount = min($remainingOrderBalance, round((float) $item->unit_price * $qtyToRefund, 2));
+        $refundCents = (int) round($refundAmount * 100);
+        $newRefundedQty = $alreadyRefundedQty + $qtyToRefund;
+
+        if ($order->stripe_payment_id && $payments->isEnabled() && $refundCents > 0) {
+            try {
+                $payments->refundPartialPayment(
+                    $order->stripe_payment_id,
+                    $refundCents,
+                    "order-{$order->id}-item-{$item->id}-refund-qty-{$newRefundedQty}",
+                    [
+                        'order_id' => (string) $order->id,
+                        'order_number' => (string) $order->order_number,
+                        'order_item_id' => (string) $item->id,
+                        'item_name' => (string) $item->name,
+                        'refunded_qty' => (string) $qtyToRefund,
+                        'reason' => $reason,
+                    ]
+                );
+                Log::info("Admin item OOS refund: Refunded \${$refundAmount} ({$qtyToRefund}x {$item->name}) on order {$order->order_number}");
+            } catch (\Throwable $e) {
+                Log::error("Admin item OOS refund failed for order {$order->order_number} item {$item->id}: {$e->getMessage()}");
+
+                throw ValidationException::withMessages([
+                    'item' => "Stripe partial refund failed for '{$item->name}': {$e->getMessage()}",
+                ]);
+            }
+        }
+
+        $previousStatus = $order->status;
+
+        DB::transaction(function () use ($order, $item, $qtyToRefund, $newRefundedQty, $refundAmount, $reason, $zeroProductStock) {
+            $lockedOrder = Order::whereKey($order->id)->lockForUpdate()->firstOrFail();
+            $lockedItem = OrderItem::whereKey($item->id)->lockForUpdate()->firstOrFail();
+
+            $newItemRefundedAmount = round((float) ($lockedItem->refunded_amount ?? 0) + $refundAmount, 2);
+            $fullyRefundedItem = $newRefundedQty >= (int) $lockedItem->quantity;
+
+            $lockedItem->update([
+                'refunded_quantity' => $newRefundedQty,
+                'refunded_amount' => $newItemRefundedAmount,
+                'refund_reason' => $reason,
+                'is_packed' => $fullyRefundedItem ? false : $lockedItem->is_packed,
+            ]);
+
+            if ($zeroProductStock && $lockedItem->product_id) {
+                Product::whereKey($lockedItem->product_id)->update(['stock' => 0]);
+            }
+
+            $reservedStock = is_array($lockedOrder->reserved_stock) ? $lockedOrder->reserved_stock : [];
+            if ($lockedItem->product_id && isset($reservedStock[$lockedItem->product_id])) {
+                $reservedStock[$lockedItem->product_id] = max(0, (int) $reservedStock[$lockedItem->product_id] - $qtyToRefund);
+            }
+
+            $newOrderRefundedTotal = min(
+                (float) $lockedOrder->total,
+                round((float) ($lockedOrder->refunded_total ?? 0) + $refundAmount, 2)
+            );
+
+            $formattedRefund = number_format($refundAmount, 2);
+            $noteEntry = "[Refunded {$qtyToRefund}× {$lockedItem->name} (\${$formattedRefund}) — {$reason}]";
+            $updatedNotes = trim(($lockedOrder->notes ?? '').' '.$noteEntry);
+
+            $remainingActiveUnits = $lockedOrder->items()
+                ->get()
+                ->sum(fn ($i) => max(0, (int) $i->quantity - (int) ($i->refunded_quantity ?? 0)));
+
+            $nextStatus = $remainingActiveUnits <= 0 ? 'cancelled' : $lockedOrder->status;
+
+            $lockedOrder->update([
+                'refunded_total' => $newOrderRefundedTotal,
+                'reserved_stock' => $reservedStock,
+                'notes' => $updatedNotes,
+                'status' => $nextStatus,
+            ]);
+        });
+
+        $order->refresh()->load('items');
+
+        try {
+            OrderItemsPackedUpdated::dispatch($order);
+            if ($order->status !== $previousStatus) {
+                OrderStatusUpdated::dispatch($order);
+            }
+        } catch (\Throwable $e) {
+            Log::warning("Broadcast failed after item refund for {$order->order_number}: {$e->getMessage()}");
+        }
+
+        $formattedAmount = number_format($refundAmount, 2);
+        $message = "Refunded {$qtyToRefund}× {$item->name} (\${$formattedAmount})".($zeroProductStock ? ' and marked product Out of Stock.' : '.');
+
+        if ($request->wantsJson()) {
+            return response()->json([
+                'success' => true,
+                'message' => $message,
+                'order' => [
+                    'id' => $order->id,
+                    'status' => $order->status,
+                    'refunded_total' => (float) $order->refunded_total,
+                    'notes' => $order->notes,
+                    'items' => $order->items->map(fn ($i) => [
+                        'id' => $i->id,
+                        'product_id' => $i->product_id,
+                        'name' => $i->name,
+                        'size' => $i->size,
+                        'unit_price' => (float) $i->unit_price,
+                        'quantity' => (int) $i->quantity,
+                        'refunded_quantity' => (int) ($i->refunded_quantity ?? 0),
+                        'total_price' => (float) $i->total_price,
+                        'refunded_amount' => (float) ($i->refunded_amount ?? 0),
+                        'refund_reason' => $i->refund_reason,
+                        'is_packed' => (bool) $i->is_packed,
+                        'image' => $i->image,
+                    ])->values()->all(),
+                ],
+            ]);
+        }
+
+        return back()->with('success', $message);
+    }
+
+    /**
      * Cancel an order, refunding its payment first so a failed refund leaves the order and its stock untouched.
      *
      * @throws ValidationException When the refund failed; the order is then left unchanged.
@@ -203,9 +382,22 @@ class AdminOrderController extends Controller
             return;
         }
 
-        if ($order->stripe_payment_id && $payments->isEnabled()) {
+        $alreadyRefunded = round((float) ($order->refunded_total ?? 0), 2);
+        $remainingBalance = max(0.0, round((float) $order->total - $alreadyRefunded, 2));
+        $remainingCents = (int) round($remainingBalance * 100);
+
+        if ($order->stripe_payment_id && $payments->isEnabled() && $remainingCents > 0) {
             try {
-                $payments->refundPayment($order->stripe_payment_id);
+                if ($alreadyRefunded > 0) {
+                    $payments->refundPartialPayment(
+                        $order->stripe_payment_id,
+                        $remainingCents,
+                        "order-{$order->id}-cancel-remaining-refund",
+                        ['order_id' => (string) $order->id, 'reason' => 'Order cancelled after partial refund']
+                    );
+                } else {
+                    $payments->refundPayment($order->stripe_payment_id);
+                }
                 Log::info("Admin cancellation: Refund issued for order {$order->order_number} (payment: {$order->stripe_payment_id})");
             } catch (\Throwable $e) {
                 Log::error("Admin cancellation: Failed to refund order {$order->order_number}: {$e->getMessage()}");
@@ -217,5 +409,6 @@ class AdminOrderController extends Controller
         }
 
         $order->cancelAndRestock('Cancelled by admin');
+        $order->update(['refunded_total' => $order->total]);
     }
 }

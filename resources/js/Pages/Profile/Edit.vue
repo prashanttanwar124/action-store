@@ -29,7 +29,16 @@ defineProps({
 
 const store = useStore();
 const page = usePage();
+const storeInfo = computed(() => page.props.storeInfo || {});
+const storeBrandName = computed(() => storeInfo.value?.brand_name || (storeInfo.value?.name ? storeInfo.value.name.split(/\s*[—–]\s*|\s+-\s+/)[0].trim() : 'Store'));
+
 const authUser = computed(() => page.props.auth?.user);
+const userPoints = computed(() => {
+  if (typeof authUser.value?.reward_points === 'number') {
+    return authUser.value.reward_points;
+  }
+  return store.rewardPoints || 0;
+});
 const userInitial = computed(() => {
   if (!authUser.value?.name) return 'U';
   return authUser.value.name.charAt(0).toUpperCase();
@@ -37,7 +46,7 @@ const userInitial = computed(() => {
 </script>
 
 <template>
-  <Head title="Profile Settings — Masala Mart" />
+  <Head :title="`Profile Settings — ${storeBrandName}`" />
 
   <StoreLayout 
     :showHeader="true" 
@@ -96,7 +105,7 @@ const userInitial = computed(() => {
             <div class="flex items-center gap-2 pt-1 text-[11px] text-[#86868b]">
               <span class="inline-flex items-center gap-1 font-semibold text-[#7a5620]">
                 <Sparkles class="w-3 h-3 text-[#a47a3c]" />
-                <span>{{ store.masalaPoints.toLocaleString() }} Masala Points</span>
+                <span>{{ userPoints.toLocaleString() }} {{ storeBrandName }} Points</span>
               </span>
               <span>·</span>
               <span class="text-stone-500">Gold Member</span>
@@ -171,7 +180,7 @@ const userInitial = computed(() => {
               </span>
             </div>
             <p class="text-xs text-[#6e6e73]">
-              Permanently remove your account, past orders, and Masala Rewards points.
+              Permanently remove your account, past orders, and {{ storeBrandName }} Rewards points.
             </p>
           </div>
         </div>

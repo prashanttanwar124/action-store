@@ -69,6 +69,7 @@ class StoreSetting extends Model
      * @var list<string>
      */
     protected $appends = [
+        'brand_name',
         'effective_prep_time_minutes',
         'effective_pickup_time',
         'is_busy',
@@ -237,6 +238,21 @@ class StoreSetting extends Model
         }
 
         return $value ?: '1-hour window';
+    }
+
+    /**
+     * Get the brand name derived from the store name (stripping location suffixes).
+     */
+    public function getBrandNameAttribute(): string
+    {
+        $trimmed = trim($this->name ?? '');
+        if ($trimmed === '') {
+            return 'Store';
+        }
+
+        $parts = preg_split('/\s*[\x{2014}\x{2013}]\s*|\s+-\s+/u', $trimmed);
+
+        return trim($parts[0] ?: $trimmed);
     }
 
     /**

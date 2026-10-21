@@ -24,12 +24,12 @@ export const useStore = defineStore('masalaStore', () => {
     return products.value.filter(p => p.isRecipeKit);
   });
 
-  // User-scoped data (connected to active user account, persisted in localStorage)
+  // User-scoped data (connected to active user account)
   const currentUserId = ref(null);
   const isInitialized = ref(false);
   const cart = ref([]);
   const pastOrders = ref([]);
-  const masalaPoints = ref(0);
+  const rewardPoints = ref(0);
 
   // Storage helper
   function loadUserStorage(key, fallback) {
@@ -60,6 +60,9 @@ export const useStore = defineStore('masalaStore', () => {
     const newUserId = user ? user.id : null;
 
     if (currentUserId.value === newUserId && isInitialized.value) {
+      if (newUserId && user && typeof user.reward_points !== 'undefined' && user.reward_points !== null) {
+        rewardPoints.value = Number(user.reward_points);
+      }
       return;
     }
 
@@ -88,13 +91,17 @@ export const useStore = defineStore('masalaStore', () => {
       cart.value = userCart;
       saveUserStorage(`masala_cart_user_${newUserId}`, cart.value);
 
-      // Load user-specific points and past orders
-      masalaPoints.value = loadUserStorage(`masala_points_user_${newUserId}`, 0);
-      pastOrders.value = loadUserStorage(`masala_orders_user_${newUserId}`, []);
+      // Load user-specific points from authoritative server value (no localStorage)
+      if (user && typeof user.reward_points !== 'undefined' && user.reward_points !== null) {
+        rewardPoints.value = Number(user.reward_points);
+      } else {
+        rewardPoints.value = 0;
+      }
+      pastOrders.value = [];
     } else {
       // Guest mode
       cart.value = loadUserStorage('masala_cart_guest', []);
-      masalaPoints.value = 0;
+      rewardPoints.value = 0;
       pastOrders.value = [];
     }
 
@@ -107,7 +114,7 @@ export const useStore = defineStore('masalaStore', () => {
     isInitialized.value = true;
   }
 
-  // Auto-persist changes
+  // Auto-persist changes (only cart items in localStorage)
   watch(cart, (newVal) => {
     if (isInitialized.value) {
       const key = currentUserId.value ? `masala_cart_user_${currentUserId.value}` : 'masala_cart_guest';
@@ -115,99 +122,302 @@ export const useStore = defineStore('masalaStore', () => {
     }
   }, { deep: true });
 
-  watch(masalaPoints, (newVal) => {
-    if (currentUserId.value) {
-      saveUserStorage(`masala_points_user_${currentUserId.value}`, newVal);
-    }
+  // Global stock notification toast state
+  const stockToast = ref({
+    visible: false,
+    title: '',
+    message: '',
+    type: 'warning', // 'error' | 'warning' | 'info'
   });
+  let stockToastTimer = null;
 
-  watch(pastOrders, (newVal) => {
-    if (currentUserId.value) {
-      saveUserStorage(`masala_orders_user_${currentUserId.value}`, newVal);
+  function showStockToast(title, message, type = 'warning') {
+    if (stockToastTimer) {
+      clearTimeout(stockToastTimer);
     }
-  }, { deep: true });
+    stockToast.value = {
+      visible: true,
+      title,
+      message,
+      type,
+    };
+    stockToastTimer = setTimeout(() => {
+      stockToast.value.visible = false;
+    }, 4200);
+  }
+
+  function dismissStockToast() {
+    if (stockToastTimer) {
+      clearTimeout(stockToastTimer);
+    }
+    stockToast.value.visible = false;
+  }
+
+  function isBadgeOutOfStock(badge) {
+    return typeof badge === 'string' && badge.toLowerCase().includes('out');
+  }
 
   // Set / merge products from Laravel database in O(N+M)
   function setProducts(dbProducts) {
-    if (!Array.isArray(dbProducts) || dbProducts.length === 0) return;
+    const list = Array.isArray(dbProducts)
+      ? dbProducts
+      : (Array.isArray(dbProducts?.data) ? dbProducts.data : []);
+    if (list.length === 0) return;
 
     const idMap = new Map();
     const slugMap = new Map();
     products.value.forEach((p, idx) => {
-      if (p.id != null) idMap.set(p.id, idx);
-      if (p.slug) slugMap.set(p.slug, idx);
+      if (!p.isRecipeKit) {
+        if (p.id != null) idMap.set(p.id, idx);
+        if (p.slug) slugMap.set(p.slug, idx);
+      }
     });
 
-    dbProducts.forEach(item => {
-      const formatted = {
-        id: item.id,
-        slug: item.slug,
-        name: item.name,
-        subtitleTag: item.subtitle_tag || item.subtitleTag,
-        category: item.category,
-        categoryTitle: item.category_title || item.categoryTitle,
-        price: Number(item.price),
-        originalPrice: Number(item.original_price || item.originalPrice || item.price),
-        unitPrice: item.unit_price || item.unitPrice,
-        stockBadge: item.stock_badge || item.stockBadge,
-        photoLabel: item.photo_label || item.photoLabel,
-        image: item.image,
-        sizeMain: item.size_main || item.sizeMain || item.size,
-        sizeSub: item.size_sub || item.sizeSub,
-        size: item.size_main || item.sizeMain || item.size,
-        freshnessLine: item.freshness_line || item.freshnessLine,
-        description: item.description,
-        servings: item.servings,
-        cookingTime: item.cooking_time || item.cookingTime,
-        isRecipeKit: !!(item.is_recipe_kit || item.isRecipeKit),
-        buyAgain: !!(item.buy_again || item.buyAgain),
-        label: item.photo_label || item.photoLabel || item.slug,
-        frequentlyBoughtTogether: item.frequently_bought_together || item.frequentlyBoughtTogether || [],
-        recipeIngredients: item.recipe_ingredients || item.recipeIngredients || [],
-      };
-
+    list.forEach(item => {
+      if (!item) return;
       const existingIdx = (item.id != null && idMap.has(item.id))
         ? idMap.get(item.id)
         : (item.slug && slugMap.has(item.slug) ? slugMap.get(item.slug) : -1);
+      const prev = (existingIdx !== -1 && existingIdx !== undefined) ? products.value[existingIdx] : null;
+
+      const parsedStock = (item.stock !== undefined && item.stock !== null && !Number.isNaN(Number(item.stock)))
+        ? Number(item.stock)
+        : (prev?.stock ?? null);
+
+      const formatted = {
+        id: item.id ?? prev?.id,
+        slug: item.slug ?? prev?.slug,
+        name: item.name ?? prev?.name,
+        subtitleTag: item.subtitle_tag || item.subtitleTag || prev?.subtitleTag,
+        category: item.category ?? prev?.category,
+        categoryTitle: item.category_title || item.categoryTitle || prev?.categoryTitle,
+        price: item.price !== undefined ? Number(item.price) : Number(prev?.price || 0),
+        originalPrice: Number(item.original_price || item.originalPrice || item.price || prev?.originalPrice || 0),
+        unitPrice: item.unit_price || item.unitPrice || prev?.unitPrice,
+        stock: parsedStock,
+        stockBadge: item.stock_badge ?? item.stockBadge ?? prev?.stockBadge ?? null,
+        photoLabel: item.photo_label || item.photoLabel || prev?.photoLabel,
+        image: item.image || prev?.image,
+        sizeMain: item.size_main || item.sizeMain || item.size || prev?.sizeMain,
+        sizeSub: item.size_sub || item.sizeSub || prev?.sizeSub,
+        size: item.size_main || item.sizeMain || item.size || prev?.size,
+        freshnessLine: item.freshness_line || item.freshnessLine || prev?.freshnessLine,
+        description: item.description ?? prev?.description,
+        servings: item.servings ?? prev?.servings,
+        cookingTime: item.cooking_time || item.cookingTime || prev?.cookingTime,
+        isRecipeKit: !!(item.is_recipe_kit || item.isRecipeKit),
+        buyAgain: !!(item.buy_again || item.buyAgain || prev?.buyAgain),
+        label: item.photo_label || item.photoLabel || item.slug || prev?.label,
+        frequentlyBoughtTogether: item.frequently_bought_together || item.frequentlyBoughtTogether || prev?.frequentlyBoughtTogether || [],
+        recipeIngredients: item.recipe_ingredients || item.recipeIngredients || prev?.recipeIngredients || [],
+        kitProducts: item.products || item.kitProducts || prev?.kitProducts || [],
+      };
 
       if (existingIdx !== -1 && existingIdx !== undefined) {
-        products.value[existingIdx] = { ...products.value[existingIdx], ...formatted };
+        products.value[existingIdx] = { ...prev, ...formatted };
       } else {
         const newIdx = products.value.length;
         products.value.push(formatted);
         if (formatted.id != null) idMap.set(formatted.id, newIdx);
         if (formatted.slug) slugMap.set(formatted.slug, newIdx);
       }
+
+      if (Array.isArray(formatted.frequentlyBoughtTogether) && formatted.frequentlyBoughtTogether.length > 0) {
+        formatted.frequentlyBoughtTogether.forEach(fbt => {
+          if (fbt && (fbt.id || fbt.slug) && fbt.stock !== undefined) {
+            const fbtIdx = (fbt.id != null && idMap.has(fbt.id))
+              ? idMap.get(fbt.id)
+              : (fbt.slug && slugMap.has(fbt.slug) ? slugMap.get(fbt.slug) : -1);
+            if (fbtIdx !== -1 && fbtIdx !== undefined) {
+              products.value[fbtIdx].stock = Number(fbt.stock);
+              if (fbt.stock_badge !== undefined) products.value[fbtIdx].stockBadge = fbt.stock_badge;
+            } else {
+              const idx = products.value.length;
+              products.value.push({
+                id: fbt.id,
+                slug: fbt.slug,
+                name: fbt.name,
+                price: Number(fbt.price || 0),
+                originalPrice: Number(fbt.original_price || fbt.price || 0),
+                sizeMain: fbt.size || fbt.size_main || '',
+                size: fbt.size || fbt.size_main || '',
+                image: fbt.image,
+                category: fbt.category,
+                stock: Number(fbt.stock),
+                stockBadge: fbt.stock_badge ?? null,
+                isRecipeKit: false,
+              });
+              if (fbt.id != null) idMap.set(fbt.id, idx);
+              if (fbt.slug) slugMap.set(fbt.slug, idx);
+            }
+          }
+        });
+      }
     });
+  }
+
+  // Set / merge Recipe Kits and their ingredient products
+  function setRecipeKits(dbKits) {
+    const list = Array.isArray(dbKits)
+      ? dbKits
+      : (Array.isArray(dbKits?.data) ? dbKits.data : (dbKits && dbKits.id ? [dbKits] : []));
+    if (list.length === 0) return;
+
+    const ingredientProducts = [];
+    list.forEach(kit => {
+      if (!kit) return;
+      if (Array.isArray(kit.products) && kit.products.length > 0) {
+        ingredientProducts.push(...kit.products);
+      }
+
+      const existingIdx = products.value.findIndex(p =>
+        Boolean(p.isRecipeKit) && (p.id === kit.id || p.slug === kit.slug || p.id === `kit-${kit.id}`)
+      );
+
+      const formattedKit = {
+        id: kit.id,
+        slug: kit.slug,
+        name: kit.name,
+        price: Number(kit.price || 0),
+        originalPrice: Number(kit.original_price || kit.originalPrice || kit.price || 0),
+        image: kit.image,
+        sizeMain: kit.servings || 'Recipe Kit',
+        size: kit.servings || 'Recipe Kit',
+        isRecipeKit: true,
+        type: 'recipe-kit',
+        kitProducts: Array.isArray(kit.products) ? kit.products : [],
+      };
+
+      if (existingIdx !== -1) {
+        products.value[existingIdx] = { ...products.value[existingIdx], ...formattedKit };
+      } else {
+        products.value.push(formattedKit);
+      }
+    });
+
+    if (ingredientProducts.length > 0) {
+      setProducts(ingredientProducts);
+    }
   }
 
   // Resolve ID whether passed as number, string slug, or object
   function resolveProductId(input) {
     if (typeof input === 'object' && input !== null) {
+      if (input.type === 'recipe-kit' || input.isRecipeKit) {
+        return input.slug || input.id;
+      }
       if (input.id) return resolveProductId(input.id);
       if (input.slug) return resolveProductId(input.slug);
     }
     if (typeof input === 'number') return input;
     if (typeof input === 'string') {
+      if (input.startsWith('kit-')) {
+        return input;
+      }
       const num = Number(input);
       if (!isNaN(num) && num > 0) {
-        const prodById = products.value.find(p => p.id === num);
+        const prodById = products.value.find(p => !p.isRecipeKit && p.id === num);
         if (prodById) return prodById.id;
       }
 
-      const prod = products.value.find(p => p.slug === input || p.label === input || String(p.id) === input);
+      const prod = products.value.find(p => !p.isRecipeKit && (p.slug === input || p.label === input || String(p.id) === input));
       if (prod) return prod.id;
     }
     return input;
   }
 
+  function findCatalogProduct(itemOrId, isKit = false) {
+    const obj = (typeof itemOrId === 'object' && itemOrId !== null) ? itemOrId : null;
+    const rawId = obj ? (obj.id ?? obj.slug) : itemOrId;
+    const rawSlug = obj?.slug || (typeof rawId === 'string' ? rawId : null);
+    const normalizedKitId = typeof rawId === 'string' && rawId.startsWith('kit-') ? Number(rawId.slice(4)) : rawId;
+
+    if (isKit) {
+      return products.value.find(p =>
+        Boolean(p.isRecipeKit) && (
+          p.id === normalizedKitId ||
+          p.slug === rawSlug ||
+          p.slug === rawId ||
+          `kit-${p.id}` === String(rawId)
+        )
+      ) || null;
+    }
+
+    const resolvedId = resolveProductId(itemOrId);
+    return products.value.find(p =>
+      !p.isRecipeKit && (p.id === resolvedId || p.slug === rawSlug || p.slug === String(resolvedId))
+    ) || null;
+  }
+
+  // Get available stock for a product or recipe kit
+  function getAvailableStock(itemOrId) {
+    if (itemOrId === null || itemOrId === undefined) return Infinity;
+    const obj = (typeof itemOrId === 'object' && itemOrId !== null) ? itemOrId : null;
+    const rawId = obj ? (obj.id ?? obj.slug) : itemOrId;
+    const isKit = Boolean(
+      obj?.type === 'recipe-kit' ||
+      obj?.isRecipeKit ||
+      (typeof rawId === 'string' && rawId.startsWith('kit-'))
+    );
+
+    const prod = findCatalogProduct(itemOrId, isKit);
+
+    if (isKit) {
+      const kitProducts = obj?.products || obj?.kitProducts || prod?.kitProducts || [];
+      if (Array.isArray(kitProducts) && kitProducts.length > 0) {
+        let maxKits = Infinity;
+        for (const ing of kitProducts) {
+          const needed = Number(ing.pivot?.quantity || 1);
+          const ingCatalog = findCatalogProduct(ing, false);
+          const ingBadge = ingCatalog?.stockBadge ?? ing.stock_badge ?? ing.stockBadge;
+          if (isBadgeOutOfStock(ingBadge)) {
+            return 0;
+          }
+          const ingStock = (ingCatalog && ingCatalog.stock !== null && ingCatalog.stock !== undefined)
+            ? Number(ingCatalog.stock)
+            : (ing.stock !== null && ing.stock !== undefined ? Number(ing.stock) : null);
+          if (ingStock !== null && !Number.isNaN(ingStock)) {
+            if (ingStock < needed) return 0;
+            maxKits = Math.min(maxKits, Math.floor(ingStock / needed));
+          }
+        }
+        return maxKits;
+      }
+      return Infinity;
+    }
+
+    const badge = prod?.stockBadge ?? obj?.stock_badge ?? obj?.stockBadge;
+    if (isBadgeOutOfStock(badge)) {
+      return 0;
+    }
+
+    const rawStock = (prod && prod.stock !== null && prod.stock !== undefined)
+      ? prod.stock
+      : (obj && obj.stock !== null && obj.stock !== undefined ? obj.stock : null);
+
+    if (rawStock !== null && rawStock !== undefined && !Number.isNaN(Number(rawStock))) {
+      return Math.max(0, Number(rawStock));
+    }
+
+    return Infinity;
+  }
+
+  function isOutOfStock(itemOrId) {
+    return getAvailableStock(itemOrId) <= 0;
+  }
+
+  function canAddMore(itemOrId, additionalQty = 1) {
+    const avail = getAvailableStock(itemOrId);
+    if (avail <= 0) return false;
+    const currentQty = getQuantity(itemOrId);
+    return (currentQty + additionalQty) <= avail;
+  }
+
   // Computed Cart Items
   const cartItems = computed(() => {
     return cart.value.map(item => {
-      const isKit = item.type === 'recipe-kit' || Boolean(item.isRecipeKit);
-      const prod = products.value.find(p =>
-        Boolean(p.isRecipeKit) === isKit && (p.id === item.id || p.slug === item.slug)
-      );
+      const isKit = item.type === 'recipe-kit' || Boolean(item.isRecipeKit) || (typeof item.id === 'string' && item.id.startsWith('kit-'));
+      const prod = findCatalogProduct(item, isKit);
 
       const price = prod ? prod.price : Number(item.price || 0);
       const name = prod ? prod.name : (item.name || 'Grocery Item');
@@ -217,6 +427,32 @@ export const useStore = defineStore('masalaStore', () => {
       const category = prod ? prod.category : (item.category || (isKit ? 'recipe-kit' : 'grocery'));
       const originalPrice = prod ? prod.originalPrice : Number(item.originalPrice || price);
       const unitCost = price;
+
+      const availableStock = getAvailableStock(item);
+      const itemIsOutOfStock = availableStock <= 0;
+      const itemExceedsStock = !itemIsOutOfStock && availableStock !== Infinity && item.quantity > availableStock;
+      const hasStockIssue = itemIsOutOfStock || itemExceedsStock;
+
+      let outOfStockIngredients = [];
+      if (isKit) {
+        const kitProducts = item.kitProducts || prod?.kitProducts || [];
+        outOfStockIngredients = kitProducts
+          .filter(ing => {
+            const needed = (Number(ing.pivot?.quantity || 1)) * item.quantity;
+            const ingAvail = getAvailableStock(ing);
+            return ingAvail < needed;
+          })
+          .map(ing => ing.name);
+      }
+
+      let stockIssueLabel = null;
+      if (itemIsOutOfStock) {
+        stockIssueLabel = (isKit && outOfStockIngredients.length > 0)
+          ? `Ingredient Out of Stock (${outOfStockIngredients.join(', ')})`
+          : 'Out of Stock';
+      } else if (itemExceedsStock) {
+        stockIssueLabel = `Only ${availableStock} left in stock`;
+      }
 
       return {
         id: item.id,
@@ -233,9 +469,54 @@ export const useStore = defineStore('masalaStore', () => {
         weight: size,
         size,
         total: Number((unitCost * item.quantity).toFixed(2)),
+        stock: availableStock === Infinity ? null : availableStock,
+        availableStock,
+        isOutOfStock: itemIsOutOfStock,
+        exceedsStock: itemExceedsStock,
+        hasStockIssue,
+        outOfStockIngredients,
+        stockIssueLabel,
       };
     });
   });
+
+  const stockIssues = computed(() => {
+    return cartItems.value.filter(item => item.hasStockIssue);
+  });
+
+  const hasStockIssues = computed(() => {
+    return stockIssues.value.length > 0;
+  });
+
+  function resolveStockIssues() {
+    const nextCart = [];
+    let removedCount = 0;
+    let adjustedCount = 0;
+
+    cart.value.forEach(item => {
+      const avail = getAvailableStock(item);
+      if (avail <= 0) {
+        removedCount += 1;
+      } else if (avail !== Infinity && item.quantity > avail) {
+        nextCart.push({
+          ...item,
+          quantity: avail,
+        });
+        adjustedCount += 1;
+      } else {
+        nextCart.push(item);
+      }
+    });
+
+    cart.value = nextCart;
+
+    if (removedCount > 0 || adjustedCount > 0) {
+      const parts = [];
+      if (removedCount > 0) parts.push(`${removedCount} out-of-stock ${removedCount === 1 ? 'item' : 'items'} removed`);
+      if (adjustedCount > 0) parts.push(`${adjustedCount} ${adjustedCount === 1 ? 'item' : 'items'} adjusted to available stock`);
+      showStockToast('Cart Updated', parts.join(' · '), 'info');
+    }
+  }
 
   const totalItemCount = computed(() => {
     return cart.value.reduce((sum, item) => sum + item.quantity, 0);
@@ -243,10 +524,8 @@ export const useStore = defineStore('masalaStore', () => {
 
   const rawSubtotal = computed(() => {
     const sum = cart.value.reduce((acc, item) => {
-      const isKit = item.type === 'recipe-kit' || Boolean(item.isRecipeKit);
-      const prod = products.value.find(p =>
-        Boolean(p.isRecipeKit) === isKit && (p.id === item.id || p.slug === item.slug)
-      );
+      const isKit = item.type === 'recipe-kit' || Boolean(item.isRecipeKit) || (typeof item.id === 'string' && item.id.startsWith('kit-'));
+      const prod = findCatalogProduct(item, isKit);
       const price = prod ? prod.price : Number(item.price || 0);
       return acc + (price * item.quantity);
     }, 0);
@@ -269,8 +548,14 @@ export const useStore = defineStore('masalaStore', () => {
   const freeDeliveryProgressPercent = computed(() => 100);
 
   function getQuantity(productId) {
-    const id = resolveProductId(productId);
-    const item = cart.value.find(i => i.id === id);
+    const obj = (typeof productId === 'object' && productId !== null) ? productId : null;
+    const isKit = Boolean(
+      obj?.type === 'recipe-kit' ||
+      obj?.isRecipeKit ||
+      (typeof productId === 'string' && productId.startsWith('kit-'))
+    );
+    const id = isKit ? (obj ? (obj.slug || obj.id) : productId) : resolveProductId(productId);
+    const item = cart.value.find(i => i.id === id || (obj?.slug && i.slug === obj.slug));
     return item ? item.quantity : 0;
   }
 
@@ -282,7 +567,7 @@ export const useStore = defineStore('masalaStore', () => {
     let id = itemOrId;
     let qty = count;
     const itemObj = (typeof itemOrId === 'object' && itemOrId !== null) ? itemOrId : null;
-    const isKit = itemObj?.type === 'recipe-kit' || Boolean(itemObj?.isRecipeKit);
+    const isKit = itemObj?.type === 'recipe-kit' || Boolean(itemObj?.isRecipeKit) || (typeof id === 'string' && id.startsWith('kit-'));
     const itemType = isKit ? 'recipe-kit' : 'product';
 
     if (itemObj) {
@@ -291,16 +576,38 @@ export const useStore = defineStore('masalaStore', () => {
     }
 
     const resolvedId = isKit ? id : resolveProductId(id);
+    const prod = findCatalogProduct(itemObj || resolvedId, isKit);
+    const itemName = itemObj?.name || prod?.name || 'This item';
+
+    const availableStock = getAvailableStock(itemObj || resolvedId);
+    if (availableStock <= 0) {
+      showStockToast('Out of Stock', `${itemName} is currently out of stock and cannot be added to your cart.`, 'error');
+      return false;
+    }
+
     const existing = cart.value.find(i =>
-      i.id === resolvedId && ((i.type || (i.isRecipeKit ? 'recipe-kit' : 'product')) === itemType)
+      (i.id === resolvedId || (isKit && prod && (i.id === prod.slug || i.id === prod.id || i.id === `kit-${prod.id}`))) &&
+      ((i.type || (i.isRecipeKit ? 'recipe-kit' : 'product')) === itemType)
     );
+
+    const currentQty = existing ? existing.quantity : 0;
+    if (availableStock !== Infinity && (currentQty + qty) > availableStock) {
+      const allowedToAdd = Math.max(0, availableStock - currentQty);
+      if (allowedToAdd <= 0) {
+        showStockToast('Maximum Stock Reached', `Only ${availableStock} of ${itemName} available in stock (already in your cart).`, 'warning');
+        return false;
+      }
+      qty = allowedToAdd;
+      showStockToast('Stock Limit Applied', `Only ${availableStock} of ${itemName} available in stock. Added ${allowedToAdd}.`, 'warning');
+    }
 
     if (existing) {
       existing.quantity += qty;
+      if (itemObj?.stock !== undefined) existing.stock = Number(itemObj.stock);
+      if (itemObj?.stock_badge !== undefined || itemObj?.stockBadge !== undefined) {
+        existing.stockBadge = itemObj.stock_badge ?? itemObj.stockBadge;
+      }
     } else {
-      const prod = products.value.find(p =>
-        Boolean(p.isRecipeKit) === isKit && (p.id === resolvedId || p.slug === id)
-      );
       cart.value.push({
         id: resolvedId,
         slug: itemObj?.slug || prod?.slug || String(resolvedId),
@@ -311,18 +618,23 @@ export const useStore = defineStore('masalaStore', () => {
         originalPrice: Number(itemObj?.originalPrice || prod?.originalPrice || itemObj?.price || 0),
         image: itemObj?.image || prod?.image || '/images/products/atta.jpg',
         size: itemObj?.size || itemObj?.weight || prod?.sizeMain || '',
+        stock: (itemObj?.stock !== undefined && itemObj?.stock !== null) ? Number(itemObj.stock) : (prod?.stock ?? null),
+        stockBadge: itemObj?.stock_badge ?? itemObj?.stockBadge ?? prod?.stockBadge ?? null,
+        kitProducts: isKit ? (itemObj?.products || itemObj?.kitProducts || prod?.kitProducts || []) : undefined,
         quantity: qty,
       });
     }
+
+    return true;
   }
 
   function addImpulseItem(impulseId) {
-    addToCart(impulseId, 1);
+    return addToCart(impulseId, 1);
   }
 
   function removeFromCart(productId) {
     const id = resolveProductId(productId);
-    const index = cart.value.findIndex(i => i.id === id);
+    const index = cart.value.findIndex(i => i.id === id || i.id === productId || i.slug === productId);
     if (index !== -1) {
       if (cart.value[index].quantity > 1) {
         cart.value[index].quantity -= 1;
@@ -334,7 +646,7 @@ export const useStore = defineStore('masalaStore', () => {
 
   function deleteItem(productId) {
     const id = resolveProductId(productId);
-    cart.value = cart.value.filter(i => i.id !== id);
+    cart.value = cart.value.filter(i => i.id !== id && i.id !== productId && i.slug !== productId);
   }
 
   function clearCart() {
@@ -353,6 +665,37 @@ export const useStore = defineStore('masalaStore', () => {
     return products.value.find(p => p.slug === slug || String(p.id) === String(slug)) || null;
   }
 
+  /**
+   * Fetch live stock and pricing ONLY for the items currently inside the customer's cart.
+   */
+  async function refreshCartStock() {
+    if (!cart.value || cart.value.length === 0) return;
+
+    const ids = Array.from(
+      new Set(
+        cart.value
+          .flatMap(item => [item.id, item.slug])
+          .filter(Boolean)
+          .map(val => String(val))
+      )
+    ).slice(0, 50);
+
+    if (ids.length === 0) return;
+
+    try {
+      const { default: axios } = await import('axios');
+      const { data } = await axios.post('/cart/stock-check', { ids });
+      if (Array.isArray(data?.products) && data.products.length > 0) {
+        setProducts(data.products);
+      }
+      if (Array.isArray(data?.recipeKits) && data.recipeKits.length > 0) {
+        setRecipeKits(data.recipeKits);
+      }
+    } catch {
+      // Non-blocking fallback
+    }
+  }
+
   return {
     deliveryMode,
     pickupLocation,
@@ -367,11 +710,21 @@ export const useStore = defineStore('masalaStore', () => {
     pastOrders,
     cart,
     cartItems,
+    stockIssues,
+    hasStockIssues,
+    resolveStockIssues,
+    refreshCartStock,
+    stockToast,
+    showStockToast,
+    dismissStockToast,
+    getAvailableStock,
+    isOutOfStock,
+    canAddMore,
     totalItemCount,
     rawSubtotal,
     subtotal,
     total,
-    masalaPoints,
+    rewardPoints,
     freeDeliveryThreshold,
     amountToFreeDelivery,
     freeDeliveryProgressPercent,
@@ -385,6 +738,7 @@ export const useStore = defineStore('masalaStore', () => {
     reorderAll,
     getProductBySlug,
     setProducts,
+    setRecipeKits,
     syncUser,
     currentUserId,
     isInitialized,

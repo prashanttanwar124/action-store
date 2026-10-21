@@ -70,9 +70,8 @@ class DatabaseSeeder extends Seeder
         );
 
         $this->call([
-            CategorySeeder::class,
-            SupplierSeeder::class,
             ProductSeeder::class,
+            SupplierSeeder::class,
             RecipeKitSeeder::class,
             SliderSeeder::class,
             AdminSeeder::class,

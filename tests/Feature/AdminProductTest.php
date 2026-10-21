@@ -175,4 +175,25 @@ class AdminProductTest extends TestCase
 
         $response->assertSessionHasErrors(['name', 'category', 'price']);
     }
+
+    public function test_admin_can_search_products_with_limit(): void
+    {
+        $admin = Admin::where('email', 'admin@masalamart.com')->first();
+
+        Product::factory()->count(5)->sequence(
+            ['name' => 'Royal Basmati Rice 10lb', 'slug' => 'royal-basmati-1'],
+            ['name' => 'Royal Basmati Rice 20lb', 'slug' => 'royal-basmati-2'],
+            ['name' => 'Royal Basmati Gold', 'slug' => 'royal-basmati-3'],
+            ['name' => 'Royal Basmati Organic', 'slug' => 'royal-basmati-4'],
+            ['name' => 'Malai Paneer Block', 'slug' => 'malai-paneer'],
+        )->create();
+
+        $response = $this->actingAs($admin, 'admin')->getJson(route('admin.products.search', [
+            'q' => 'Royal Basmati',
+            'limit' => 2,
+        ]));
+
+        $response->assertOk()
+            ->assertJsonCount(2, 'items');
+    }
 }

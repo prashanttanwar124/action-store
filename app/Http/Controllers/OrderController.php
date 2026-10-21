@@ -492,14 +492,97 @@ class OrderController extends Controller
         $resolvedItems = [];
         $requiredProductQuantities = [];
 
-        foreach ($validated['items'] as $index => $item) {
-            $model = ($item['type'] ?? 'product') === 'recipe-kit' ? RecipeKit::class : Product::class;
-            $catalogItem = $model::query()
-                ->where(is_numeric($item['id']) ? 'id' : 'slug', $item['id'])->first();
+        $productIds = [];
+        $productSlugs = [];
+        $kitIds = [];
+        $kitSlugs = [];
 
-            if (! $catalogItem && (! isset($item['type']) || ! is_numeric($item['id']))) {
-                $catalogItem = RecipeKit::query()
-                    ->where(is_numeric($item['id']) ? 'id' : 'slug', $item['id'])->first();
+        foreach ($validated['items'] as $item) {
+            $rawId = $item['id'];
+            $isKitPrefix = is_string($rawId) && str_starts_with($rawId, 'kit-');
+            $lookupId = $isKitPrefix ? substr($rawId, 4) : $rawId;
+            $isNumeric = is_numeric($lookupId);
+            $type = $item['type'] ?? null;
+            $isKitTarget = $type === 'recipe-kit' || $isKitPrefix;
+
+            if ($isKitTarget) {
+                if ($isNumeric) {
+                    $kitIds[] = (int) $lookupId;
+                } else {
+                    $kitSlugs[] = (string) $lookupId;
+                }
+            } else {
+                if ($isNumeric) {
+                    $productIds[] = (int) $lookupId;
+                    if ($type === null) {
+                        $kitIds[] = (int) $lookupId;
+                    }
+                } else {
+                    $productSlugs[] = (string) $lookupId;
+                    $kitSlugs[] = (string) $lookupId;
+                }
+            }
+        }
+
+        $productIds = array_values(array_unique($productIds));
+        $productSlugs = array_values(array_unique($productSlugs));
+        $kitIds = array_values(array_unique($kitIds));
+        $kitSlugs = array_values(array_unique($kitSlugs));
+
+        $products = (! empty($productIds) || ! empty($productSlugs))
+            ? Product::query()
+                ->when(! empty($productIds) && ! empty($productSlugs), function ($query) use ($productIds, $productSlugs) {
+                    $query->where(function ($sub) use ($productIds, $productSlugs) {
+                        $sub->whereIn('id', $productIds)
+                            ->orWhereIn('slug', $productSlugs);
+                    });
+                })
+                ->when(! empty($productIds) && empty($productSlugs), fn ($query) => $query->whereIn('id', $productIds))
+                ->when(empty($productIds) && ! empty($productSlugs), fn ($query) => $query->whereIn('slug', $productSlugs))
+                ->get()
+            : collect();
+
+        $recipeKits = (! empty($kitIds) || ! empty($kitSlugs))
+            ? RecipeKit::with('products')
+                ->when(! empty($kitIds) && ! empty($kitSlugs), function ($query) use ($kitIds, $kitSlugs) {
+                    $query->where(function ($sub) use ($kitIds, $kitSlugs) {
+                        $sub->whereIn('id', $kitIds)
+                            ->orWhereIn('slug', $kitSlugs);
+                    });
+                })
+                ->when(! empty($kitIds) && empty($kitSlugs), fn ($query) => $query->whereIn('id', $kitIds))
+                ->when(empty($kitIds) && ! empty($kitSlugs), fn ($query) => $query->whereIn('slug', $kitSlugs))
+                ->get()
+            : collect();
+
+        $productsById = $products->keyBy('id');
+        $productsBySlug = $products->keyBy('slug');
+        $recipeKitsById = $recipeKits->keyBy('id');
+        $recipeKitsBySlug = $recipeKits->keyBy('slug');
+
+        foreach ($validated['items'] as $index => $item) {
+            $rawId = $item['id'];
+            $isKitPrefix = is_string($rawId) && str_starts_with($rawId, 'kit-');
+            $lookupId = $isKitPrefix ? substr($rawId, 4) : $rawId;
+            $isNumeric = is_numeric($lookupId);
+            $type = $item['type'] ?? null;
+            $isKitTarget = $type === 'recipe-kit' || $isKitPrefix;
+
+            $catalogItem = null;
+            if ($isKitTarget) {
+                $catalogItem = $isNumeric
+                    ? $recipeKitsById->get((int) $lookupId)
+                    : $recipeKitsBySlug->get((string) $lookupId);
+            } else {
+                $catalogItem = $isNumeric
+                    ? $productsById->get((int) $lookupId)
+                    : $productsBySlug->get((string) $lookupId);
+
+                if (! $catalogItem && ($type === null || ! $isNumeric)) {
+                    $catalogItem = $isNumeric
+                        ? $recipeKitsById->get((int) $lookupId)
+                        : $recipeKitsBySlug->get((string) $lookupId);
+                }
             }
 
             if (! $catalogItem || ($catalogItem instanceof RecipeKit && ! $catalogItem->is_active)) {
@@ -512,7 +595,6 @@ class OrderController extends Controller
             if ($catalogItem instanceof Product) {
                 $requiredProductQuantities[$catalogItem->id] = ($requiredProductQuantities[$catalogItem->id] ?? 0) + $quantity;
             } else {
-                $catalogItem->load('products');
                 foreach ($catalogItem->products as $kitProduct) {
                     $needed = ($kitProduct->pivot->quantity ?? 1) * $quantity;
                     $requiredProductQuantities[$kitProduct->id] = ($requiredProductQuantities[$kitProduct->id] ?? 0) + $needed;
@@ -532,9 +614,10 @@ class OrderController extends Controller
         $products = Product::whereIn('id', array_keys($requiredProductQuantities))->get()->keyBy('id');
         foreach ($requiredProductQuantities as $productId => $totalQty) {
             $product = $products->get($productId);
-            if (! $product || (int) ($product->stock ?? 0) < $totalQty) {
+            $isBadgeOut = $product && str_contains(strtolower((string) $product->stock_badge), 'out');
+            if (! $product || $isBadgeOut || (int) ($product->stock ?? 0) < $totalQty) {
                 $name = $product ? $product->name : "Item #{$productId}";
-                $avail = $product ? (int) $product->stock : 0;
+                $avail = ($product && ! $isBadgeOut) ? max(0, (int) $product->stock) : 0;
                 throw ValidationException::withMessages([
                     'items' => ["Insufficient stock for '{$name}'. Total requested: {$totalQty}, but only {$avail} available."],
                     'error_code' => 'out_of_stock',
@@ -745,6 +828,7 @@ class OrderController extends Controller
                 'subtotal' => (float) $order->subtotal,
                 'discount' => (float) $order->discount,
                 'total' => (float) $order->total,
+                'refunded_total' => (float) ($order->refunded_total ?? 0),
                 'points_earned' => $order->points_earned,
                 'payment_method' => $order->payment_method,
                 'stripe_payment_id' => $order->stripe_payment_id,
@@ -762,8 +846,11 @@ class OrderController extends Controller
                         'name' => $item->name,
                         'size' => $item->size,
                         'unit_price' => (float) $item->unit_price,
-                        'quantity' => $item->quantity,
+                        'quantity' => (int) $item->quantity,
+                        'refunded_quantity' => (int) ($item->refunded_quantity ?? 0),
                         'total_price' => (float) $item->total_price,
+                        'refunded_amount' => (float) ($item->refunded_amount ?? 0),
+                        'refund_reason' => $item->refund_reason,
                         'image' => $item->image,
                     ];
                 }),

@@ -48,7 +48,7 @@ const store = useStore();
         <span class="text-stone-700">|</span>
         <Link href="/account" class="text-stone-200 hover:text-white font-semibold flex items-center gap-1">
           <Sparkles class="w-3 h-3 text-[#a47a3c]" />
-          <span>{{ store.masalaPoints.toLocaleString() }} pts</span>
+          <span>{{ (store.rewardPoints || 0).toLocaleString() }} pts</span>
         </Link>
       </div>
     </div>

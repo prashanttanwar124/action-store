@@ -21,10 +21,11 @@ class HomeController extends Controller
             ->where('is_active', true)
             ->orderBy('sort_order')
             ->latest('id')
+            ->limit(10)
             ->get();
 
         $recipeKits = RecipeKit::query()
-            ->with(['products:id,name,price,size_main,image'])
+            ->with(['products:id,slug,name,price,size_main,image,stock,stock_badge'])
             ->where('is_active', true)
             ->latest('id')
             ->limit(10)
@@ -40,6 +41,7 @@ class HomeController extends Controller
                 'unit_price',
                 'image',
                 'size_main',
+                'stock',
                 'stock_badge',
                 'photo_label',
                 'category',
@@ -92,6 +94,7 @@ class HomeController extends Controller
                 'unit_price',
                 'image',
                 'size_main',
+                'stock',
                 'stock_badge',
                 'photo_label',
                 'category',
@@ -115,10 +118,11 @@ class HomeController extends Controller
         }
 
         if ($inStock) {
-            $productsQuery->where(function ($q) {
-                $q->whereNull('stock_badge')
-                    ->orWhere('stock_badge', 'not like', '%out%');
-            });
+            $productsQuery->where('stock', '>', 0)
+                ->where(function ($q) {
+                    $q->whereNull('stock_badge')
+                        ->orWhere('stock_badge', 'not like', '%out%');
+                });
         }
 
         switch ($sort) {
@@ -143,7 +147,7 @@ class HomeController extends Controller
         $products = $productsQuery->paginate(10)->withQueryString();
 
         $recipeKitsQuery = RecipeKit::query()
-            ->with(['products:id,name,price,size_main,image'])
+            ->with(['products:id,slug,name,price,size_main,image,stock,stock_badge'])
             ->where('is_active', true);
 
         if ($query !== '') {
@@ -166,7 +170,7 @@ class HomeController extends Controller
 
         $recipeKits = $recipeKitsQuery->paginate(10, ['*'], 'kits_page')->withQueryString();
 
-        $dbCategories = Category::where('is_active', true)->orderBy('sort_order')->get();
+        $dbCategories = Category::where('is_active', true)->orderBy('sort_order')->limit(30)->get();
         if ($dbCategories->isNotEmpty()) {
             $categories = $dbCategories->map(fn (Category $c) => [
                 'category' => $c->slug,
@@ -179,6 +183,7 @@ class HomeController extends Controller
                 ->select('category', 'category_title')
                 ->distinct()
                 ->whereNotNull('category')
+                ->limit(30)
                 ->get()
                 ->unique('category')
                 ->values();

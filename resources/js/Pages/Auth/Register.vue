@@ -1,8 +1,12 @@
 <script setup>
-import { ref } from 'vue';
+import { computed, ref } from 'vue';
 import GuestLayout from '@/Layouts/GuestLayout.vue';
-import { Head, Link, useForm } from '@inertiajs/vue3';
+import { Head, Link, useForm, usePage } from '@inertiajs/vue3';
 import { User, Mail, Lock, Eye, EyeOff, ArrowRight, Sparkles, CheckCircle2 } from 'lucide-vue-next';
+
+const page = usePage();
+const storeInfo = computed(() => page.props.storeInfo || {});
+const storeBrandName = computed(() => storeInfo.value?.brand_name || (storeInfo.value?.name ? storeInfo.value.name.split(/\s*[—–]\s*|\s+-\s+/)[0].trim() : 'Store'));
 
 const showPassword = ref(false);
 
@@ -22,7 +26,7 @@ const submit = () => {
 
 <template>
   <GuestLayout>
-    <Head title="Create Account — Masala Mart" />
+    <Head :title="`Create Account — ${storeBrandName}`" />
 
     <div class="space-y-6">
       
@@ -36,7 +40,7 @@ const submit = () => {
           Create Your Account
         </h1>
         <p class="text-xs text-[#6e6e73]">
-          Join for 1-hour express pickup and Masala Rewards points.
+          Join for 1-hour express pickup and {{ storeBrandName }} Rewards points.
         </p>
       </div>
 
@@ -47,7 +51,7 @@ const submit = () => {
         </div>
         <div class="text-xs">
           <span class="font-bold text-[#1d1d1f]">Welcome Bonus:</span>
-          <span class="text-[#6e6e73] ml-1">Receive 100 bonus Masala Points upon creating your account!</span>
+          <span class="text-[#6e6e73] ml-1">Receive 100 bonus {{ storeBrandName }} Points upon creating your account!</span>
         </div>
       </div>
 
@@ -182,7 +186,7 @@ const submit = () => {
       <!-- Switch to Login -->
       <div class="text-center pt-2 border-t border-[#e0d9cc]/60">
         <p class="text-xs text-[#6e6e73]">
-          Already have a Masala Mart account?
+          Already have a {{ storeBrandName }} account?
           <Link :href="route('login')" class="font-semibold text-[#1d1d1f] hover:text-[#a47a3c] underline ml-1">
             Sign In here
           </Link>

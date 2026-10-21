@@ -32,14 +32,27 @@ const page = usePage();
 const reorderedNotification = ref(false);
 const reorderedItemCount = ref(0);
 
+const storeInfo = computed(() => page.props.storeInfo || {});
+const storeBrandName = computed(() => storeInfo.value?.brand_name || (storeInfo.value?.name ? storeInfo.value.name.split(/\s*[—–]\s*|\s+-\s+/)[0].trim() : 'Store'));
+
 const authUser = computed(() => page.props.auth?.user);
 const userName = computed(() => authUser.value ? authUser.value.name.split(' ')[0] : 'there');
 
 const displayOrders = computed(() => {
-  if (props.dbOrders && props.dbOrders.length > 0) {
-    return props.dbOrders;
+  if (!authUser.value) {
+    return [];
   }
-  return store.pastOrders;
+  return props.dbOrders || [];
+});
+
+const userPoints = computed(() => {
+  if (!authUser.value) {
+    return 0;
+  }
+  if (typeof authUser.value.reward_points === 'number') {
+    return authUser.value.reward_points;
+  }
+  return store.rewardPoints || 0;
 });
 
 function handleReorderOrder(order) {
@@ -57,10 +70,32 @@ function handleReorderOrder(order) {
     reorderedNotification.value = false;
   }, 2500);
 }
+
+function isOrderFullyRefunded(order) {
+  const total = Number(order?.total || 0);
+  const refunded = Number(order?.refunded_total || 0);
+  return refunded > 0 && total - refunded <= 0;
+}
+
+function displayOrderTotal(order) {
+  if (isOrderFullyRefunded(order)) {
+    return Number(order?.total || 0);
+  }
+  return Math.max(0, Number(order?.total || 0) - Number(order?.refunded_total || 0));
+}
+
+function refundedItemsForOrder(order) {
+  if (!Array.isArray(order?.items)) return [];
+  return order.items.filter((i) => Number(i?.refunded_quantity || 0) > 0);
+}
+
+function isOrderItemFullyRefunded(item) {
+  return Number(item?.refunded_quantity || 0) >= Number(item?.quantity || 1);
+}
 </script>
 
 <template>
-  <Head title="Customer Dashboard — Masala Mart" />
+  <Head :title="`Customer Dashboard — ${storeBrandName}`" />
 
   <StoreLayout :showHeader="false" :showFooter="false" :showBottomNav="true" :showCartBar="false">
     <div class="space-y-6 sm:space-y-8 max-w-xl mx-auto pb-24 pt-2 sm:pt-4">
@@ -85,7 +120,7 @@ function handleReorderOrder(order) {
         <div>
           <div class="flex items-center gap-2">
             <h1 class="text-2xl sm:text-3xl font-serif font-medium text-[#1d1d1f] tracking-tight">
-              {{ authUser ? 'Hi, ' + userName : 'Welcome to Masala Mart' }}
+              {{ authUser ? 'Hi, ' + userName : 'Welcome to ' + storeBrandName }}
             </h1>
             <span v-if="authUser" class="w-2 h-2 rounded-full bg-emerald-500" title="Signed in"></span>
           </div>
@@ -139,7 +174,7 @@ function handleReorderOrder(order) {
           <div class="flex items-center gap-2">
             <Sparkles class="w-4 h-4 text-[#a47a3c]" />
             <span class="text-xs font-bold text-[#1d1d1f] uppercase tracking-wider">
-              Unlock Your Masala Rewards
+              Unlock Your {{ storeBrandName }} Rewards
             </span>
           </div>
           <p class="text-xs text-[#6e6e73] leading-relaxed">
@@ -162,11 +197,11 @@ function handleReorderOrder(order) {
         </div>
       </div>
 
-      <!-- SECTION 1: Masala Points Reward Meter (Screen 1f Exact Match) -->
+      <!-- SECTION 1: Dynamic Points Reward Meter -->
       <div class="bg-[#1a1a1a] text-white p-5 sm:p-6 rounded-lg shadow-sm space-y-3.5 border border-[#e0d9cc]/20">
         <div class="flex items-center justify-between">
           <span class="text-[10px] font-semibold uppercase tracking-wider text-[#a47a3c]">
-            MASALA REWARDS
+            {{ storeBrandName.toUpperCase() }} REWARDS
           </span>
           <span class="text-xs text-stone-300 font-normal">
             Gold Member
@@ -175,9 +210,9 @@ function handleReorderOrder(order) {
 
         <div class="flex items-baseline">
           <span class="text-3xl sm:text-4xl font-serif font-medium tracking-tight text-white leading-none">
-            {{ store.masalaPoints.toLocaleString() }}
+            {{ userPoints.toLocaleString() }}
           </span>
-          <span class="text-sm text-stone-400 font-normal ml-1.5">pts</span>
+          <span class="text-sm text-stone-400 font-normal ml-1.5">{{ storeBrandName }} Points</span>
         </div>
 
         <!-- 10-Segment Progress Meter -->
@@ -229,6 +264,7 @@ function handleReorderOrder(order) {
                     order.status === 'confirmed' ? 'bg-amber-100 text-amber-800' :
                     order.status === 'packing' ? 'bg-blue-100 text-blue-800' :
                     order.status === 'ready_for_pickup' ? 'bg-emerald-100 text-emerald-800 animate-pulse' :
+                    order.status === 'cancelled' ? 'bg-rose-100 text-rose-800' :
                     'bg-zinc-100 text-zinc-700'
                   ]"
                 >
@@ -237,26 +273,52 @@ function handleReorderOrder(order) {
                     order.status === 'confirmed' ? 'Received' :
                     order.status === 'packing' ? 'Packing' :
                     order.status === 'ready_for_pickup' ? 'Ready for Pickup' :
+                    order.status === 'cancelled' ? 'Cancelled & Refunded' :
                     (order.status === 'completed' ? 'Completed' : order.status)
                   }}
                 </span>
+                <span
+                  v-if="Boolean(Number(order.refunded_total || 0))"
+                  class="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-semibold bg-rose-50 text-rose-700 border border-rose-200"
+                >
+                  Refunded -${{ Number(order.refunded_total).toFixed(2) }}
+                </span>
               </div>
-              <span class="font-serif font-medium text-base text-[#1d1d1f]">${{ Number(order.total).toFixed(2) }}</span>
+              <span
+                class="font-serif font-medium text-base"
+                :class="isOrderFullyRefunded(order) ? 'line-through text-rose-400' : 'text-[#1d1d1f]'"
+              >
+                ${{ displayOrderTotal(order).toFixed(2) }}
+              </span>
             </div>
 
             <div class="text-xs text-[#6e6e73] font-normal leading-relaxed">
               {{ order.id }} · {{ order.summary }}
             </div>
 
+            <!-- Per-Item Refund Pills if any item was refunded -->
+            <div
+              v-if="refundedItemsForOrder(order).length"
+              class="flex flex-wrap items-center gap-1.5"
+            >
+              <span
+                v-for="item in refundedItemsForOrder(order)"
+                :key="'ref-' + item.id"
+                class="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-semibold bg-rose-50 text-rose-800 border border-rose-200"
+              >
+                {{ item.refunded_quantity }}× {{ item.name }} Out of Stock · Refunded -${{ Number(item.refunded_amount || 0).toFixed(2) }}
+              </span>
+            </div>
+
             <!-- Product Thumbnails Row if items are attached -->
-            <div v-if="order.items && order.items.length > 0" class="flex items-center gap-2 overflow-x-auto no-scrollbar py-1">
+            <div v-if="order.items && order.items.length" class="flex items-center gap-2 overflow-x-auto no-scrollbar py-1">
               <div 
                 v-for="item in order.items.slice(0, 6)" 
                 :key="item.id"
-                class="w-10 h-10 rounded-lg bg-[#f3efe7] overflow-hidden shrink-0 border border-[#e0d9cc]"
+                class="w-10 h-10 rounded-lg bg-[#f3efe7] overflow-hidden shrink-0 border border-[#e0d9cc] relative"
                 :title="item.name"
               >
-                <img :src="item.image || '/images/products/atta.jpg'" :alt="item.name" class="w-full h-full object-cover" />
+                <img :src="item.image || '/images/products/atta.jpg'" :alt="item.name" class="w-full h-full object-cover" :class="isOrderItemFullyRefunded(item) ? 'opacity-40 grayscale' : ''" />
               </div>
             </div>
 

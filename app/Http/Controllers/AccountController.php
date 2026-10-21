@@ -42,6 +42,7 @@ class AccountController extends Controller
         return Order::with('items')
             ->where('user_id', Auth::id())
             ->latest()
+            ->limit(25)
             ->get()
             ->map(fn (Order $order) => [
                 'id' => $order->order_number,
@@ -49,13 +50,17 @@ class AccountController extends Controller
                 'date' => $order->created_at->diffForHumans(),
                 'type' => $order->fulfillment_type,
                 'total' => (float) $order->total,
+                'refunded_total' => (float) ($order->refunded_total ?? 0),
                 'itemCount' => $order->items->sum('quantity'),
                 'summary' => $order->items->pluck('name')->join(', '),
                 'items' => $order->items->map(fn ($item) => [
                     'id' => $item->product_id ?? $item->id,
                     'name' => $item->name,
                     'price' => (float) $item->unit_price,
-                    'quantity' => $item->quantity,
+                    'quantity' => (int) $item->quantity,
+                    'refunded_quantity' => (int) ($item->refunded_quantity ?? 0),
+                    'refunded_amount' => (float) ($item->refunded_amount ?? 0),
+                    'refund_reason' => $item->refund_reason,
                     'size' => $item->size,
                     'image' => $item->image,
                 ])->all(),

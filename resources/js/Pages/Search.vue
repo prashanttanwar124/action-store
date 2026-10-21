@@ -1,6 +1,6 @@
 <script setup>
 import { ref, computed, watch, onMounted } from 'vue';
-import { Head, Link, router } from '@inertiajs/vue3';
+import { Head, Link, router, usePage } from '@inertiajs/vue3';
 import StoreLayout from '../Layouts/StoreLayout.vue';
 import { useStore } from '../stores/cart';
 import { 
@@ -66,6 +66,9 @@ const props = defineProps({
 });
 
 const store = useStore();
+const page = usePage();
+const storeInfo = computed(() => page.props.storeInfo || {});
+const storeBrandName = computed(() => storeInfo.value?.brand_name || (storeInfo.value?.name ? storeInfo.value.name.split(/\s*[—–]\s*|\s+-\s+/)[0].trim() : 'Store'));
 
 // Local Filter States synced with Laravel props
 const searchQuery = ref(props.filters.q || '');
@@ -74,10 +77,16 @@ const activeSort = ref(props.filters.sort || 'featured');
 const inStockOnly = ref(Boolean(props.filters.in_stock));
 const activeTab = ref(props.filters.tab || 'products');
 
-// Keep Pinia cart store synced with incoming paginated products
+// Keep Pinia cart store synced with incoming paginated products & kits
 watch(() => props.products?.data, (newProducts) => {
   if (newProducts && Array.isArray(newProducts) && newProducts.length > 0) {
     store.setProducts(newProducts);
+  }
+}, { immediate: true });
+
+watch(() => props.recipeKits?.data, (newKits) => {
+  if (newKits && Array.isArray(newKits) && newKits.length > 0) {
+    store.setRecipeKits(newKits);
   }
 }, { immediate: true });
 
@@ -224,18 +233,48 @@ function resetAllFilters() {
   });
 }
 
+function isIngredientOOS(p) {
+  if (!p) return false;
+  if (store.isOutOfStock(p)) return true;
+  return store.getAvailableStock(p) < Number(p.pivot?.quantity || 1);
+}
+
+function getKitAvailableProducts(kit) {
+  return (kit.products || []).filter(p => !isIngredientOOS(p));
+}
+
+function getKitOOSProducts(kit) {
+  return (kit.products || []).filter(p => isIngredientOOS(p));
+}
+
+function isKitCompletelyOOS(kit) {
+  return (kit.products || []).length > 0 && getKitAvailableProducts(kit).length === 0;
+}
+
 function handleAddKitToCart(kit) {
   if (kit.products && kit.products.length > 0) {
-    kit.products.forEach(p => {
+    if (isKitCompletelyOOS(kit)) {
+      store.showStockToast(`"${kit.name}" is currently out of stock.`);
+      return;
+    }
+    const available = getKitAvailableProducts(kit);
+    const oos = getKitOOSProducts(kit);
+    available.forEach(p => {
       store.addToCart({
         id: p.id,
+        slug: p.slug,
         name: p.name,
         price: Number(p.price),
         weight: p.size_main,
         quantity: p.pivot?.quantity || 1,
         image: p.image,
+        stock: p.stock,
+        stock_badge: p.stock_badge,
       });
     });
+    if (oos.length > 0) {
+      store.showStockToast(`Added ${available.length} available kit items (Skipped out-of-stock: ${oos.map(i => i.name).join(', ')}).`);
+    }
   } else {
     store.addToCart({
       id: kit.slug || kit.id,
@@ -300,7 +339,7 @@ watch([() => props.products?.current_page, () => props.recipeKits?.current_page]
 </script>
 
 <template>
-  <Head title="Search Catalogue — Masala Mart" />
+  <Head :title="`Search Catalogue — ${storeBrandName}`" />
 
   <StoreLayout :showHeader="true" :showFooter="true" :showBottomNav="true" :showCartBar="true" headerMode="search">
     <div class="space-y-4 sm:space-y-6 pb-24 pt-1 sm:pt-3">
@@ -547,6 +586,7 @@ watch([() => props.products?.current_page, () => props.recipeKits?.current_page]
                 :src="item.image || '/images/products/atta.jpg'" 
                 :alt="item.name" 
                 class="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-300"
+                :class="{ 'opacity-60 grayscale-[35%]': store.isOutOfStock(item) }"
               />
               
               <!-- Photo label badge -->
@@ -554,9 +594,15 @@ watch([() => props.products?.current_page, () => props.recipeKits?.current_page]
                 {{ item.photo_label || item.photoLabel || item.category || 'grocery' }}
               </span>
 
-              <!-- In-cart Stepper or Add to cart button -->
+              <!-- Out of Stock or In-cart Stepper or Add to cart button -->
+              <span
+                v-if="store.isOutOfStock(item)"
+                class="absolute bottom-2.5 right-2.5 bg-red-600/95 text-white text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-md shadow-xs z-10"
+              >
+                Out of Stock
+              </span>
               <div 
-                v-if="store.getItemQuantity(item.id || item.slug) > 0"
+                v-else-if="store.getItemQuantity(item.id || item.slug) > 0"
                 class="absolute bottom-2.5 inset-x-2.5 bg-[#1a1a1a] text-white h-8 sm:h-9 rounded-md flex items-center justify-between px-2.5 shadow-md z-10"
                 @click.stop.prevent
               >
@@ -571,8 +617,10 @@ watch([() => props.products?.current_page, () => props.recipeKits?.current_page]
                 <span class="text-xs font-bold">{{ store.getItemQuantity(item.id || item.slug) }}</span>
                 <button 
                   type="button"
+                  :disabled="!store.canAddMore(item, 1)"
                   @click.stop.prevent="store.addToCart(item)" 
-                  class="p-1 hover:opacity-80 cursor-pointer flex items-center justify-center"
+                  class="p-1 flex items-center justify-center"
+                  :class="store.canAddMore(item, 1) ? 'hover:opacity-80 cursor-pointer' : 'opacity-35 cursor-not-allowed'"
                   aria-label="Increase quantity"
                 >
                   <Plus class="w-3.5 h-3.5 stroke-[2.5]" />
@@ -642,12 +690,25 @@ watch([() => props.products?.current_page, () => props.recipeKits?.current_page]
                   :src="kit.image || '/images/products/paneer_curry.jpg'" 
                   :alt="kit.name" 
                   class="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-300"
+                  :class="{ 'opacity-60 grayscale-[35%]': isKitCompletelyOOS(kit) }"
                 />
                 <span class="font-mono text-xs text-[#1d1d1f] bg-white/85 backdrop-blur-xs px-2 py-0.5 rounded-md absolute top-2.5 left-2.5 shadow-2xs">
                   {{ kit.subtitle_tag || 'recipe kit' }}
                 </span>
                 <span class="absolute top-2.5 right-2.5 bg-[#1a1a1a] text-white text-[11px] font-semibold px-2 py-0.5 rounded-md shadow-xs">
                   {{ kit.products ? kit.products.length : 3 }} items
+                </span>
+                <span 
+                  v-if="isKitCompletelyOOS(kit)"
+                  class="absolute bottom-2.5 right-2.5 bg-red-600/95 text-white text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-md shadow-xs"
+                >
+                  Out of Stock
+                </span>
+                <span 
+                  v-else-if="getKitOOSProducts(kit).length > 0"
+                  class="absolute bottom-2.5 right-2.5 bg-amber-600/95 text-white text-[10px] font-bold px-2 py-0.5 rounded-md shadow-xs"
+                >
+                  {{ getKitOOSProducts(kit).length }} item OOS
                 </span>
               </Link>
 
@@ -677,11 +738,17 @@ watch([() => props.products?.current_page, () => props.recipeKits?.current_page]
 
             <button 
               type="button"
+              :disabled="isKitCompletelyOOS(kit)"
               @click.stop.prevent="handleAddKitToCart(kit)"
-              class="w-full mt-3.5 py-2.5 sm:py-3 bg-[#1a1a1a] hover:bg-black text-white font-semibold text-xs rounded-md flex items-center justify-center gap-1.5 transition-colors cursor-pointer active:scale-98 shadow-xs"
+              class="w-full mt-3.5 py-2.5 sm:py-3 font-semibold text-xs rounded-md flex items-center justify-center gap-1.5 transition-colors shadow-xs"
+              :class="isKitCompletelyOOS(kit)
+                ? 'bg-stone-200 text-stone-500 border border-stone-300 cursor-not-allowed shadow-none'
+                : 'bg-[#1a1a1a] hover:bg-black text-white cursor-pointer active:scale-98'"
             >
-              <Plus class="w-3.5 h-3.5 stroke-[2.5]" />
-              <span>Add all {{ kit.products ? kit.products.length : 3 }} to cart</span>
+              <Plus v-if="!isKitCompletelyOOS(kit)" class="w-3.5 h-3.5 stroke-[2.5]" />
+              <span v-if="isKitCompletelyOOS(kit)">Out of Stock</span>
+              <span v-else-if="getKitOOSProducts(kit).length > 0">Add {{ getKitAvailableProducts(kit).length }} available to cart</span>
+              <span v-else>Add all {{ kit.products ? kit.products.length : 3 }} to cart</span>
             </button>
           </div>
         </div>

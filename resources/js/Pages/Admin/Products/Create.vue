@@ -1,5 +1,5 @@
 <script setup>
-import { ref, watch } from 'vue';
+import { ref, computed, watch } from 'vue';
 import { Head, Link, useForm } from '@inertiajs/vue3';
 import AdminLayout from '@/Layouts/AdminLayout.vue';
 import { 
@@ -17,13 +17,7 @@ import { Textarea } from '@/Components/ui/textarea';
 import { Label } from '@/Components/ui/label';
 import { Checkbox } from '@/Components/ui/checkbox';
 import { Button } from '@/Components/ui/button';
-import { 
-  Select, 
-  SelectTrigger, 
-  SelectValue, 
-  SelectContent, 
-  SelectItem 
-} from '@/Components/ui/select';
+import { SearchableSelect } from '@/Components/ui/searchable-select';
 
 const props = defineProps({
   defaultCategories: {
@@ -41,6 +35,34 @@ const previewImages = ref([]);
 const manualUrlInput = ref('');
 const fileInputRef = ref(null);
 const selectedSupplierId = ref('none');
+
+const categoryOptions = computed(() => {
+  const entries = Object.entries(props.defaultCategories || {});
+  if (entries.length === 0) {
+    return [
+      { value: 'grocery', label: 'Pantry & Groceries', sublabel: '(grocery)' },
+      { value: 'spices', label: 'Fresh Spices & Masalas', sublabel: '(spices)' },
+      { value: 'dairy', label: 'Dairy, Paneer & Ghee', sublabel: '(dairy)' },
+      { value: 'sweets', label: 'Indian Sweets & Snacks', sublabel: '(sweets)' },
+      { value: 'vegetables', label: 'Fresh Herbs & Produce', sublabel: '(vegetables)' },
+      { value: 'recipe-kits', label: 'Artisanal Meal Kits', sublabel: '(recipe-kits)' },
+    ];
+  }
+  return entries.map(([slug, title]) => ({
+    value: slug,
+    label: title,
+    sublabel: `(${slug})`,
+  }));
+});
+
+const supplierOptions = computed(() => [
+  { value: 'none', label: 'None (Direct / In-House Inventory)', sublabel: '' },
+  ...(props.suppliers || []).map((sup) => ({
+    value: String(sup.id),
+    label: sup.name,
+    sublabel: sup.code ? `(${sup.code})` : '',
+  })),
+]);
 
 const form = useForm({
   name: '',
@@ -93,6 +115,12 @@ watch(() => form.category, (newCat) => {
     form.category_title = props.defaultCategories[newCat];
   }
 });
+
+const handleCategorySelect = (opt) => {
+  if (opt?.label) {
+    form.category_title = opt.label;
+  }
+};
 
 // Sync supplier selection
 watch(selectedSupplierId, (val) => {
@@ -262,19 +290,15 @@ const submit = () => {
               <Label class="block mb-1">
                 Category <span class="text-red-500">*</span>
               </Label>
-              <Select v-model="form.category">
-                <SelectTrigger class="w-full h-9 bg-[#fafafa] rounded-md text-xs">
-                  <SelectValue placeholder="Select category..." />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="grocery">Pantry & Groceries (grocery)</SelectItem>
-                  <SelectItem value="spices">Fresh Spices & Masalas (spices)</SelectItem>
-                  <SelectItem value="dairy">Dairy, Paneer & Ghee (dairy)</SelectItem>
-                  <SelectItem value="sweets">Indian Sweets & Snacks (sweets)</SelectItem>
-                  <SelectItem value="vegetables">Fresh Herbs & Produce (vegetables)</SelectItem>
-                  <SelectItem value="recipe-kits">Artisanal Meal Kits (recipe-kits)</SelectItem>
-                </SelectContent>
-              </Select>
+              <SearchableSelect
+                v-model="form.category"
+                :options="categoryOptions"
+                :limit="8"
+                :search-url="route('admin.categories.search')"
+                placeholder="Select category..."
+                search-placeholder="Search categories..."
+                @select="handleCategorySelect"
+              />
               <p v-if="form.errors.category" class="text-xs text-red-600 mt-1">{{ form.errors.category }}</p>
             </div>
 
@@ -307,21 +331,14 @@ const submit = () => {
                   <ArrowLeft class="w-3 h-3 rotate-135" />
                 </Link>
               </div>
-              <Select v-model="selectedSupplierId">
-                <SelectTrigger class="w-full h-9 bg-[#fafafa] rounded-md text-xs">
-                  <SelectValue placeholder="Select supplier (Optional)..." />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">None (Direct / In-House Inventory)</SelectItem>
-                  <SelectItem 
-                    v-for="sup in suppliers" 
-                    :key="sup.id" 
-                    :value="String(sup.id)"
-                  >
-                    {{ sup.name }} ({{ sup.code }})
-                  </SelectItem>
-                </SelectContent>
-              </Select>
+              <SearchableSelect
+                v-model="selectedSupplierId"
+                :options="supplierOptions"
+                :limit="8"
+                :search-url="route('admin.suppliers.search')"
+                placeholder="Select supplier (Optional)..."
+                search-placeholder="Search suppliers by name or code..."
+              />
               <p v-if="form.errors.supplier_id" class="text-xs text-red-600 mt-1">{{ form.errors.supplier_id }}</p>
             </div>
           </div>

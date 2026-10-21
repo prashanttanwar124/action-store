@@ -1,6 +1,7 @@
 <script setup>
+import { computed } from 'vue';
 import GuestLayout from '@/Layouts/GuestLayout.vue';
-import { Head, Link, useForm } from '@inertiajs/vue3';
+import { Head, Link, useForm, usePage } from '@inertiajs/vue3';
 import { Mail, ArrowRight, ArrowLeft, KeyRound, CheckCircle2 } from 'lucide-vue-next';
 
 defineProps({
@@ -14,6 +15,10 @@ const form = useForm({
   email: '',
 });
 
+const page = usePage();
+const storeInfo = computed(() => page.props.storeInfo || {});
+const storeBrandName = computed(() => storeInfo.value?.brand_name || (storeInfo.value?.name ? storeInfo.value.name.split(/\s*[—–]\s*|\s+-\s+/)[0].trim() : 'Store'));
+
 const submit = () => {
   form.post(route('password.email'));
 };
@@ -21,7 +26,7 @@ const submit = () => {
 
 <template>
   <GuestLayout>
-    <Head title="Reset Password — Masala Mart" />
+    <Head :title="`Reset Password — ${storeBrandName}`" />
 
     <div class="space-y-6">
       

@@ -26,6 +26,7 @@ class AdminSeeder extends Seeder
             'manage users',
             'manage roles',
             'view reports',
+            'manage settings',
         ];
 
         foreach ($permissions as $permissionName) {
@@ -46,7 +47,7 @@ class AdminSeeder extends Seeder
             'name' => 'Store Manager',
             'guard_name' => 'admin',
         ]);
-        $storeManagerRole->syncPermissions(['manage products', 'manage orders', 'manage users', 'view reports']);
+        $storeManagerRole->syncPermissions(['manage products', 'manage orders', 'manage users', 'view reports', 'manage settings']);
 
         $orderHandlerRole = Role::firstOrCreate([
             'name' => 'Order Handler',

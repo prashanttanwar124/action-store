@@ -24,9 +24,7 @@ class AdminSupplierController extends Controller
         $status = (string) $request->input('status', 'all');
         $sort = (string) $request->input('sort', 'name');
 
-        $query = Supplier::query()->withCount('products')->with([
-            'products:id,supplier_id,name,price,image,stock,category',
-        ]);
+        $query = Supplier::query()->withCount('products');
 
         if ($search !== '') {
             $query->where(function ($q) use ($search) {
@@ -53,7 +51,23 @@ class AdminSupplierController extends Controller
             default => $query->orderBy('name'),
         };
 
-        $suppliers = $query->paginate(15)->withQueryString()->through(function (Supplier $supplier) {
+        $paginated = $query->paginate(15)->withQueryString();
+        $supplierIds = $paginated->getCollection()->pluck('id')->all();
+
+        $productsBySupplier = collect();
+        if (! empty($supplierIds)) {
+            $productsBySupplier = Product::query()
+                ->select('id', 'supplier_id', 'name', 'price', 'image', 'stock', 'category')
+                ->whereIn('supplier_id', $supplierIds)
+                ->limit(count($supplierIds) * 5)
+                ->get()
+                ->groupBy('supplier_id')
+                ->map(fn ($items) => $items->take(5));
+        }
+
+        $suppliers = $paginated->through(function (Supplier $supplier) use ($productsBySupplier) {
+            $supplierProducts = $productsBySupplier->get($supplier->id, collect());
+
             return [
                 'id' => $supplier->id,
                 'name' => $supplier->name,
@@ -71,25 +85,36 @@ class AdminSupplierController extends Controller
                 'status' => $supplier->status,
                 'notes' => $supplier->notes,
                 'products_count' => (int) $supplier->products_count,
-                'products' => $supplier->products->take(5)->map(fn (Product $p) => [
+                'products' => $supplierProducts->map(fn (Product $p) => [
                     'id' => $p->id,
                     'name' => $p->name,
                     'price' => (float) $p->price,
                     'stock' => (int) $p->stock,
                     'image' => $p->image,
-                ]),
+                ])->values(),
                 'created_at' => $supplier->created_at?->format('M d, Y'),
             ];
         });
 
+        $supplierAgg = Supplier::query()
+            ->selectRaw("
+                COUNT(*) as total_suppliers,
+                SUM(CASE WHEN status = 'active' THEN 1 ELSE 0 END) as active_suppliers,
+                SUM(CASE WHEN status = 'inactive' THEN 1 ELSE 0 END) as inactive_suppliers,
+                AVG(lead_time_days) as avg_lead_time
+            ")
+            ->first();
+        $linkedProductsCount = Product::whereNotNull('supplier_id')->count();
+        $avgLeadTime = round((float) ($supplierAgg->avg_lead_time ?? 2), 1);
+
         $metrics = [
-            'total_suppliers' => Supplier::count(),
-            'active_suppliers' => Supplier::where('status', 'active')->count(),
-            'inactive_suppliers' => Supplier::where('status', 'inactive')->count(),
-            'total_supplied_products' => Product::whereNotNull('supplier_id')->count(),
-            'total_products_linked' => Product::whereNotNull('supplier_id')->count(),
-            'avg_lead_time' => round((float) (Supplier::avg('lead_time_days') ?? 2), 1),
-            'avg_lead_time_days' => round((float) (Supplier::avg('lead_time_days') ?? 2), 1),
+            'total_suppliers' => (int) ($supplierAgg->total_suppliers ?? 0),
+            'active_suppliers' => (int) ($supplierAgg->active_suppliers ?? 0),
+            'inactive_suppliers' => (int) ($supplierAgg->inactive_suppliers ?? 0),
+            'total_supplied_products' => $linkedProductsCount,
+            'total_products_linked' => $linkedProductsCount,
+            'avg_lead_time' => $avgLeadTime,
+            'avg_lead_time_days' => $avgLeadTime,
         ];
 
         return Inertia::render('Admin/Suppliers/Index', [
@@ -100,6 +125,40 @@ class AdminSupplierController extends Controller
                 'status' => $status,
                 'sort' => $sort,
             ],
+        ]);
+    }
+
+    /**
+     * Search active suppliers with a limit for dropdown selectors.
+     */
+    public function search(Request $request): JsonResponse
+    {
+        $q = trim((string) $request->input('q', ''));
+        $limit = min(max((int) $request->input('limit', 10), 1), 25);
+
+        $suppliers = Supplier::query()
+            ->where('status', 'active')
+            ->when($q !== '', function ($query) use ($q) {
+                $query->where(function ($sub) use ($q) {
+                    $sub->where('name', 'like', "%{$q}%")
+                        ->orWhere('code', 'like', "%{$q}%")
+                        ->orWhere('city', 'like', "%{$q}%");
+                });
+            })
+            ->orderBy('name')
+            ->limit($limit)
+            ->get(['id', 'name', 'code'])
+            ->map(fn (Supplier $s) => [
+                'id' => $s->id,
+                'value' => (string) $s->id,
+                'label' => $s->name,
+                'sublabel' => $s->code ? "({$s->code})" : '',
+                'name' => $s->name,
+                'code' => $s->code,
+            ]);
+
+        return response()->json([
+            'items' => $suppliers,
         ]);
     }
 

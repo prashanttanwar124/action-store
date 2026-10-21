@@ -100,6 +100,28 @@ class StripePayments
     }
 
     /**
+     * Refund a specific amount (in cents) on a payment intent for an out-of-stock item or remaining balance.
+     *
+     * @param  array<string, string>  $metadata
+     */
+    public function refundPartialPayment(string $paymentIntentId, int $amountInCents, string $idempotencyKey, array $metadata = []): Refund
+    {
+        $payload = [
+            'payment_intent' => $paymentIntentId,
+            'amount' => $amountInCents,
+            'reason' => 'requested_by_customer',
+        ];
+
+        if (! empty($metadata)) {
+            $payload['metadata'] = $metadata;
+        }
+
+        return $this->client()->refunds->create($payload, [
+            'idempotency_key' => $idempotencyKey,
+        ]);
+    }
+
+    /**
      * Determine whether a PaymentIntent is a completed, exact payment for the given checkout.
      */
     public function intentPaysFor(object $intent, Checkout $checkout): bool

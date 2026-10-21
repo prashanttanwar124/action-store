@@ -4,7 +4,10 @@ namespace App\Http\Controllers;
 
 use App\Models\Order;
 use App\Models\Product;
+use App\Models\RecipeKit;
 use App\Models\StoreSetting;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -21,6 +24,77 @@ class CartController extends Controller
 
         return Inertia::render('Cart', [
             'impulseItems' => $impulseItems,
+        ]);
+    }
+
+    /**
+     * Check live stock and pricing only for the specific product/kit IDs present in the customer's cart.
+     */
+    public function stockCheck(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'ids' => ['required', 'array', 'max:50'],
+            'ids.*' => ['required', 'string', 'max:120'],
+        ]);
+
+        $numericIds = [];
+        $slugs = [];
+        $kitNumericIds = [];
+        $kitSlugs = [];
+
+        foreach ($validated['ids'] as $rawId) {
+            if (str_starts_with($rawId, 'kit-')) {
+                $cleanKit = substr($rawId, 4);
+                if (is_numeric($cleanKit)) {
+                    $kitNumericIds[] = (int) $cleanKit;
+                } else {
+                    $kitSlugs[] = $cleanKit;
+                }
+            } elseif (is_numeric($rawId)) {
+                $numericIds[] = (int) $rawId;
+                $kitNumericIds[] = (int) $rawId;
+            } else {
+                $slugs[] = $rawId;
+                $kitSlugs[] = $rawId;
+            }
+        }
+
+        $products = collect();
+        if (! empty($numericIds) || ! empty($slugs)) {
+            $products = Product::query()
+                ->select(['id', 'slug', 'name', 'price', 'original_price', 'size_main', 'image', 'stock', 'stock_badge', 'category'])
+                ->where(function ($query) use ($numericIds, $slugs) {
+                    if (! empty($numericIds)) {
+                        $query->whereIn('id', array_unique($numericIds));
+                    }
+                    if (! empty($slugs)) {
+                        $query->orWhereIn('slug', array_unique($slugs));
+                    }
+                })
+                ->limit(50)
+                ->get();
+        }
+
+        $recipeKits = collect();
+        if (! empty($kitNumericIds) || ! empty($kitSlugs)) {
+            $recipeKits = RecipeKit::query()
+                ->with(['products:id,slug,name,price,size_main,image,stock,stock_badge'])
+                ->where('is_active', true)
+                ->where(function ($query) use ($kitNumericIds, $kitSlugs) {
+                    if (! empty($kitNumericIds)) {
+                        $query->whereIn('id', array_unique($kitNumericIds));
+                    }
+                    if (! empty($kitSlugs)) {
+                        $query->orWhereIn('slug', array_unique($kitSlugs));
+                    }
+                })
+                ->limit(25)
+                ->get();
+        }
+
+        return response()->json([
+            'products' => $products,
+            'recipeKits' => $recipeKits,
         ]);
     }
 

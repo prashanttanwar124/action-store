@@ -1,6 +1,6 @@
 <script setup>
 import { ref, computed } from 'vue';
-import { Head, Link } from '@inertiajs/vue3';
+import { Head, Link, usePage } from '@inertiajs/vue3';
 import StoreLayout from '../Layouts/StoreLayout.vue';
 import { useStore } from '../stores/cart';
 import { 
@@ -17,7 +17,8 @@ import {
   PackageCheck,
   ShieldCheck,
   ChevronRight,
-  X
+  X,
+  AlertTriangle
 } from 'lucide-vue-next';
 
 const props = defineProps({
@@ -28,22 +29,45 @@ const props = defineProps({
 });
 
 const store = useStore();
+const page = usePage();
+const storeInfo = computed(() => page.props.storeInfo || {});
+const storeBrandName = computed(() => storeInfo.value?.brand_name || (storeInfo.value?.name ? storeInfo.value.name.split(/\s*[—–]\s*|\s+-\s+/)[0].trim() : 'Store'));
+
 
 const activeImage = ref(props.kit.image || (props.kit.images?.[0]) || '/images/products/paneer_curry.jpg');
 const addedNotification = ref(false);
 const lastAddedSummary = ref('');
 let addedToastTimeout = null;
 
+function isIngredientOutOfStock(p) {
+  if (!p) return false;
+  if (store.isOutOfStock(p)) return true;
+  const requiredQty = Number(p.pivot?.quantity || 1);
+  return store.getAvailableStock(p) < requiredQty;
+}
+
+const outOfStockIngredients = computed(() => {
+  return (props.kit.products || []).filter(p => isIngredientOutOfStock(p));
+});
+
+const availableIngredients = computed(() => {
+  return (props.kit.products || []).filter(p => !isIngredientOutOfStock(p));
+});
+
 // State for which linked ingredients are checked for Group Buy
 const checkedProducts = ref({});
 if (props.kit.products && props.kit.products.length > 0) {
   props.kit.products.forEach(p => {
-    checkedProducts.value[p.id] = true;
+    checkedProducts.value[p.id] = !isIngredientOutOfStock(p);
   });
 }
 
-function toggleProduct(id) {
-  checkedProducts.value[id] = !checkedProducts.value[id];
+function toggleProduct(p) {
+  if (isIngredientOutOfStock(p)) {
+    store.showStockToast(`"${p.name}" is currently out of stock and cannot be added.`);
+    return;
+  }
+  checkedProducts.value[p.id] = !checkedProducts.value[p.id];
 }
 
 const imagesList = computed(() => {
@@ -55,7 +79,7 @@ const imagesList = computed(() => {
 
 // Calculated pricing
 const selectedProducts = computed(() => {
-  return (props.kit.products || []).filter(p => checkedProducts.value[p.id]);
+  return (props.kit.products || []).filter(p => checkedProducts.value[p.id] && !isIngredientOutOfStock(p));
 });
 
 const standaloneSum = computed(() => {
@@ -68,6 +92,10 @@ const standaloneSum = computed(() => {
 const allChecked = computed(() => {
   return (props.kit.products || []).length > 0 && 
          selectedProducts.value.length === (props.kit.products || []).length;
+});
+
+const isAllIngredientsOutOfStock = computed(() => {
+  return (props.kit.products || []).length > 0 && availableIngredients.value.length === 0;
 });
 
 const kitPrice = computed(() => {
@@ -90,31 +118,48 @@ const bundleSavings = computed(() => {
 });
 
 function handleAddKitToCart() {
+  if ((props.kit.products || []).length > 0 && selectedProducts.value.length === 0) {
+    store.showStockToast('Please select at least one available ingredient to add to cart.');
+    return;
+  }
+
+  let addedAny = false;
   if (allChecked.value || (props.kit.products || []).length === 0) {
-    store.addToCart({
+    addedAny = store.addToCart({
       id: `kit-${props.kit.id}`,
+      slug: props.kit.slug,
+      type: 'recipe-kit',
+      isRecipeKit: true,
       name: `${props.kit.name} (Recipe Kit)`,
       price: Number(props.kit.price),
       weight: props.kit.servings || 'Recipe Kit',
       quantity: 1,
       image: activeImage.value,
+      products: props.kit.products || [],
     });
     lastAddedSummary.value = `${props.kit.name} Kit`;
   } else {
-    if (selectedProducts.value.length === 0) return;
+    let addedCount = 0;
     selectedProducts.value.forEach(p => {
       const qty = p.pivot?.quantity || 1;
-      store.addToCart({
+      const ok = store.addToCart({
         id: p.id,
+        slug: p.slug,
         name: p.name,
         price: Number(p.price),
         weight: p.size_main,
         quantity: qty,
         image: p.image,
+        stock: p.stock,
+        stock_badge: p.stock_badge,
       });
+      if (ok) addedCount++;
     });
-    lastAddedSummary.value = `${selectedProducts.value.length} Kit Ingredients`;
+    addedAny = addedCount > 0;
+    lastAddedSummary.value = `${addedCount} Kit Ingredient${addedCount === 1 ? '' : 's'}`;
   }
+
+  if (!addedAny) return;
 
   addedNotification.value = true;
   if (addedToastTimeout) clearTimeout(addedToastTimeout);
@@ -125,7 +170,7 @@ function handleAddKitToCart() {
 </script>
 
 <template>
-  <Head :title="`${kit.name} — Recipe Kit Group Buy — Masala Mart`" />
+  <Head :title="`${kit.name} — Recipe Kit Group Buy — ${storeBrandName}`" />
 
   <StoreLayout 
     headerMode="pdp" 
@@ -245,14 +290,32 @@ function handleAddKitToCart() {
               </div>
             </div>
 
+            <!-- Out-of-stock Ingredients Alert Banner -->
+            <div 
+              v-if="outOfStockIngredients.length > 0" 
+              class="p-3 rounded-md bg-amber-50 border border-amber-200/80 flex items-start gap-2.5 text-amber-950"
+            >
+              <AlertTriangle class="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+              <div class="text-xs leading-snug">
+                <span class="font-bold">{{ outOfStockIngredients.length }} ingredient{{ outOfStockIngredients.length === 1 ? ' is' : 's are' }} out of stock</span>
+                ({{ outOfStockIngredients.map(i => i.name).join(', ') }}) and automatically unchecked. You can still buy the remaining {{ selectedProducts.length }} available item{{ selectedProducts.length === 1 ? '' : 's' }} at the adjusted price.
+              </div>
+            </div>
+
             <!-- 1-Click Group Buy Action Button -->
             <button
               type="button"
+              :disabled="isAllIngredientsOutOfStock || ((kit.products || []).length > 0 && selectedProducts.length === 0)"
               @click="handleAddKitToCart"
-              class="w-full py-3.5 bg-[#1a1a1a] hover:bg-black text-white font-semibold text-xs sm:text-sm rounded-md flex items-center justify-center gap-2 transition-all active:scale-98 shadow-md cursor-pointer"
+              class="w-full py-3.5 font-semibold text-xs sm:text-sm rounded-md flex items-center justify-center gap-2 transition-all shadow-md"
+              :class="(isAllIngredientsOutOfStock || ((kit.products || []).length > 0 && selectedProducts.length === 0))
+                ? 'bg-stone-200 text-stone-500 border border-stone-300 cursor-not-allowed shadow-none'
+                : 'bg-[#1a1a1a] hover:bg-black text-white active:scale-98 cursor-pointer'"
             >
-              <Plus class="w-4 h-4 stroke-[2.5]" />
-              <span>Add All {{ selectedProducts.length }} Ingredients to Cart</span>
+              <Plus v-if="!isAllIngredientsOutOfStock && !((kit.products || []).length > 0 && selectedProducts.length === 0)" class="w-4 h-4 stroke-[2.5]" />
+              <span v-if="isAllIngredientsOutOfStock">Kit Out of Stock</span>
+              <span v-else-if="(kit.products || []).length > 0 && selectedProducts.length === 0">Select at least 1 ingredient</span>
+              <span v-else>Add {{ allChecked ? 'All ' : '' }}{{ selectedProducts.length }} Ingredient{{ selectedProducts.length === 1 ? '' : 's' }} to Cart</span>
             </button>
 
             <!-- Notification Toast -->
@@ -277,7 +340,7 @@ function handleAddKitToCart() {
                       Added {{ lastAddedSummary }}
                     </div>
                     <div class="text-[11px] text-stone-300 font-mono">
-                      Cart ({{ store.cartCount }} items) · ${{ store.cartSubtotal.toFixed(2) }}
+                      Cart ({{ store.totalItemCount }} items) · ${{ store.subtotal.toFixed(2) }}
                     </div>
                   </div>
                 </div>
@@ -306,6 +369,9 @@ function handleAddKitToCart() {
               <span class="text-xs font-semibold text-stone-700">
                 {{ selectedProducts.length }} of {{ (kit.products || []).length }} Items Selected
               </span>
+              <span v-if="outOfStockIngredients.length > 0" class="text-[11px] font-bold text-red-700 bg-red-50 border border-red-200 px-2 py-0.5 rounded-md">
+                {{ outOfStockIngredients.length }} Out of Stock
+              </span>
             </div>
             <h2 class="text-xl font-serif font-medium text-[#1d1d1f] mt-1.5">
               Fresh Ingredients & Pantry Staples
@@ -321,19 +387,30 @@ function handleAddKitToCart() {
           <div 
             v-for="p in kit.products"
             :key="p.id"
-            @click="toggleProduct(p.id)"
-            class="p-3.5 rounded-lg border transition-all cursor-pointer flex items-center justify-between gap-3 group select-none"
-            :class="checkedProducts[p.id] ? 'bg-[#fbfaf8] border-[#a47a3c]/80 shadow-2xs' : 'bg-stone-50/50 border-stone-200 opacity-60'"
+            @click="toggleProduct(p)"
+            class="p-3.5 rounded-lg border transition-all flex items-center justify-between gap-3 group select-none"
+            :class="isIngredientOutOfStock(p)
+              ? 'bg-red-50/40 border-red-200/80 opacity-65 cursor-not-allowed'
+              : (checkedProducts[p.id] ? 'bg-[#fbfaf8] border-[#a47a3c]/80 shadow-2xs cursor-pointer' : 'bg-stone-50/50 border-stone-200 opacity-60 cursor-pointer')"
           >
             <div class="flex items-center gap-3 min-w-0">
               <img 
                 :src="p.image || '/images/products/paneer_curry.jpg'" 
                 :alt="p.name"
-                class="w-12 h-12 rounded-md object-cover border border-[#e0d9cc]/60 shrink-0" 
+                class="w-12 h-12 rounded-md object-cover border border-[#e0d9cc]/60 shrink-0"
+                :class="{ 'grayscale': isIngredientOutOfStock(p) }"
               />
               <div class="min-w-0">
-                <div class="text-xs font-semibold text-[#1d1d1f] truncate group-hover:text-[#a47a3c] transition-colors">
-                  {{ p.name }}
+                <div class="flex items-center gap-1.5 flex-wrap">
+                  <div class="text-xs font-semibold text-[#1d1d1f] truncate transition-colors" :class="{ 'line-through text-stone-500': isIngredientOutOfStock(p), 'group-hover:text-[#a47a3c]': !isIngredientOutOfStock(p) }">
+                    {{ p.name }}
+                  </div>
+                  <span v-if="isIngredientOutOfStock(p)" class="text-[9.5px] font-bold uppercase tracking-wider bg-red-100 text-red-700 border border-red-200 px-1.5 py-0.2 rounded">
+                    Out of Stock
+                  </span>
+                  <span v-else-if="store.getAvailableStock(p) <= 5" class="text-[9.5px] font-bold bg-amber-50 text-amber-800 border border-amber-200 px-1.5 py-0.2 rounded">
+                    Only {{ store.getAvailableStock(p) }} left
+                  </span>
                 </div>
                 <div class="text-[10px] text-[#6e6e73] truncate">
                   {{ p.pivot?.unit_notes || p.size_main || 'Standard Pack' }}
@@ -350,9 +427,12 @@ function handleAddKitToCart() {
             <!-- Custom Checkbox -->
             <div 
               class="w-6 h-6 rounded-lg flex items-center justify-center transition-colors shrink-0"
-              :class="checkedProducts[p.id] ? 'bg-[#1a1a1a] text-white' : 'border border-stone-300 bg-white'"
+              :class="isIngredientOutOfStock(p)
+                ? 'border border-red-200 bg-red-50 text-red-400'
+                : (checkedProducts[p.id] ? 'bg-[#1a1a1a] text-white' : 'border border-stone-300 bg-white')"
             >
-              <Check v-if="checkedProducts[p.id]" class="w-3.5 h-3.5 stroke-[3]" />
+              <X v-if="isIngredientOutOfStock(p)" class="w-3.5 h-3.5 stroke-[2.5]" />
+              <Check v-else-if="checkedProducts[p.id]" class="w-3.5 h-3.5 stroke-[3]" />
             </div>
           </div>
         </div>

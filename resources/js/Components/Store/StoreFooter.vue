@@ -1,9 +1,10 @@
 <script setup>
+import { computed } from 'vue';
 import { Link, usePage } from '@inertiajs/vue3';
 import { useStore } from '../../stores/cart';
 import { Sparkles, ChevronRight } from 'lucide-vue-next';
 
-defineProps({
+const props = defineProps({
   storeInfo: {
     type: Object,
     default: () => ({}),
@@ -14,6 +15,7 @@ defineEmits(['openStoreInfo']);
 
 const store = useStore();
 const page = usePage();
+const storeBrandName = computed(() => props.storeInfo?.brand_name || (props.storeInfo?.name ? props.storeInfo.name.split(/\s*[—–]\s*|\s+-\s+/)[0].trim() : 'Store'));
 </script>
 
 <template>
@@ -24,7 +26,7 @@ const page = usePage();
         <!-- Column 1: Store Bio -->
         <div class="space-y-3">
           <div class="text-2xl font-serif font-medium tracking-tight text-[#1d1d1f] flex items-center gap-1.5">
-            <span>Masala Mart</span>
+            <span>{{ storeBrandName }}</span>
             <span class="font-devanagari text-xs text-[#7a5620] font-medium bg-[#f5eee2] px-2 py-0.5 rounded-md border border-[#e0d9cc]">
               {{ storeInfo.hindi_tagline || 'किराना' }}
             </span>
@@ -82,21 +84,21 @@ const page = usePage();
         <div class="space-y-3 text-xs bg-[#f5eee2] p-4 rounded-lg border border-[#e0d9cc]">
           <div class="font-semibold uppercase text-[11px] text-[#7a5620] flex items-center gap-1.5">
             <Sparkles class="w-3.5 h-3.5 text-[#a47a3c]" />
-            <span>Masala Rewards</span>
+            <span>{{ storeBrandName }} Rewards</span>
           </div>
           <p class="text-[11px] text-[#6e6e73] font-normal leading-snug">
             Earn 1 point for every $1 spent. Curbside pickup ready in {{ storeInfo.pickup_time || '1 hr' }} at {{ storeInfo.name }}.
           </p>
           <div class="flex items-center justify-between text-xs text-[#1d1d1f] border-t border-[#e0d9cc] pt-2 font-bold">
             <span>Your Balance:</span>
-            <span class="text-[#7a5620] font-serif font-medium">{{ store.masalaPoints }} pts</span>
+            <span class="text-[#7a5620] font-serif font-medium">{{ (store.rewardPoints || 0) }} pts</span>
           </div>
         </div>
 
       </div>
 
       <div class="pt-6 flex flex-col sm:flex-row justify-between items-center text-xs text-[#86868b] gap-3 font-normal">
-        <div>© 2026 {{ storeInfo.name || 'Masala Mart' }}. All rights reserved. Modern Classic V3.</div>
+        <div>© 2026 {{ storeBrandName || storeInfo.name || 'Store' }}. All rights reserved. Modern Classic V3.</div>
         <div class="flex gap-4">
           <a href="#" class="hover:text-stone-600">Privacy Policy</a>
           <span>·</span>

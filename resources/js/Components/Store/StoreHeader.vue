@@ -43,6 +43,7 @@ defineEmits(['openStoreInfo']);
 const store = useStore();
 const page = usePage();
 const searchInputRef = ref(null);
+const storeBrandName = computed(() => props.storeInfo?.brand_name || (props.storeInfo?.name ? props.storeInfo.name.split(/\s*[—–]\s*|\s+-\s+/)[0].trim() : 'Store'));
 
 const categoryLinks = [
   { id: 'all', label: 'All Categories', href: '/' },
@@ -115,7 +116,7 @@ function handleSearchSubmit() {
           <div class="flex flex-col">
             <Link href="/" class="flex items-center gap-1.5 group">
               <span class="text-2xl sm:text-[27px] font-serif font-medium tracking-tight leading-none text-[#1d1d1f] group-hover:text-[#a47a3c] transition-colors">
-                Masala Mart
+                {{ storeBrandName }}
               </span>
               <span class="font-devanagari text-[10.5px] text-[#7a5620] font-medium bg-[#f5eee2] px-1.5 py-0.5 rounded-md border border-[#e0d9cc] hidden sm:inline-block">
                 {{ storeInfo.hindi_tagline || 'किराना' }}
