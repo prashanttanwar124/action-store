@@ -13,18 +13,14 @@ import {
   ChevronUp,
   CheckCircle2, 
   LogOut,
-  User as UserIcon,
   Plus,
   Minus,
-  Package,
-  Clock,
   Award,
   Flame,
   UtensilsCrossed,
   ShieldCheck,
   MapPin,
   Receipt,
-  ArrowUpRight,
   Gift,
   Settings
 } from 'lucide-vue-next';
@@ -320,12 +316,6 @@ function refundedItemsForOrder(order) {
 function isOrderItemFullyRefunded(item) {
   return Number(item?.refunded_quantity || 0) >= Number(item?.quantity || 1);
 }
-
-function activeOrderStepIndex(status) {
-  if (status === 'ready_for_pickup') return 3;
-  if (status === 'packing') return 2;
-  return 1;
-}
 </script>
 
 <template>
@@ -359,13 +349,13 @@ function activeOrderStepIndex(status) {
       </Transition>
 
       <!-- =================================================================== -->
-      <!-- UNIFIED COMMAND HEADER CARD (Matches Search & Cart Design Language) -->
+      <!-- PAGE HEADER CARD (Clean, No Duplicate Tab Switcher)                 -->
       <!-- =================================================================== -->
       <div class="bg-white border border-[#dfd6c8] rounded-xl p-4 sm:p-6 shadow-2xs">
-        <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div class="flex items-center justify-between gap-4">
 
           <!-- Left: User Identity & Title -->
-          <div class="flex items-start sm:items-center gap-3.5">
+          <div class="flex items-start sm:items-center gap-3.5 min-w-0">
             <div class="w-12 h-12 sm:w-14 sm:h-14 rounded-xl bg-[#f4efe6] border border-[#dfd6c8] flex items-center justify-center text-[#1d1d1f] font-serif font-semibold text-xl sm:text-2xl shrink-0 shadow-2xs">
               <RefreshCw v-if="isReorderMode" class="w-5 h-5 sm:w-6 sm:h-6 text-[#8a6b32]" />
               <span v-else>{{ authUser ? authUser.name.charAt(0).toUpperCase() : 'G' }}</span>
@@ -374,13 +364,13 @@ function activeOrderStepIndex(status) {
             <div class="min-w-0 space-y-1">
               <div class="flex flex-wrap items-center gap-2">
                 <span class="text-[10px] font-mono uppercase bg-[#1a1a1a] text-white px-2 py-0.5 rounded-md font-bold tracking-wider">
-                  {{ isReorderMode ? 'Pantry Restock' : 'Customer Portal' }}
+                  {{ isReorderMode ? 'Pantry Restock' : 'Customer Account' }}
                 </span>
                 <span class="font-devanagari text-[11px] text-[#7a5620] bg-[#f5eee2] px-2 py-0.5 rounded-md border border-[#e0d9cc] font-medium">
                   {{ isReorderMode ? 'फिर से खरीदें' : 'ग्राहक खाता' }}
                 </span>
                 <span
-                  v-if="authUser"
+                  v-if="authUser && !isReorderMode"
                   class="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-800 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-md"
                 >
                   <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
@@ -411,27 +401,35 @@ function activeOrderStepIndex(status) {
             </div>
           </div>
 
-          <!-- Right: Mode Switcher Pill Bar -->
-          <div class="flex items-center gap-2.5 self-start md:self-center shrink-0 w-full md:w-auto">
-            <div class="grid grid-cols-2 md:inline-flex items-center p-1 bg-[#f4efe6] border border-[#dfd6c8] rounded-lg w-full md:w-auto">
-              <Link
-                href="/account"
-                class="inline-flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-md text-xs font-bold transition-all"
-                :class="!isReorderMode ? 'bg-[#1a1a1a] text-white shadow-xs' : 'text-[#6e6e73] hover:text-[#1d1d1f]'"
-              >
-                <UserIcon class="w-3.5 h-3.5" />
-                <span>Account &amp; Rewards</span>
-              </Link>
-              <Link
-                href="/reorder"
-                class="inline-flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-md text-xs font-bold transition-all"
-                :class="isReorderMode ? 'bg-[#1a1a1a] text-white shadow-xs' : 'text-[#6e6e73] hover:text-[#1d1d1f]'"
-              >
-                <RefreshCw class="w-3.5 h-3.5" />
-                <span>Buy It Again</span>
-              </Link>
-            </div>
+          <!-- Right Quick Action (Desktop) -->
+          <div v-if="authUser && !isReorderMode" class="hidden sm:flex items-center gap-2 shrink-0">
+            <Link
+              href="/profile"
+              class="px-3.5 py-2 rounded-lg border border-[#dfd6c8] bg-[#faf7f2] hover:bg-[#f0e9dd] text-xs font-semibold text-[#1d1d1f] inline-flex items-center gap-1.5 transition-colors"
+            >
+              <Settings class="w-3.5 h-3.5 text-[#8a6b32]" />
+              <span>Edit Profile</span>
+            </Link>
+            <Link
+              href="/logout"
+              method="post"
+              as="button"
+              class="px-3.5 py-2 rounded-lg border border-rose-200 bg-rose-50 hover:bg-rose-100 text-xs font-semibold text-rose-700 inline-flex items-center gap-1.5 transition-colors cursor-pointer"
+            >
+              <LogOut class="w-3.5 h-3.5" />
+              <span>Sign Out</span>
+            </Link>
           </div>
+
+          <button
+            v-else-if="isReorderMode && buyAgainItems.length > 0"
+            type="button"
+            @click="handleAddAllEssentials"
+            class="hidden sm:inline-flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-lg bg-[#a47a3c] hover:bg-[#8a6b32] text-white text-xs font-semibold transition-colors cursor-pointer shadow-xs shrink-0"
+          >
+            <Plus class="w-4 h-4 stroke-[2.5]" />
+            <span>Add All Essentials</span>
+          </button>
 
         </div>
 
@@ -470,54 +468,37 @@ function activeOrderStepIndex(status) {
 
         <!-- SECTION R1: Frequent Essentials Grid (Authenticated user with past items) -->
         <div v-if="buyAgainItems.length > 0" class="space-y-4">
-          <div class="bg-white border border-[#dfd6c8] rounded-xl p-4 sm:p-5 shadow-2xs space-y-4">
-            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-              <div>
-                <div class="flex items-center gap-2">
-                  <h2 class="text-lg sm:text-xl font-serif font-medium text-[#1d1d1f] tracking-tight">
-                    Your Frequent Essentials
-                  </h2>
-                  <span class="text-xs font-semibold text-[#7a5620] bg-[#f5eee2] px-2.5 py-0.5 rounded-md border border-[#e0d9cc]">
-                    {{ buyAgainItems.length }} saved item{{ buyAgainItems.length === 1 ? '' : 's' }}
-                  </span>
-                </div>
-                <p class="text-xs text-[#6e6e73] mt-0.5">
-                  Automatically sorted by what you order most frequently · Live inventory &amp; pricing
-                </p>
-              </div>
-
-              <button
-                type="button"
-                @click="handleAddAllEssentials"
-                class="inline-flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-lg bg-[#a47a3c] hover:bg-[#8a6b32] text-white text-xs font-semibold transition-colors cursor-pointer shadow-xs shrink-0"
-              >
-                <Plus class="w-4 h-4 stroke-[2.5]" />
-                <span>Add All Essentials to Cart</span>
-              </button>
-            </div>
-
-            <!-- Category Filter Pills -->
-            <div v-if="availableCategories.length > 1" class="flex items-center gap-2 overflow-x-auto no-scrollbar pt-1 border-t border-[#f3efe7]">
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <div class="flex items-center gap-2 overflow-x-auto no-scrollbar">
               <button
                 type="button"
                 @click="selectedCategory = 'all'"
-                class="px-3.5 py-1.5 rounded-md text-xs font-semibold shrink-0 transition-colors cursor-pointer"
-                :class="selectedCategory === 'all' ? 'bg-[#1a1a1a] text-white shadow-2xs' : 'bg-[#f4efe6] text-[#6e6e73] hover:text-[#1d1d1f] border border-[#dfd6c8]'"
+                class="px-3.5 py-1.5 rounded-lg text-xs font-semibold shrink-0 transition-colors cursor-pointer"
+                :class="selectedCategory === 'all' ? 'bg-[#1a1a1a] text-white shadow-2xs' : 'bg-white text-[#6e6e73] hover:text-[#1d1d1f] border border-[#dfd6c8]'"
               >
-                All Items ({{ buyAgainItems.length }})
+                All Essentials ({{ buyAgainItems.length }})
               </button>
               <button
                 v-for="cat in availableCategories"
                 :key="cat.id"
                 type="button"
                 @click="selectedCategory = cat.id"
-                class="px-3.5 py-1.5 rounded-md text-xs font-semibold shrink-0 transition-colors cursor-pointer inline-flex items-center gap-1.5"
-                :class="selectedCategory === cat.id ? 'bg-[#1a1a1a] text-white shadow-2xs' : 'bg-[#f4efe6] text-[#6e6e73] hover:text-[#1d1d1f] border border-[#dfd6c8]'"
+                class="px-3.5 py-1.5 rounded-lg text-xs font-semibold shrink-0 transition-colors cursor-pointer inline-flex items-center gap-1.5"
+                :class="selectedCategory === cat.id ? 'bg-[#1a1a1a] text-white shadow-2xs' : 'bg-white text-[#6e6e73] hover:text-[#1d1d1f] border border-[#dfd6c8]'"
               >
                 <UtensilsCrossed v-if="cat.id === 'recipe-kit'" class="w-3 h-3 text-[#a47a3c]" />
                 <span>{{ cat.label }} ({{ cat.count }})</span>
               </button>
             </div>
+
+            <button
+              type="button"
+              @click="handleAddAllEssentials"
+              class="sm:hidden inline-flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-lg bg-[#a47a3c] hover:bg-[#8a6b32] text-white text-xs font-semibold transition-colors cursor-pointer shadow-xs"
+            >
+              <Plus class="w-3.5 h-3.5 stroke-[2.5]" />
+              <span>Add All</span>
+            </button>
           </div>
 
           <!-- 2 / 3 / 4 Column Storefront Product Grid -->
@@ -638,7 +619,7 @@ function activeOrderStepIndex(status) {
 
         <!-- SECTION R2: Popular Weekly Staples Fallback (Guests or new customers) -->
         <div v-else-if="popularEssentials.length > 0" class="space-y-4">
-          <div class="bg-white border border-[#dfd6c8] rounded-xl p-4 sm:p-5 shadow-2xs flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+          <div class="flex items-center justify-between border-b border-[#dfd6c8] pb-2.5">
             <div>
               <div class="flex items-center gap-2">
                 <h2 class="text-lg sm:text-xl font-serif font-medium text-[#1d1d1f] tracking-tight">
@@ -652,10 +633,6 @@ function activeOrderStepIndex(status) {
                 {{ authUser ? 'Once you complete your first pickup order, your personal frequent items will appear here.' : 'Most reordered daily essentials at ' + storeInfo.brand_name }}
               </p>
             </div>
-            <Link href="/" class="text-xs font-semibold text-[#a47a3c] hover:underline inline-flex items-center gap-1">
-              <span>Browse Full Storefront</span>
-              <ChevronRight class="w-3.5 h-3.5" />
-            </Link>
           </div>
 
           <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3.5 sm:gap-4">
@@ -1007,275 +984,155 @@ function activeOrderStepIndex(status) {
           </div>
 
           <!-- =============================================================== -->
-          <!-- RIGHT COLUMN (lg:col-span-7): ACTIVE ORDERS, PAST ORDERS        -->
+          <!-- RIGHT COLUMN (lg:col-span-7): ORDERS & RECEIPTS                 -->
           <!-- =============================================================== -->
-          <div class="lg:col-span-7 space-y-6">
+          <div class="lg:col-span-7 space-y-4">
 
-            <!-- SECTION A1: Live Active Pickup Order Banner -->
-            <div v-if="activeOrders.length > 0" class="space-y-4">
-              <div
-                v-for="active in activeOrders"
-                :key="active.id"
-                class="rounded-xl border-2 border-[#a47a3c] bg-white overflow-hidden shadow-sm"
+            <div class="flex items-center justify-between border-b border-[#dfd6c8] pb-2.5">
+              <div class="flex items-center gap-2">
+                <h2 class="text-lg sm:text-xl font-serif font-medium text-[#1d1d1f] tracking-tight">Past orders</h2>
+                <span class="font-devanagari text-xs text-[#7a5620] bg-[#f5eee2] px-2 py-0.5 rounded-md border border-[#e0d9cc]">पिछला ऑर्डर</span>
+              </div>
+              <span v-if="displayOrders.length > 0" class="text-xs font-normal text-[#6e6e73]">
+                Showing {{ displayOrders.length }} of {{ totalOrdersCount }} order{{ totalOrdersCount > 1 ? 's' : '' }}
+              </span>
+            </div>
+
+            <!-- Orders List -->
+            <div v-if="displayOrders.length > 0" class="space-y-4">
+              <div 
+                v-for="order in displayOrders" 
+                :key="order.id"
+                class="rounded-xl border border-[#dfd6c8] bg-white overflow-hidden shadow-2xs hover:border-[#c8bba6] transition-colors"
               >
-                <div class="bg-[#faf4e8] border-b border-[#e5d8c1] px-5 py-3 flex items-center justify-between gap-2">
-                  <div class="flex items-center gap-2">
-                    <span class="w-2 h-2 rounded-full bg-emerald-500 animate-ping"></span>
-                    <span class="text-xs font-bold uppercase tracking-wider text-[#7a5620]">
-                      Live Pickup Order · {{ active.type }}
+                <!-- Order Card Header Bar -->
+                <div class="bg-[#faf7f2] border-b border-[#ece5d8] px-4 sm:px-5 py-3 flex flex-wrap items-center justify-between gap-2">
+                  <div class="flex flex-wrap items-center gap-2">
+                    <span class="font-mono font-bold text-xs text-[#1d1d1f]">{{ order.id }}</span>
+                    <span class="text-stone-300">·</span>
+                    <span class="text-xs font-semibold text-[#6e6e73]">{{ order.date }} · {{ order.type }}</span>
+                    <span 
+                      v-if="order.status"
+                      class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md text-[10.5px] font-semibold"
+                      :class="[
+                        order.status === 'confirmed' ? 'bg-amber-100 text-amber-800' :
+                        order.status === 'packing' ? 'bg-blue-100 text-blue-800' :
+                        order.status === 'ready_for_pickup' ? 'bg-emerald-100 text-emerald-800' :
+                        order.status === 'cancelled' ? 'bg-rose-100 text-rose-800' :
+                        'bg-stone-200/80 text-stone-700'
+                      ]"
+                    >
+                      <span v-if="order.status !== 'completed'" class="w-1.5 h-1.5 rounded-full bg-current"></span>
+                      {{ 
+                        order.status === 'confirmed' ? 'Received' :
+                        order.status === 'packing' ? 'Packing' :
+                        order.status === 'ready_for_pickup' ? 'Ready for Pickup' :
+                        order.status === 'cancelled' ? 'Cancelled & Refunded' :
+                        (order.status === 'completed' ? 'Completed' : order.status)
+                      }}
+                    </span>
+                    <span
+                      v-if="Boolean(Number(order.refunded_total || 0))"
+                      class="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-semibold bg-rose-50 text-rose-700 border border-rose-200"
+                    >
+                      Refunded -${{ Number(order.refunded_total).toFixed(2) }}
                     </span>
                   </div>
-                  <span class="font-mono font-bold text-xs bg-[#1a1a1a] text-[#e4b97a] px-2.5 py-1 rounded-md">
-                    {{ active.id }}
+
+                  <span
+                    class="font-serif font-semibold text-base sm:text-lg"
+                    :class="isOrderFullyRefunded(order) ? 'line-through text-rose-400' : 'text-[#1d1d1f]'"
+                  >
+                    ${{ displayOrderTotal(order).toFixed(2) }}
                   </span>
                 </div>
 
-                <div class="p-5 space-y-4">
-                  <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                    <div>
-                      <h3 class="text-lg font-serif font-medium text-[#1d1d1f]">
-                        {{
-                          active.status === 'ready_for_pickup'
-                            ? 'Your order is Ready for Pickup!'
-                            : active.status === 'packing'
-                              ? 'Our team is packing your fresh groceries'
-                              : 'Order received — preparing shortly'
-                        }}
-                      </h3>
-                      <p class="text-xs text-[#6e6e73] mt-0.5">
-                        <span v-if="active.pickup_slot">Slot: <strong class="text-[#1d1d1f]">{{ active.pickup_slot }}</strong> · </span>
-                        <span>{{ active.itemCount }} item{{ active.itemCount === 1 ? '' : 's' }} · ${{ Number(active.total || 0).toFixed(2) }}</span>
-                      </p>
-                    </div>
-
-                    <Link
-                      :href="'/orders/' + encodeURIComponent(active.id)"
-                      class="px-4 py-2.5 rounded-lg bg-[#1a1a1a] hover:bg-black text-white font-semibold text-xs inline-flex items-center justify-center gap-1.5 shrink-0 transition-colors shadow-xs"
-                    >
-                      <Sparkles class="w-3.5 h-3.5 text-[#e4b97a]" />
-                      <span>Track Live Order</span>
-                    </Link>
+                <!-- Order Card Body -->
+                <div class="p-4 sm:p-5 space-y-4">
+                  <div class="text-xs text-[#6e6e73] leading-relaxed">
+                    {{ order.summary }}
                   </div>
 
-                  <!-- 3-Step Visual Progress Bar -->
-                  <div class="grid grid-cols-3 gap-2.5 pt-1">
-                    <div class="space-y-1.5">
-                      <div class="h-2 rounded-full bg-[#a47a3c]"></div>
-                      <span class="block text-[11px] font-semibold text-[#1d1d1f]">1. Received</span>
-                    </div>
-                    <div class="space-y-1.5">
-                      <div
-                        class="h-2 rounded-full transition-colors"
-                        :class="activeOrderStepIndex(active.status) >= 2 ? 'bg-[#a47a3c]' : 'bg-[#e6dfd3]'"
-                      ></div>
-                      <span class="block text-[11px] font-semibold" :class="activeOrderStepIndex(active.status) >= 2 ? 'text-[#1d1d1f]' : 'text-[#86868b]'">
-                        2. Packing
-                      </span>
-                    </div>
-                    <div class="space-y-1.5">
-                      <div
-                        class="h-2 rounded-full transition-colors"
-                        :class="activeOrderStepIndex(active.status) >= 3 ? 'bg-emerald-600' : 'bg-[#e6dfd3]'"
-                      ></div>
-                      <span class="block text-[11px] font-semibold" :class="activeOrderStepIndex(active.status) >= 3 ? 'text-emerald-800' : 'text-[#86868b]'">
-                        3. Ready for Pickup
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <!-- SECTION A2: Past Orders & Receipts -->
-            <div class="space-y-4">
-              <div class="flex items-center justify-between border-b border-[#dfd6c8] pb-2.5">
-                <div class="flex items-center gap-2">
-                  <h2 class="text-lg sm:text-xl font-serif font-medium text-[#1d1d1f] tracking-tight">Past orders</h2>
-                  <span class="font-devanagari text-xs text-[#7a5620] bg-[#f5eee2] px-2 py-0.5 rounded-md border border-[#e0d9cc]">पिछला ऑर्डर</span>
-                </div>
-                <span v-if="displayOrders.length > 0" class="text-xs font-normal text-[#6e6e73]">
-                  Showing {{ displayOrders.length }} of {{ totalOrdersCount }} order{{ totalOrdersCount > 1 ? 's' : '' }}
-                </span>
-              </div>
-
-              <!-- Orders List -->
-              <div v-if="displayOrders.length > 0" class="space-y-4">
-                <div 
-                  v-for="order in displayOrders" 
-                  :key="order.id"
-                  class="rounded-xl border border-[#dfd6c8] bg-white overflow-hidden shadow-2xs hover:border-[#c8bba6] transition-colors"
-                >
-                  <!-- Order Card Header Bar -->
-                  <div class="bg-[#faf7f2] border-b border-[#ece5d8] px-4 sm:px-5 py-3 flex flex-wrap items-center justify-between gap-2">
-                    <div class="flex flex-wrap items-center gap-2">
-                      <span class="font-mono font-bold text-xs text-[#1d1d1f]">{{ order.id }}</span>
-                      <span class="text-stone-300">·</span>
-                      <span class="text-xs font-semibold text-[#6e6e73]">{{ order.date }} · {{ order.type }}</span>
-                      <span 
-                        v-if="order.status"
-                        class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md text-[10.5px] font-semibold"
-                        :class="[
-                          order.status === 'confirmed' ? 'bg-amber-100 text-amber-800' :
-                          order.status === 'packing' ? 'bg-blue-100 text-blue-800' :
-                          order.status === 'ready_for_pickup' ? 'bg-emerald-100 text-emerald-800' :
-                          order.status === 'cancelled' ? 'bg-rose-100 text-rose-800' :
-                          'bg-stone-200/80 text-stone-700'
-                        ]"
-                      >
-                        <span v-if="order.status !== 'completed'" class="w-1.5 h-1.5 rounded-full bg-current"></span>
-                        {{ 
-                          order.status === 'confirmed' ? 'Received' :
-                          order.status === 'packing' ? 'Packing' :
-                          order.status === 'ready_for_pickup' ? 'Ready for Pickup' :
-                          order.status === 'cancelled' ? 'Cancelled & Refunded' :
-                          (order.status === 'completed' ? 'Completed' : order.status)
-                        }}
-                      </span>
-                      <span
-                        v-if="Boolean(Number(order.refunded_total || 0))"
-                        class="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-semibold bg-rose-50 text-rose-700 border border-rose-200"
-                      >
-                        Refunded -${{ Number(order.refunded_total).toFixed(2) }}
-                      </span>
-                    </div>
-
+                  <!-- Per-Item Refund Pills if any item was refunded -->
+                  <div
+                    v-if="refundedItemsForOrder(order).length"
+                    class="flex flex-wrap items-center gap-1.5"
+                  >
                     <span
-                      class="font-serif font-semibold text-base sm:text-lg"
-                      :class="isOrderFullyRefunded(order) ? 'line-through text-rose-400' : 'text-[#1d1d1f]'"
+                      v-for="item in refundedItemsForOrder(order)"
+                      :key="'ref-' + item.id"
+                      class="inline-flex items-center px-2.5 py-1 rounded-md text-[10.5px] font-semibold bg-rose-50 text-rose-800 border border-rose-200"
                     >
-                      ${{ displayOrderTotal(order).toFixed(2) }}
+                      {{ item.refunded_quantity }}× {{ item.name }} Out of Stock · Refunded -${{ Number(item.refunded_amount || 0).toFixed(2) }}
                     </span>
                   </div>
 
-                  <!-- Order Card Body -->
-                  <div class="p-4 sm:p-5 space-y-4">
-                    <div class="text-xs text-[#6e6e73] leading-relaxed">
-                      {{ order.summary }}
-                    </div>
-
-                    <!-- Per-Item Refund Pills if any item was refunded -->
-                    <div
-                      v-if="refundedItemsForOrder(order).length"
-                      class="flex flex-wrap items-center gap-1.5"
+                  <!-- Product Thumbnails Strip -->
+                  <div v-if="order.items && order.items.length" class="flex items-center gap-2 overflow-x-auto no-scrollbar">
+                    <div 
+                      v-for="item in order.items.slice(0, 6)" 
+                      :key="item.id"
+                      class="flex items-center gap-2 pr-2.5 rounded-lg bg-[#faf7f2] border border-[#ece5d8] shrink-0"
+                      :title="item.name"
                     >
-                      <span
-                        v-for="item in refundedItemsForOrder(order)"
-                        :key="'ref-' + item.id"
-                        class="inline-flex items-center px-2.5 py-1 rounded-md text-[10.5px] font-semibold bg-rose-50 text-rose-800 border border-rose-200"
-                      >
-                        {{ item.refunded_quantity }}× {{ item.name }} Out of Stock · Refunded -${{ Number(item.refunded_amount || 0).toFixed(2) }}
-                      </span>
-                    </div>
-
-                    <!-- Product Thumbnails Strip -->
-                    <div v-if="order.items && order.items.length" class="flex items-center gap-2 overflow-x-auto no-scrollbar">
-                      <div 
-                        v-for="item in order.items.slice(0, 6)" 
-                        :key="item.id"
-                        class="flex items-center gap-2 pr-2.5 rounded-lg bg-[#faf7f2] border border-[#ece5d8] shrink-0"
-                        :title="item.name"
-                      >
-                        <div class="w-10 h-10 rounded-l-lg bg-[#f3efe7] overflow-hidden shrink-0">
-                          <img :src="item.image || '/images/products/atta.jpg'" :alt="item.name" class="w-full h-full object-cover" :class="isOrderItemFullyRefunded(item) ? 'opacity-40 grayscale' : ''" />
-                        </div>
-                        <div class="py-1 max-w-[120px]">
-                          <div class="text-[11px] font-semibold text-[#1d1d1f] truncate">{{ item.name }}</div>
-                          <div class="text-[10px] text-[#6e6e73]">Qty {{ item.quantity }} · ${{ Number(item.price || 0).toFixed(2) }}</div>
-                        </div>
+                      <div class="w-10 h-10 rounded-l-lg bg-[#f3efe7] overflow-hidden shrink-0">
+                        <img :src="item.image || '/images/products/atta.jpg'" :alt="item.name" class="w-full h-full object-cover" :class="isOrderItemFullyRefunded(item) ? 'opacity-40 grayscale' : ''" />
+                      </div>
+                      <div class="py-1 max-w-[120px]">
+                        <div class="text-[11px] font-semibold text-[#1d1d1f] truncate">{{ item.name }}</div>
+                        <div class="text-[10px] text-[#6e6e73]">Qty {{ item.quantity }} · ${{ Number(item.price || 0).toFixed(2) }}</div>
                       </div>
                     </div>
-
-                    <!-- Actions Row: Track Live & Reorder Button -->
-                    <div class="pt-1 flex items-center gap-2.5">
-                      <Link 
-                        :href="'/orders/' + encodeURIComponent(order.id)"
-                        class="flex-1 h-10 bg-[#f4efe6] hover:bg-[#ebe2d3] text-[#1d1d1f] border border-[#dfd6c8] font-semibold text-xs rounded-lg transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
-                      >
-                        <Sparkles class="w-3.5 h-3.5 text-[#8a6b32]" />
-                        <span>Track Live</span>
-                      </Link>
-                      <button 
-                        @click="handleReorderOrder(order)"
-                        class="flex-1 h-10 bg-[#1a1a1a] hover:bg-black text-white font-semibold text-xs rounded-lg transition-colors flex items-center justify-center gap-2 cursor-pointer shadow-xs"
-                      >
-                        <RotateCcw class="w-3.5 h-3.5 stroke-[2.2]" />
-                        <span>Reorder ({{ order.itemCount }})</span>
-                      </button>
-                    </div>
                   </div>
-                </div>
 
-                <!-- Load More Button -->
-                <div v-if="hasMoreOrders" class="pt-1">
-                  <button
-                    type="button"
-                    :disabled="loadingMoreOrders"
-                    @click="loadMoreOrders"
-                    class="w-full h-11 rounded-xl border border-[#dfd6c8] bg-white hover:bg-[#f4efe6] disabled:opacity-60 text-[#1d1d1f] font-semibold text-xs transition-colors flex items-center justify-center gap-2 cursor-pointer shadow-2xs"
-                  >
-                    <RefreshCw class="w-3.5 h-3.5" :class="{ 'animate-spin': loadingMoreOrders }" />
-                    <span>{{ loadingMoreOrders ? 'Loading more orders...' : 'Load More Orders' }}</span>
-                  </button>
+                  <!-- Actions Row: Track Live & Reorder Button -->
+                  <div class="pt-1 flex items-center gap-2.5">
+                    <Link 
+                      :href="'/orders/' + encodeURIComponent(order.id)"
+                      class="flex-1 h-10 bg-[#f4efe6] hover:bg-[#ebe2d3] text-[#1d1d1f] border border-[#dfd6c8] font-semibold text-xs rounded-lg transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
+                    >
+                      <Sparkles class="w-3.5 h-3.5 text-[#8a6b32]" />
+                      <span>Track Live</span>
+                    </Link>
+                    <button 
+                      @click="handleReorderOrder(order)"
+                      class="flex-1 h-10 bg-[#1a1a1a] hover:bg-black text-white font-semibold text-xs rounded-lg transition-colors flex items-center justify-center gap-2 cursor-pointer shadow-xs"
+                    >
+                      <RotateCcw class="w-3.5 h-3.5 stroke-[2.2]" />
+                      <span>Reorder ({{ order.itemCount }})</span>
+                    </button>
+                  </div>
                 </div>
               </div>
 
-              <!-- Empty Past Orders State -->
-              <div v-else class="p-8 rounded-xl border border-[#dfd6c8] bg-white text-center space-y-3 shadow-2xs">
-                <div class="w-12 h-12 rounded-xl bg-[#f4efe6] border border-[#dfd6c8] flex items-center justify-center mx-auto text-[#8a6b32]">
-                  <ShoppingBag class="w-5 h-5" />
-                </div>
-                <div class="text-base font-serif font-medium text-[#1d1d1f]">No past orders yet</div>
-                <p class="text-xs text-[#6e6e73] max-w-sm mx-auto leading-relaxed">
-                  When you complete pickup orders, your receipts, live order tracking, and 1-click reorder buttons will appear here.
-                </p>
-                <div class="pt-1">
-                  <Link href="/" class="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-[#1a1a1a] hover:bg-black text-white text-xs font-semibold transition-colors">
-                    <span>Start Shopping</span>
-                    <ChevronRight class="w-3.5 h-3.5" />
-                  </Link>
-                </div>
+              <!-- Load More Button -->
+              <div v-if="hasMoreOrders" class="pt-1">
+                <button
+                  type="button"
+                  :disabled="loadingMoreOrders"
+                  @click="loadMoreOrders"
+                  class="w-full h-11 rounded-xl border border-[#dfd6c8] bg-white hover:bg-[#f4efe6] disabled:opacity-60 text-[#1d1d1f] font-semibold text-xs transition-colors flex items-center justify-center gap-2 cursor-pointer shadow-2xs"
+                >
+                  <RefreshCw class="w-3.5 h-3.5" :class="{ 'animate-spin': loadingMoreOrders }" />
+                  <span>{{ loadingMoreOrders ? 'Loading more orders...' : 'Load More Orders' }}</span>
+                </button>
               </div>
             </div>
 
-            <!-- SECTION A3: Quick Pantry Restock Strip -->
-            <div v-if="buyAgainItems.length > 0" class="rounded-xl border border-[#dfd6c8] bg-white p-4 sm:p-5 space-y-3.5 shadow-2xs">
-              <div class="flex items-center justify-between">
-                <div>
-                  <h3 class="text-sm font-bold text-[#1d1d1f]">Your Frequent Staples</h3>
-                  <p class="text-[11px] text-[#6e6e73]">Quickly add your regular items or view your full pantry</p>
-                </div>
-                <Link
-                  href="/reorder"
-                  class="text-xs font-semibold text-[#8a6b32] hover:text-[#1d1d1f] inline-flex items-center gap-1"
-                >
-                  <span>Open Buy It Again</span>
-                  <ArrowUpRight class="w-3.5 h-3.5" />
-                </Link>
+            <!-- Empty Past Orders State -->
+            <div v-else class="p-8 rounded-xl border border-[#dfd6c8] bg-white text-center space-y-3 shadow-2xs">
+              <div class="w-12 h-12 rounded-xl bg-[#f4efe6] border border-[#dfd6c8] flex items-center justify-center mx-auto text-[#8a6b32]">
+                <ShoppingBag class="w-5 h-5" />
               </div>
-
-              <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                <div
-                  v-for="item in buyAgainItems.slice(0, 4)"
-                  :key="item.id"
-                  class="flex items-center justify-between gap-2.5 p-2.5 rounded-lg bg-[#faf7f2] border border-[#ece5d8]"
-                >
-                  <Link :href="itemDetailHref(item)" class="flex items-center gap-2.5 min-w-0">
-                    <img :src="item.image || '/images/products/atta.jpg'" :alt="item.name" class="w-11 h-11 rounded-md object-cover border border-[#dfd6c8] shrink-0" />
-                    <div class="min-w-0">
-                      <div class="text-xs font-bold text-[#1d1d1f] truncate">{{ item.name }}</div>
-                      <div class="text-[11px] text-[#6e6e73]">${{ Number(item.price || 0).toFixed(2) }} · Ordered {{ item.times_ordered }}×</div>
-                    </div>
-                  </Link>
-                  <button
-                    type="button"
-                    :disabled="isItemOutOfStock(item)"
-                    @click="handleAddSingleItem(item)"
-                    class="h-8 px-3 rounded-md bg-[#1a1a1a] hover:bg-black disabled:opacity-40 text-white text-xs font-semibold inline-flex items-center gap-1 shrink-0 cursor-pointer"
-                  >
-                    <Plus class="w-3 h-3" />
-                    <span>{{ getItemCartQty(item) > 0 ? `(${getItemCartQty(item)})` : 'Add' }}</span>
-                  </button>
-                </div>
+              <div class="text-base font-serif font-medium text-[#1d1d1f]">No past orders yet</div>
+              <p class="text-xs text-[#6e6e73] max-w-sm mx-auto leading-relaxed">
+                When you complete pickup orders, your receipts, live order tracking, and 1-click reorder buttons will appear here.
+              </p>
+              <div class="pt-1">
+                <Link href="/" class="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-[#1a1a1a] hover:bg-black text-white text-xs font-semibold transition-colors">
+                  <span>Start Shopping</span>
+                  <ChevronRight class="w-3.5 h-3.5" />
+                </Link>
               </div>
             </div>
 
