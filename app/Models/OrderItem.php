@@ -16,6 +16,7 @@ class OrderItem extends Model
     protected $fillable = [
         'order_id',
         'product_id',
+        'recipe_kit_id',
         'name',
         'size',
         'unit_price',
@@ -56,5 +57,13 @@ class OrderItem extends Model
     public function product(): BelongsTo
     {
         return $this->belongsTo(Product::class);
+    }
+
+    /**
+     * @return BelongsTo<RecipeKit, $this>
+     */
+    public function recipeKit(): BelongsTo
+    {
+        return $this->belongsTo(RecipeKit::class);
     }
 }

@@ -152,7 +152,7 @@ onMounted(() => {
           <div v-else class="bg-white rounded-lg border border-[#e0d9cc] divide-y divide-[#e0d9cc]/60 overflow-hidden shadow-xs">
             <div 
               v-for="item in store.cartItems" 
-              :key="item.id"
+              :key="item.type + ':' + item.id"
               class="p-4 sm:p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4 transition-colors"
               :class="item.isOutOfStock ? 'bg-rose-50/40' : (item.exceedsStock ? 'bg-amber-50/40' : '')"
             >
@@ -206,7 +206,7 @@ onMounted(() => {
                   class="w-24 sm:w-28 h-9 bg-[#ece7de] rounded-md flex items-center justify-between px-2.5 border border-[#e0d9cc]"
                 >
                   <button 
-                    @click="store.removeFromCart(item.id)" 
+                    @click="store.removeFromCart(item)" 
                     class="p-1 hover:text-[#1a1a1a] cursor-pointer flex items-center justify-center text-[#1d1d1f]"
                     aria-label="Decrease quantity"
                   >
@@ -238,7 +238,7 @@ onMounted(() => {
                 </div>
 
                 <button 
-                  @click="store.deleteItem(item.id)"
+                  @click="store.deleteItem(item)"
                   class="text-[#86868b] hover:text-red-600 p-1.5 transition-colors cursor-pointer"
                   aria-label="Remove item"
                 >

@@ -35,6 +35,7 @@ return new class extends Migration
             $table->id();
             $table->foreignId('order_id')->constrained()->cascadeOnDelete();
             $table->foreignId('product_id')->nullable()->constrained()->nullOnDelete();
+            $table->foreignId('recipe_kit_id')->nullable()->constrained('recipe_kits')->nullOnDelete();
             $table->string('name');
             $table->string('size')->nullable();
             $table->decimal('unit_price', 10, 2);

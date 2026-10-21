@@ -7,7 +7,9 @@ use App\Events\OrderStatusUpdated;
 use App\Http\Controllers\Admin\AdminOrderController;
 use App\Models\Admin;
 use App\Models\Order;
+use App\Models\OrderItem;
 use App\Models\Product;
+use App\Models\RecipeKit;
 use App\Models\StoreSetting;
 use App\Models\User;
 use App\Services\StripePayments;
@@ -332,5 +334,187 @@ class SevenBugFixesVerificationTest extends TestCase
 
         $this->assertCount(1, $slots);
         $this->assertSame('9:30 AM – 10:30 AM', $slots[0]['label']);
+    }
+
+    public function test_reordering_preserves_recipe_kit_id_after_kit_rename(): void
+    {
+        $user = User::factory()->create();
+
+        $ingredient = Product::create([
+            'slug' => 'paneer-cubes',
+            'name' => 'Paneer Cubes',
+            'price' => 5.00,
+            'stock' => 20,
+            'category' => 'dairy',
+            'category_title' => 'Dairy',
+            'image' => '/images/products/paneer.jpg',
+        ]);
+
+        // Unrelated kit that happens to have id = 1
+        $unrelatedKit = RecipeKit::create([
+            'slug' => 'unrelated-kit',
+            'name' => 'Unrelated Kit',
+            'price' => 12.00,
+            'is_active' => true,
+        ]);
+        $unrelatedKit->products()->attach($ingredient->id, ['quantity' => 1]);
+
+        $orderedKit = RecipeKit::create([
+            'slug' => 'paneer-butter-masala-kit',
+            'name' => 'Paneer Butter Masala Kit',
+            'price' => 18.00,
+            'is_active' => true,
+        ]);
+        $orderedKit->products()->attach($ingredient->id, ['quantity' => 1]);
+
+        StoreSetting::current()->update([
+            'is_pickup_active' => true,
+            'pickup_slot_start_time' => '00:00',
+            'pickup_slot_end_time' => '23:59',
+            'prep_time_minutes' => 5,
+            'busy_mode_extra_minutes' => 0,
+        ]);
+
+        $this->actingAs($user)
+            ->postJson('/checkout', [
+                'fulfillment_type' => 'Store Pickup',
+                'pickup_timing_mode' => 'asap',
+                'items' => [
+                    [
+                        'id' => "kit-{$orderedKit->id}",
+                        'type' => 'recipe-kit',
+                        'name' => $orderedKit->name,
+                        'price' => $orderedKit->price,
+                        'quantity' => 1,
+                    ],
+                ],
+            ])
+            ->assertCreated();
+
+        $orderItem = OrderItem::firstOrFail();
+        $this->assertSame($orderedKit->id, $orderItem->recipe_kit_id);
+
+        // Rename the ordered kit after order creation
+        $orderedKit->update([
+            'name' => 'Royal Paneer Makhani Kit',
+            'slug' => 'royal-paneer-makhani-kit',
+        ]);
+
+        $response = $this->actingAs($user)->get('/account');
+        $response->assertOk();
+
+        $dbOrders = $response->viewData('page')['props']['dbOrders'];
+        $this->assertNotEmpty($dbOrders);
+        $returnedItem = $dbOrders[0]['items'][0];
+
+        $this->assertSame("kit-{$orderedKit->id}", $returnedItem['id']);
+        $this->assertSame($orderedKit->id, $returnedItem['recipe_kit_id']);
+        $this->assertSame('royal-paneer-makhani-kit', $returnedItem['slug']);
+        $this->assertNotSame("kit-{$unrelatedKit->id}", $returnedItem['id']);
+    }
+
+    public function test_in_stock_search_excludes_kits_with_insufficient_ingredient_quantities(): void
+    {
+        $ingredient = Product::create([
+            'slug' => 'fresh-paneer',
+            'name' => 'Fresh Paneer',
+            'price' => 6.00,
+            'stock' => 1,
+            'category' => 'dairy',
+            'category_title' => 'Dairy',
+            'image' => '/images/products/paneer.jpg',
+        ]);
+
+        $unavailableKit = RecipeKit::create([
+            'slug' => 'double-paneer-feast',
+            'name' => 'Double Paneer Feast',
+            'price' => 15.00,
+            'is_active' => true,
+        ]);
+        $unavailableKit->products()->attach($ingredient->id, ['quantity' => 2]);
+
+        $availableKit = RecipeKit::create([
+            'slug' => 'single-paneer-delight',
+            'name' => 'Single Paneer Delight',
+            'price' => 10.00,
+            'is_active' => true,
+        ]);
+        $availableKit->products()->attach($ingredient->id, ['quantity' => 1]);
+
+        $response = $this->get('/search?in_stock=1&tab=kits');
+        $response->assertOk();
+
+        $kitsData = $response->viewData('page')['props']['recipeKits']['data'];
+        $kitSlugs = array_column($kitsData, 'slug');
+
+        $this->assertContains('single-paneer-delight', $kitSlugs);
+        $this->assertNotContains('double-paneer-feast', $kitSlugs);
+    }
+
+    public function test_invalid_pickup_settings_are_rejected_with_validation_errors(): void
+    {
+        $admin = Admin::where('email', 'admin@masalamart.com')->firstOrFail();
+
+        StoreSetting::current();
+
+        // 1. Arbitrary string like "banana" for start/end times
+        $this->actingAs($admin, 'admin')
+            ->from('/admin/pickup-settings')
+            ->put('/admin/pickup-settings', [
+                'is_pickup_active' => true,
+                'pickup_slot_start_time' => 'banana',
+                'pickup_slot_end_time' => '21:00',
+            ])
+            ->assertRedirect('/admin/pickup-settings')
+            ->assertSessionHasErrors(['pickup_slot_start_time']);
+
+        // 2. End time not after start time
+        $this->actingAs($admin, 'admin')
+            ->from('/admin/pickup-settings')
+            ->put('/admin/pickup-settings', [
+                'is_pickup_active' => true,
+                'pickup_slot_start_time' => '18:00',
+                'pickup_slot_end_time' => '09:00',
+            ])
+            ->assertRedirect('/admin/pickup-settings')
+            ->assertSessionHasErrors(['pickup_slot_end_time']);
+
+        // 3. Invalid slot label contents
+        $this->actingAs($admin, 'admin')
+            ->from('/admin/pickup-settings')
+            ->put('/admin/pickup-settings', [
+                'is_pickup_active' => true,
+                'pickup_slot_start_time' => '09:00',
+                'pickup_slot_end_time' => '21:00',
+                'pickup_slots' => [
+                    [
+                        'id' => 'bad-slot',
+                        'startHour' => 9,
+                        'label' => 'banana',
+                        'active' => true,
+                    ],
+                ],
+            ])
+            ->assertRedirect('/admin/pickup-settings')
+            ->assertSessionHasErrors(['pickup_slots.0.label']);
+
+        // 4. Valid settings succeed
+        $this->actingAs($admin, 'admin')
+            ->from('/admin/pickup-settings')
+            ->put('/admin/pickup-settings', [
+                'is_pickup_active' => true,
+                'pickup_slot_start_time' => '09:30',
+                'pickup_slot_end_time' => '20:30',
+                'pickup_slots' => [
+                    [
+                        'id' => '09-10',
+                        'startHour' => 9,
+                        'label' => '9:30 AM – 10:30 AM',
+                        'active' => true,
+                    ],
+                ],
+            ])
+            ->assertRedirect('/admin/pickup-settings')
+            ->assertSessionHasNoErrors();
     }
 }

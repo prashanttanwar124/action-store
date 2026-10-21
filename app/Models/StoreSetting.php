@@ -163,6 +163,112 @@ class StoreSetting extends Model
     }
 
     /**
+     * Validate a 24h time string (HH:MM) and return total minutes since midnight, or null if invalid.
+     */
+    public static function parseTimeStringMinutes(?string $time): ?int
+    {
+        if ($time === null || ! preg_match('/^(?:[01]\d|2[0-3]):[0-5]\d$/', trim($time))) {
+            return null;
+        }
+
+        [$hours, $minutes] = explode(':', trim($time), 2);
+
+        return ((int) $hours) * 60 + (int) $minutes;
+    }
+
+    /**
+     * Parse a pickup slot range label (e.g. "9:30 AM – 10:30 AM") into [startMinutes, endMinutes], or null if invalid.
+     *
+     * @return ?array{0: int, 1: int}
+     */
+    public static function parseSlotLabelMinutes(?string $label): ?array
+    {
+        if ($label === null || ! preg_match('/^(\d{1,2}):(\d{2})\s*(AM|PM)\s*[\x{2014}\x{2013}–-]\s*(\d{1,2}):(\d{2})\s*(AM|PM)$/iu', trim($label), $m)) {
+            return null;
+        }
+
+        $startH = (int) $m[1];
+        $startM = (int) $m[2];
+        $endH = (int) $m[4];
+        $endM = (int) $m[5];
+
+        if ($startH < 1 || $startH > 12 || $startM < 0 || $startM > 59 || $endH < 1 || $endH > 12 || $endM < 0 || $endM > 59) {
+            return null;
+        }
+
+        $startMinutes = (($startH % 12) + (strtoupper($m[3]) === 'PM' ? 12 : 0)) * 60 + $startM;
+        $endMinutes = (($endH % 12) + (strtoupper($m[6]) === 'PM' ? 12 : 0)) * 60 + $endM;
+
+        if ($endMinutes <= $startMinutes) {
+            return null;
+        }
+
+        return [$startMinutes, $endMinutes];
+    }
+
+    /**
+     * Shared validation rules for pickup time settings and slots.
+     *
+     * @return array<string, mixed>
+     */
+    public static function pickupValidationRules(?self $current = null): array
+    {
+        $current ??= static::current();
+
+        return [
+            'is_pickup_active' => ['boolean'],
+            'prep_time_minutes' => ['nullable', 'integer', 'min:5', 'max:240'],
+            'busy_mode_extra_minutes' => ['nullable', 'integer', 'min:0', 'max:180'],
+            'busy_mode_reason' => ['nullable', 'string', 'max:100'],
+            'pickup_time' => ['nullable', 'string', 'max:100'],
+            'pickup_slot_window_label' => ['nullable', 'string', 'max:100'],
+            'pickup_slot_start_time' => ['nullable', 'string', 'date_format:H:i'],
+            'pickup_slot_end_time' => [
+                'nullable',
+                'string',
+                'date_format:H:i',
+                function (string $attribute, mixed $value, \Closure $fail) use ($current) {
+                    $requestStart = request()->input('pickup_slot_start_time');
+                    $effectiveStart = ($requestStart !== null && $requestStart !== '')
+                        ? (string) $requestStart
+                        : ($current->pickup_slot_start_time ?? '09:00');
+                    $effectiveEnd = ($value !== null && $value !== '')
+                        ? (string) $value
+                        : ($current->pickup_slot_end_time ?? '21:00');
+
+                    $startMinutes = static::parseTimeStringMinutes($effectiveStart);
+                    $endMinutes = static::parseTimeStringMinutes($effectiveEnd);
+
+                    if ($startMinutes !== null && $endMinutes !== null && $endMinutes <= $startMinutes) {
+                        $fail('The pickup closing time must be after the opening time.');
+                    }
+                },
+            ],
+            'pickup_slot_duration_minutes' => ['nullable', 'integer', 'min:15', 'max:240'],
+            'max_orders_per_slot' => ['nullable', 'integer', 'min:1', 'max:500'],
+            'min_order_amount' => ['nullable', 'numeric', 'min:0'],
+            'pickup_days' => ['nullable', 'array'],
+            'pickup_days.*' => ['string', 'in:monday,tuesday,wednesday,thursday,friday,saturday,sunday'],
+            'pickup_slots' => ['nullable', 'array'],
+            'pickup_slots.*' => ['required', 'array'],
+            'pickup_slots.*.id' => ['nullable', 'string', 'max:50'],
+            'pickup_slots.*.startHour' => ['nullable', 'integer', 'min:0', 'max:23'],
+            'pickup_slots.*.label' => [
+                'required',
+                'string',
+                'max:100',
+                function (string $attribute, mixed $value, \Closure $fail) {
+                    if (! is_string($value) || static::parseSlotLabelMinutes($value) === null) {
+                        $fail('Each pickup slot must have a valid time range (e.g., "9:00 AM – 10:00 AM") with an end time after the start time.');
+                    }
+                },
+            ],
+            'pickup_slots.*.active' => ['nullable', 'boolean'],
+            'curbside_instructions' => ['nullable', 'string', 'max:1000'],
+        ];
+    }
+
+    /**
      * Generate default slots based on hours and duration.
      *
      * @return array<int, array{id: string, startHour: int, label: string, active: bool}>

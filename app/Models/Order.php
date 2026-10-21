@@ -192,9 +192,8 @@ class Order extends Model
         $isLastSlot = ! empty($activeSlots) && (($activeSlots[count($activeSlots) - 1]['label'] ?? '') === $slotLabel);
 
         if (! $isLastSlot && ! empty($storeInfo->pickup_slot_end_time)) {
-            [$seh, $sem] = explode(':', $storeInfo->pickup_slot_end_time);
-            $storeEndMinutes = ((int) $seh) * 60 + (int) $sem;
-            if ($endMinutes === $storeEndMinutes) {
+            $storeEndMinutes = StoreSetting::parseTimeStringMinutes($storeInfo->pickup_slot_end_time);
+            if ($storeEndMinutes !== null && $endMinutes === $storeEndMinutes) {
                 $isLastSlot = true;
             }
         }

@@ -154,6 +154,14 @@ class AdminOrderController extends Controller
         $newStatus = $validated['status'];
 
         if ($newStatus === 'cancelled') {
+            $order->refresh();
+
+            if ($order->status === 'completed') {
+                throw ValidationException::withMessages([
+                    'status' => 'Completed orders cannot be cancelled or refunded.',
+                ]);
+            }
+
             $this->cancelOrder($order, $payments);
         } else {
             DB::transaction(function () use ($order, $newStatus) {
@@ -411,9 +419,7 @@ class AdminOrderController extends Controller
         $order->refresh();
 
         if ($order->status === 'completed') {
-            throw ValidationException::withMessages([
-                'status' => 'Completed orders cannot be cancelled or refunded.',
-            ]);
+            abort(422, 'Completed orders cannot be cancelled.');
         }
 
         if ($order->status === 'cancelled') {

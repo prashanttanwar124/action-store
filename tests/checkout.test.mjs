@@ -121,9 +121,76 @@ test('cart store preserves recipe-kit type and prevents numeric ID collision wit
   });
 
   assert.equal(store.cartItems.length, 1);
-  assert.equal(store.cartItems[0].id, 'butter-chicken-kit');
+  assert.equal(store.cartItems[0].id, 'kit-butter-chicken-kit');
   assert.equal(store.cartItems[0].type, 'recipe-kit');
   assert.equal(store.cartItems[0].name, 'Butter Chicken Kit');
   assert.equal(store.subtotal, 24.99);
 });
+
+test('decrementing or deleting a recipe kit never affects a product sharing the same slug', () => {
+  setActivePinia(createPinia());
+  const store = useStore();
+  store.setProducts([
+    { id: 10, slug: 'paneer-tikka', name: 'Paneer Tikka Cubes', price: 8.99, stock: 10, isRecipeKit: false },
+  ]);
+  store.setRecipeKits([
+    { id: 10, slug: 'paneer-tikka', name: 'Paneer Tikka Recipe Kit', price: 19.99, is_active: true, products: [] },
+  ]);
+
+  store.addToCart({ id: 10, slug: 'paneer-tikka', name: 'Paneer Tikka Cubes', price: 8.99, quantity: 2 });
+  store.addToCart({ id: 'kit-10', slug: 'paneer-tikka', type: 'recipe-kit', isRecipeKit: true, name: 'Paneer Tikka Recipe Kit', price: 19.99, quantity: 2 });
+
+  assert.equal(store.cartItems.length, 2);
+
+  const kitEntry = store.cartItems.find(i => i.type === 'recipe-kit');
+  const productEntry = store.cartItems.find(i => i.type === 'product');
+
+  // Decrementing the kit should only decrement the kit, leaving product quantity at 2
+  store.removeFromCart(kitEntry);
+  assert.equal(store.getQuantity(kitEntry), 1);
+  assert.equal(store.getQuantity(productEntry), 2);
+
+  // Deleting the kit should only delete the kit, leaving the product intact
+  store.deleteItem(kitEntry);
+  assert.equal(store.cartItems.length, 1);
+  assert.equal(store.cartItems[0].type, 'product');
+  assert.equal(store.cartItems[0].quantity, 2);
+});
+
+test('refreshed recipe kit contents replace stale cart ingredient lists for stock checks', () => {
+  setActivePinia(createPinia());
+  const store = useStore();
+
+  const initialIngredient = { id: 50, slug: 'malai-paneer', name: 'Malai Paneer', price: 5.99, stock: 1, pivot: { quantity: 1 } };
+  store.setProducts([initialIngredient]);
+  store.setRecipeKits([
+    { id: 7, slug: 'shahi-paneer-kit', name: 'Shahi Paneer Kit', price: 16.99, is_active: true, products: [initialIngredient] },
+  ]);
+
+  store.addToCart({
+    id: 'kit-7',
+    slug: 'shahi-paneer-kit',
+    type: 'recipe-kit',
+    isRecipeKit: true,
+    name: 'Shahi Paneer Kit',
+    price: 16.99,
+    quantity: 1,
+    products: [initialIngredient],
+  });
+
+  assert.equal(store.hasStockIssues, false);
+  assert.equal(store.cartItems[0].availableStock, 1);
+
+  // Refresh catalog with increased ingredient requirement (2 needed, only 1 in stock)
+  const updatedIngredient = { id: 50, slug: 'malai-paneer', name: 'Malai Paneer', price: 5.99, stock: 1, pivot: { quantity: 2 } };
+  store.setRecipeKits([
+    { id: 7, slug: 'shahi-paneer-kit', name: 'Shahi Paneer Kit', price: 16.99, is_active: true, products: [updatedIngredient] },
+  ]);
+
+  assert.equal(store.getAvailableStock({ id: 'kit-7', slug: 'shahi-paneer-kit', type: 'recipe-kit', isRecipeKit: true }), 0);
+  assert.equal(store.cartItems[0].availableStock, 0);
+  assert.equal(store.cartItems[0].isOutOfStock, true);
+  assert.equal(store.hasStockIssues, true);
+});
+
 

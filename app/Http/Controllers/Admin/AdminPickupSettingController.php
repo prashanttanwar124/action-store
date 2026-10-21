@@ -28,25 +28,9 @@ class AdminPickupSettingController extends Controller
      */
     public function update(Request $request): RedirectResponse
     {
-        $validated = $request->validate([
-            'is_pickup_active' => ['boolean'],
-            'prep_time_minutes' => ['nullable', 'integer', 'min:5', 'max:240'],
-            'busy_mode_extra_minutes' => ['nullable', 'integer', 'min:0', 'max:180'],
-            'busy_mode_reason' => ['nullable', 'string', 'max:100'],
-            'pickup_time' => ['nullable', 'string', 'max:100'],
-            'pickup_slot_window_label' => ['nullable', 'string', 'max:100'],
-            'pickup_slot_start_time' => ['nullable', 'string', 'max:10'],
-            'pickup_slot_end_time' => ['nullable', 'string', 'max:10'],
-            'pickup_slot_duration_minutes' => ['nullable', 'integer', 'min:15', 'max:240'],
-            'max_orders_per_slot' => ['nullable', 'integer', 'min:1', 'max:500'],
-            'min_order_amount' => ['nullable', 'numeric', 'min:0'],
-            'pickup_days' => ['nullable', 'array'],
-            'pickup_days.*' => ['string', 'in:monday,tuesday,wednesday,thursday,friday,saturday,sunday'],
-            'pickup_slots' => ['nullable', 'array'],
-            'curbside_instructions' => ['nullable', 'string', 'max:1000'],
-        ]);
-
         $storeInfo = StoreSetting::current();
+        $validated = $request->validate(StoreSetting::pickupValidationRules($storeInfo));
+
         $storeInfo->fill($validated);
 
         if (empty($validated['pickup_time'])) {

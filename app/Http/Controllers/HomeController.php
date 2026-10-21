@@ -166,8 +166,12 @@ class HomeController extends Controller
 
         if ($inStock) {
             $recipeKitsQuery->whereDoesntHave('products', function ($q) {
-                $q->where('stock', '<=', 0)
-                    ->orWhere('stock_badge', 'like', '%out%');
+                $q->where(function ($sub) {
+                    $sub->whereNull('products.stock')
+                        ->orWhere('products.stock', '<=', 0)
+                        ->orWhereColumn('products.stock', '<', 'recipe_kit_products.quantity')
+                        ->orWhere('products.stock_badge', 'like', '%out%');
+                });
             });
         }
 

@@ -296,6 +296,23 @@ export const useStore = defineStore('masalaStore', () => {
     if (ingredientProducts.length > 0) {
       setProducts(ingredientProducts);
     }
+
+    // Keep cart kit items' ingredient lists and active status in sync with refreshed catalog
+    cart.value.forEach(item => {
+      if (!isKitCartEntry(item)) return;
+      const prod = findCatalogProduct(item, true);
+      if (prod) {
+        if (Array.isArray(prod.kitProducts)) {
+          item.kitProducts = prod.kitProducts;
+          if (item.products !== undefined) {
+            item.products = prod.kitProducts;
+          }
+        }
+        if (prod.isActive !== undefined) {
+          item.isActive = prod.isActive;
+        }
+      }
+    });
   }
 
   // Resolve ID whether passed as number, string slug, or object
@@ -347,16 +364,70 @@ export const useStore = defineStore('masalaStore', () => {
     ) || null;
   }
 
+  function isKitCartEntry(entry) {
+    return Boolean(
+      entry?.type === 'recipe-kit' ||
+      entry?.isRecipeKit ||
+      (typeof entry?.id === 'string' && entry.id.startsWith('kit-'))
+    );
+  }
+
+  function resolveTargetIsKit(input, explicitType = null) {
+    if (explicitType === 'recipe-kit') return true;
+    if (explicitType === 'product') return false;
+    if (typeof input === 'object' && input !== null) {
+      return isKitCartEntry(input);
+    }
+    return typeof input === 'string' && input.startsWith('kit-');
+  }
+
+  function stripKitPrefix(val) {
+    return typeof val === 'string' && val.startsWith('kit-') ? val.slice(4) : val;
+  }
+
+  function matchesCartEntry(entry, input, explicitType = null) {
+    const entryIsKit = isKitCartEntry(entry);
+    const targetIsKit = resolveTargetIsKit(input, explicitType);
+    if (entryIsKit !== targetIsKit) {
+      return false;
+    }
+
+    const obj = (typeof input === 'object' && input !== null) ? input : null;
+    const rawId = obj ? (obj.id ?? obj.slug) : input;
+    const rawSlug = obj?.slug ?? null;
+
+    if (entryIsKit) {
+      const targetKey = String(stripKitPrefix(rawId ?? rawSlug ?? ''));
+      const entryKey = String(stripKitPrefix(entry.id ?? ''));
+      const entrySlug = entry.slug ? String(stripKitPrefix(entry.slug)) : null;
+
+      if (String(entry.id) === String(rawId)) return true;
+      if (targetKey && (entryKey === targetKey || entrySlug === targetKey)) return true;
+      if (rawSlug && (entrySlug === String(rawSlug) || entryKey === String(rawSlug))) return true;
+
+      const prod = findCatalogProduct(input, true);
+      if (prod) {
+        if (entryKey === String(prod.id) || entryKey === String(prod.slug) || entrySlug === String(prod.slug)) {
+          return true;
+        }
+      }
+      return false;
+    }
+
+    const resolvedId = resolveProductId(input);
+    return (
+      entry.id === resolvedId ||
+      entry.id === rawId ||
+      (rawSlug && entry.slug === rawSlug) ||
+      entry.slug === rawId
+    );
+  }
+
   // Get available stock for a product or recipe kit
   function getAvailableStock(itemOrId) {
     if (itemOrId === null || itemOrId === undefined) return Infinity;
     const obj = (typeof itemOrId === 'object' && itemOrId !== null) ? itemOrId : null;
-    const rawId = obj ? (obj.id ?? obj.slug) : itemOrId;
-    const isKit = Boolean(
-      obj?.type === 'recipe-kit' ||
-      obj?.isRecipeKit ||
-      (typeof rawId === 'string' && rawId.startsWith('kit-'))
-    );
+    const isKit = resolveTargetIsKit(itemOrId);
 
     const prod = findCatalogProduct(itemOrId, isKit);
 
@@ -364,7 +435,9 @@ export const useStore = defineStore('masalaStore', () => {
       if (prod?.isActive === false || obj?.is_active === false || obj?.isActive === false) {
         return 0;
       }
-      const kitProducts = obj?.products || obj?.kitProducts || prod?.kitProducts || [];
+      const kitProducts = (Array.isArray(prod?.kitProducts) && prod.kitProducts.length > 0)
+        ? prod.kitProducts
+        : (obj?.products || obj?.kitProducts || []);
       if (Array.isArray(kitProducts) && kitProducts.length > 0) {
         let maxKits = Infinity;
         for (const ing of kitProducts) {
@@ -436,7 +509,9 @@ export const useStore = defineStore('masalaStore', () => {
 
       let outOfStockIngredients = [];
       if (isKit) {
-        const kitProducts = item.kitProducts || prod?.kitProducts || [];
+        const kitProducts = (Array.isArray(prod?.kitProducts) && prod.kitProducts.length > 0)
+          ? prod.kitProducts
+          : (item.products || item.kitProducts || []);
         outOfStockIngredients = kitProducts
           .filter(ing => {
             const needed = (Number(ing.pivot?.quantity || 1)) * item.quantity;
@@ -538,27 +613,20 @@ export const useStore = defineStore('masalaStore', () => {
   const amountToFreeDelivery = computed(() => 0.0);
   const freeDeliveryProgressPercent = computed(() => 100);
 
-  function getQuantity(productId) {
-    const obj = (typeof productId === 'object' && productId !== null) ? productId : null;
-    const isKit = Boolean(
-      obj?.type === 'recipe-kit' ||
-      obj?.isRecipeKit ||
-      (typeof productId === 'string' && productId.startsWith('kit-'))
-    );
-    const id = isKit ? (obj ? (obj.slug || obj.id) : productId) : resolveProductId(productId);
-    const item = cart.value.find(i => i.id === id || (obj?.slug && i.slug === obj.slug));
+  function getQuantity(productId, type = null) {
+    const item = cart.value.find(i => matchesCartEntry(i, productId, type));
     return item ? item.quantity : 0;
   }
 
-  function getItemQuantity(productId) {
-    return getQuantity(productId);
+  function getItemQuantity(productId, type = null) {
+    return getQuantity(productId, type);
   }
 
   function addToCart(itemOrId, count = 1) {
     let id = itemOrId;
     let qty = count;
     const itemObj = (typeof itemOrId === 'object' && itemOrId !== null) ? itemOrId : null;
-    const isKit = itemObj?.type === 'recipe-kit' || Boolean(itemObj?.isRecipeKit) || (typeof id === 'string' && id.startsWith('kit-'));
+    const isKit = resolveTargetIsKit(itemOrId);
     const itemType = isKit ? 'recipe-kit' : 'product';
 
     if (itemObj) {
@@ -566,20 +634,21 @@ export const useStore = defineStore('masalaStore', () => {
       if (itemObj.quantity) qty = itemObj.quantity;
     }
 
-    const resolvedId = isKit ? id : resolveProductId(id);
+    let resolvedId = isKit ? id : resolveProductId(id);
+    if (isKit) {
+      const rawIdStr = String(resolvedId ?? '');
+      resolvedId = rawIdStr.startsWith('kit-') ? rawIdStr : `kit-${rawIdStr}`;
+    }
     const prod = findCatalogProduct(itemObj || resolvedId, isKit);
     const itemName = itemObj?.name || prod?.name || 'This item';
 
-    const availableStock = getAvailableStock(itemObj || resolvedId);
+    const availableStock = getAvailableStock(itemObj || (isKit ? { id: resolvedId, type: 'recipe-kit', isRecipeKit: true } : resolvedId));
     if (availableStock <= 0) {
       showStockToast('Out of Stock', `${itemName} is currently out of stock and cannot be added to your cart.`, 'error');
       return false;
     }
 
-    const existing = cart.value.find(i =>
-      (i.id === resolvedId || (isKit && prod && (i.id === prod.slug || i.id === prod.id || i.id === `kit-${prod.id}`))) &&
-      ((i.type || (i.isRecipeKit ? 'recipe-kit' : 'product')) === itemType)
-    );
+    const existing = cart.value.find(i => matchesCartEntry(i, itemObj || resolvedId, itemType));
 
     const currentQty = existing ? existing.quantity : 0;
     if (availableStock !== Infinity && (currentQty + qty) > availableStock) {
@@ -592,11 +661,20 @@ export const useStore = defineStore('masalaStore', () => {
       showStockToast('Stock Limit Applied', `Only ${availableStock} of ${itemName} available in stock. Added ${allowedToAdd}.`, 'warning');
     }
 
+    const resolvedKitProducts = isKit
+      ? ((Array.isArray(prod?.kitProducts) && prod.kitProducts.length > 0)
+          ? prod.kitProducts
+          : (itemObj?.products || itemObj?.kitProducts || []))
+      : undefined;
+
     if (existing) {
       existing.quantity += qty;
       if (itemObj?.stock !== undefined) existing.stock = Number(itemObj.stock);
       if (itemObj?.stock_badge !== undefined || itemObj?.stockBadge !== undefined) {
         existing.stockBadge = itemObj.stock_badge ?? itemObj.stockBadge;
+      }
+      if (isKit && Array.isArray(resolvedKitProducts) && resolvedKitProducts.length > 0) {
+        existing.kitProducts = resolvedKitProducts;
       }
     } else {
       cart.value.push({
@@ -611,7 +689,7 @@ export const useStore = defineStore('masalaStore', () => {
         size: itemObj?.size || itemObj?.weight || prod?.sizeMain || '',
         stock: (itemObj?.stock !== undefined && itemObj?.stock !== null) ? Number(itemObj.stock) : (prod?.stock ?? null),
         stockBadge: itemObj?.stock_badge ?? itemObj?.stockBadge ?? prod?.stockBadge ?? null,
-        kitProducts: isKit ? (itemObj?.products || itemObj?.kitProducts || prod?.kitProducts || []) : undefined,
+        kitProducts: resolvedKitProducts,
         quantity: qty,
       });
     }
@@ -623,9 +701,8 @@ export const useStore = defineStore('masalaStore', () => {
     return addToCart(impulseId, 1);
   }
 
-  function removeFromCart(productId) {
-    const id = resolveProductId(productId);
-    const index = cart.value.findIndex(i => i.id === id || i.id === productId || i.slug === productId);
+  function removeFromCart(productId, type = null) {
+    const index = cart.value.findIndex(i => matchesCartEntry(i, productId, type));
     if (index !== -1) {
       if (cart.value[index].quantity > 1) {
         cart.value[index].quantity -= 1;
@@ -635,9 +712,8 @@ export const useStore = defineStore('masalaStore', () => {
     }
   }
 
-  function deleteItem(productId) {
-    const id = resolveProductId(productId);
-    cart.value = cart.value.filter(i => i.id !== id && i.id !== productId && i.slug !== productId);
+  function deleteItem(productId, type = null) {
+    cart.value = cart.value.filter(i => !matchesCartEntry(i, productId, type));
   }
 
   function clearCart() {

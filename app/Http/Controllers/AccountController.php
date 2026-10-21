@@ -10,7 +10,7 @@ use Inertia\Response;
 
 class AccountController extends Controller
 {
-    private const ORDERS_PER_PAGE = 10;
+    private const ORDERS_PER_PAGE = 2;
 
     /**
      * Display the customer account dashboard.
@@ -58,13 +58,28 @@ class AccountController extends Controller
 
         $orders = $paginator->getCollection();
 
-        $kitNames = $orders
+        $kitItems = $orders
             ->flatMap(fn (Order $order) => $order->items)
-            ->filter(fn ($item) => empty($item->product_id))
+            ->filter(fn ($item) => ! empty($item->recipe_kit_id) || empty($item->product_id));
+
+        $kitIds = $kitItems
+            ->pluck('recipe_kit_id')
+            ->filter()
+            ->unique()
+            ->values();
+
+        $kitNames = $kitItems
+            ->filter(fn ($item) => empty($item->recipe_kit_id))
             ->pluck('name')
             ->filter()
             ->unique()
             ->values();
+
+        $recipeKitsById = $kitIds->isEmpty()
+            ? collect()
+            : RecipeKit::whereIn('id', $kitIds)
+                ->get(['id', 'name', 'slug'])
+                ->keyBy('id');
 
         $recipeKitsByName = $kitNames->isEmpty()
             ? collect()
@@ -82,17 +97,25 @@ class AccountController extends Controller
                 'refunded_total' => (float) ($order->refunded_total ?? 0),
                 'itemCount' => $order->items->sum('quantity'),
                 'summary' => $order->items->pluck('name')->join(', '),
-                'items' => $order->items->map(function ($item) use ($recipeKitsByName) {
-                    $isKit = empty($item->product_id);
-                    $kit = $isKit ? $recipeKitsByName->get($item->name) : null;
+                'items' => $order->items->map(function ($item) use ($recipeKitsById, $recipeKitsByName) {
+                    $isKit = ! empty($item->recipe_kit_id) || empty($item->product_id);
+                    $kit = null;
+                    if ($isKit) {
+                        if (! empty($item->recipe_kit_id)) {
+                            $kit = $recipeKitsById->get((int) $item->recipe_kit_id);
+                        } else {
+                            $kit = $recipeKitsByName->get($item->name);
+                        }
+                    }
 
-                    $kitId = $kit?->id ?? $item->id;
+                    $resolvedKitId = $kit?->id ?? $item->recipe_kit_id ?? $item->id;
                     $id = $isKit
-                        ? "kit-{$kitId}"
+                        ? "kit-{$resolvedKitId}"
                         : ($item->product_id ?? $item->id);
 
                     return [
                         'id' => $id,
+                        'recipe_kit_id' => ($kit?->id ?? $item->recipe_kit_id) ? (int) ($kit?->id ?? $item->recipe_kit_id) : null,
                         'slug' => $kit?->slug ?? null,
                         'type' => $isKit ? 'recipe-kit' : 'product',
                         'isRecipeKit' => $isKit,

@@ -739,8 +739,10 @@ class OrderController extends Controller
         if ($timingMode === 'asap') {
             $tz = config('app.timezone');
             $now = now($tz);
-            $start = $storeInfo->pickup_slot_start_time ?? '09:00';
-            $end = $storeInfo->pickup_slot_end_time ?? '21:00';
+            $rawStart = $storeInfo->pickup_slot_start_time ?? '09:00';
+            $rawEnd = $storeInfo->pickup_slot_end_time ?? '21:00';
+            $start = StoreSetting::parseTimeStringMinutes($rawStart) !== null ? $rawStart : '09:00';
+            $end = StoreSetting::parseTimeStringMinutes($rawEnd) !== null ? $rawEnd : '21:00';
             $prepMinutes = (int) ($storeInfo->effective_prep_time_minutes ?? 15);
             $startAt = $now->copy()->setTimeFromTimeString($start.':00');
             $endAt = $now->copy()->setTimeFromTimeString($end.':00');
@@ -815,8 +817,10 @@ class OrderController extends Controller
             }
 
             $pickupAt = $now->copy()->setDateFrom($date)->setTimeFromTimeString($time.':00');
-            $start = $storeInfo->pickup_slot_start_time ?? '09:00';
-            $end = $storeInfo->pickup_slot_end_time ?? '21:00';
+            $rawStart = $storeInfo->pickup_slot_start_time ?? '09:00';
+            $rawEnd = $storeInfo->pickup_slot_end_time ?? '21:00';
+            $start = StoreSetting::parseTimeStringMinutes($rawStart) !== null ? $rawStart : '09:00';
+            $end = StoreSetting::parseTimeStringMinutes($rawEnd) !== null ? $rawEnd : '21:00';
             if ($time < $start || $time > $end || $pickupAt->lt($now->copy()->addMinutes($storeInfo->effective_prep_time_minutes))) {
                 throw ValidationException::withMessages([
                     'pickup_time' => 'Choose a future pickup time within store hours, allowing time for preparation.',
