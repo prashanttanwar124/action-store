@@ -10,6 +10,7 @@ use App\Models\RecipeKit;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
@@ -120,6 +121,7 @@ class AdminRecipeKitController extends Controller
     {
         $availableProducts = Product::select('id', 'name', 'price', 'image', 'size_main', 'category')
             ->orderBy('name')
+            ->limit(25)
             ->get();
 
         return Inertia::render('Admin/RecipeKits/Create', [
@@ -137,6 +139,10 @@ class AdminRecipeKitController extends Controller
         $slug = ! empty($validated['slug'])
             ? Str::slug($validated['slug'])
             : Str::slug($validated['name']);
+
+        if (empty($slug)) {
+            $slug = 'recipe-kit';
+        }
 
         $originalSlug = $slug;
         $existingSlugs = RecipeKit::where('slug', $slug)
@@ -179,26 +185,33 @@ class AdminRecipeKitController extends Controller
         $linkedProducts = $validated['products'] ?? [];
         unset($validated['image_files'], $validated['image_urls'], $validated['products']);
 
-        $kit = RecipeKit::create($validated);
+        $syncedCount = 0;
 
-        // Sync linked products for Group Buy
-        if (! empty($linkedProducts)) {
-            $syncData = [];
-            foreach ($linkedProducts as $idx => $item) {
-                if (! empty($item['product_id'])) {
-                    $syncData[$item['product_id']] = [
-                        'quantity' => (int) ($item['quantity'] ?? 1),
-                        'unit_notes' => $item['unit_notes'] ?? null,
-                        'is_optional' => ! empty($item['is_optional']),
-                        'sort_order' => $idx,
-                    ];
+        $kit = DB::transaction(function () use ($validated, $linkedProducts, &$syncedCount) {
+            $kit = RecipeKit::create($validated);
+
+            // Sync linked products for Group Buy
+            if (! empty($linkedProducts)) {
+                $syncData = [];
+                foreach ($linkedProducts as $idx => $item) {
+                    if (! empty($item['product_id'])) {
+                        $syncData[$item['product_id']] = [
+                            'quantity' => (int) ($item['quantity'] ?? 1),
+                            'unit_notes' => $item['unit_notes'] ?? null,
+                            'is_optional' => ! empty($item['is_optional']),
+                            'sort_order' => $idx,
+                        ];
+                    }
                 }
+                $kit->products()->sync($syncData);
+                $syncedCount = count($syncData);
             }
-            $kit->products()->sync($syncData);
-        }
+
+            return $kit;
+        });
 
         return redirect()->route('admin.recipe-kits.index')
-            ->with('success', "Recipe kit '{$kit->name}' created successfully with ".count($kit->products).' linked group buy ingredients.');
+            ->with('success', "Recipe kit '{$kit->name}' created successfully with {$syncedCount} linked group buy ingredients.");
     }
 
     /**
@@ -210,6 +223,7 @@ class AdminRecipeKitController extends Controller
 
         $availableProducts = Product::select('id', 'name', 'price', 'image', 'size_main', 'category')
             ->orderBy('name')
+            ->limit(25)
             ->get();
 
         return Inertia::render('Admin/RecipeKits/Edit', [
@@ -249,11 +263,32 @@ class AdminRecipeKitController extends Controller
     {
         $validated = $request->validated();
 
-        if (empty($validated['slug'])) {
-            $validated['slug'] = Str::slug($validated['name']);
-        } else {
-            $validated['slug'] = Str::slug($validated['slug']);
+        $slug = ! empty($validated['slug'])
+            ? Str::slug($validated['slug'])
+            : Str::slug($validated['name']);
+
+        if (empty($slug)) {
+            $slug = 'recipe-kit';
         }
+
+        $originalSlug = $slug;
+        $existingSlugs = RecipeKit::where('id', '!=', $recipeKit->id)
+            ->where(function ($query) use ($originalSlug) {
+                $query->where('slug', $originalSlug)
+                    ->orWhere('slug', 'like', "{$originalSlug}-%");
+            })
+            ->pluck('slug')
+            ->flip()
+            ->all();
+
+        if (isset($existingSlugs[$slug])) {
+            $counter = 1;
+            while (isset($existingSlugs["{$originalSlug}-{$counter}"])) {
+                $counter++;
+            }
+            $slug = "{$originalSlug}-{$counter}";
+        }
+        $validated['slug'] = $slug;
 
         $existingImages = $validated['existing_images'] ?? [];
 
@@ -281,21 +316,23 @@ class AdminRecipeKitController extends Controller
         $linkedProducts = $validated['products'] ?? [];
         unset($validated['image_files'], $validated['existing_images'], $validated['image_urls'], $validated['products']);
 
-        $recipeKit->update($validated);
+        DB::transaction(function () use ($recipeKit, $validated, $linkedProducts) {
+            $recipeKit->update($validated);
 
-        // Sync linked products
-        $syncData = [];
-        foreach ($linkedProducts as $idx => $item) {
-            if (! empty($item['product_id'])) {
-                $syncData[$item['product_id']] = [
-                    'quantity' => (int) ($item['quantity'] ?? 1),
-                    'unit_notes' => $item['unit_notes'] ?? null,
-                    'is_optional' => ! empty($item['is_optional']),
-                    'sort_order' => $idx,
-                ];
+            // Sync linked products
+            $syncData = [];
+            foreach ($linkedProducts as $idx => $item) {
+                if (! empty($item['product_id'])) {
+                    $syncData[$item['product_id']] = [
+                        'quantity' => (int) ($item['quantity'] ?? 1),
+                        'unit_notes' => $item['unit_notes'] ?? null,
+                        'is_optional' => ! empty($item['is_optional']),
+                        'sort_order' => $idx,
+                    ];
+                }
             }
-        }
-        $recipeKit->products()->sync($syncData);
+            $recipeKit->products()->sync($syncData);
+        });
 
         return redirect()->route('admin.recipe-kits.index')
             ->with('success', "Recipe kit '{$recipeKit->name}' updated successfully.");
@@ -311,8 +348,8 @@ class AdminRecipeKitController extends Controller
         if (is_array($recipeKit->images)) {
             foreach ($recipeKit->images as $img) {
                 if (str_starts_with($img, '/storage/recipe-kits/')) {
-                    $relative = str_replace('/storage/', '', $img);
-                    Storage::disk('public')->delete($relative);
+                    $filename = basename($img);
+                    Storage::disk('public')->delete('recipe-kits/'.$filename);
                 }
             }
         }

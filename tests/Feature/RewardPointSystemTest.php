@@ -85,7 +85,7 @@ class RewardPointSystemTest extends TestCase
         $this->assertStringContainsString((string) $order->order_number, $orderLedger->description);
 
         // Verify Inertia shares database reward_points
-        $this->actingAs($user)->get('/account')
+        $this->actingAs($user->refresh())->get('/account')
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
                 ->component('Account')

@@ -10,6 +10,7 @@ use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -27,7 +28,9 @@ class AdminCustomerController extends Controller
 
         $query = User::query()
             ->withCount('orders')
-            ->withSum('orders as total_spent', 'total');
+            ->withSum(['orders as total_spent' => function ($q) {
+                $q->where('status', '!=', 'cancelled');
+            }], DB::raw('COALESCE(total, 0) - COALESCE(refunded_total, 0)'));
 
         // Search by name or email
         if ($search !== '') {
@@ -92,7 +95,7 @@ class AdminCustomerController extends Controller
         // Store customer metrics
         $totalCustomers = User::count();
         $orderAgg = Order::query()
-            ->selectRaw("COUNT(*) as total_orders, COALESCE(SUM(CASE WHEN status != 'cancelled' THEN total ELSE 0 END), 0) as total_revenue")
+            ->selectRaw("COUNT(*) as total_orders, COALESCE(SUM(CASE WHEN status != 'cancelled' THEN COALESCE(total, 0) - COALESCE(refunded_total, 0) ELSE 0 END), 0) as total_revenue")
             ->first();
         $totalOrders = (int) ($orderAgg->total_orders ?? 0);
         $totalRevenue = (float) ($orderAgg->total_revenue ?? 0);
@@ -121,7 +124,9 @@ class AdminCustomerController extends Controller
      */
     public function show(Request $request, User $customer): JsonResponse|Response
     {
-        $customer->loadCount('orders')->loadSum('orders as total_spent', 'total');
+        $customer->loadCount('orders')->loadSum(['orders as total_spent' => function ($q) {
+            $q->where('status', '!=', 'cancelled');
+        }], DB::raw('COALESCE(total, 0) - COALESCE(refunded_total, 0)'));
 
         $search = trim((string) $request->input('search', ''));
         $limit = min(max((int) $request->input('limit', 25), 1), 100);

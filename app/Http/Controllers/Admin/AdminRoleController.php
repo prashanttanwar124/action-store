@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Admin;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Spatie\Permission\Models\Role;
 
 class AdminRoleController extends Controller
@@ -21,14 +22,16 @@ class AdminRoleController extends Controller
             'permissions.*' => ['string', 'exists:permissions,name'],
         ]);
 
-        $role = Role::create([
-            'name' => $validated['name'],
-            'guard_name' => 'admin',
-        ]);
+        DB::transaction(function () use ($validated) {
+            $role = Role::create([
+                'name' => $validated['name'],
+                'guard_name' => 'admin',
+            ]);
 
-        if (! empty($validated['permissions'])) {
-            $role->syncPermissions($validated['permissions']);
-        }
+            if (! empty($validated['permissions'])) {
+                $role->syncPermissions($validated['permissions']);
+            }
+        });
 
         return back()->with('success', 'Role created successfully.');
     }

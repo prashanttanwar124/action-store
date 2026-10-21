@@ -682,6 +682,14 @@ export const useStore = defineStore('masalaStore', () => {
       if (Array.isArray(data?.recipeKits) && data.recipeKits.length > 0) {
         setRecipeKits(data.recipeKits);
       }
+      // Keep cart.value prices in sync with refreshed catalog prices
+      cart.value.forEach(item => {
+        const isKit = item.type === 'recipe-kit' || Boolean(item.isRecipeKit) || (typeof item.id === 'string' && item.id.startsWith('kit-'));
+        const prod = findCatalogProduct(item, isKit);
+        if (prod && prod.price !== undefined) {
+          item.price = Number(prod.price);
+        }
+      });
     } catch {
       // Non-blocking fallback
     }

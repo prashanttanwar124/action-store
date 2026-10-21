@@ -407,6 +407,7 @@ class OrderController extends Controller
             'notes' => $validated['notes'] ?? null,
             'items' => array_map(fn (array $item) => [
                 'product_id' => $item['catalog_item'] instanceof Product ? $item['catalog_item']->id : null,
+                'recipe_kit_id' => $item['catalog_item'] instanceof RecipeKit ? $item['catalog_item']->id : null,
                 'name' => $item['name'],
                 'size' => $item['size'] ?? ($item['weight'] ?? null),
                 'unit_price' => $item['price'],
@@ -430,10 +431,18 @@ class OrderController extends Controller
         $normalizeLines = function (array $items) use ($cents) {
             $mapped = array_map(fn (array $item) => [
                 'product_id' => $item['product_id'] ?? null,
+                'recipe_kit_id' => $item['recipe_kit_id'] ?? null,
+                'name' => (string) ($item['name'] ?? ''),
                 'quantity' => (int) $item['quantity'],
                 'unit_price' => $cents($item['unit_price']),
             ], $items);
-            usort($mapped, fn ($a, $b) => strcmp((string) ($a['product_id'] ?? ''), (string) ($b['product_id'] ?? '')));
+
+            usort($mapped, function ($a, $b) {
+                $keyA = ($a['product_id'] ?? '').'|'.($a['recipe_kit_id'] ?? '').'|'.($a['name'] ?? '');
+                $keyB = ($b['product_id'] ?? '').'|'.($b['recipe_kit_id'] ?? '').'|'.($b['name'] ?? '');
+
+                return strcmp($keyA, $keyB);
+            });
 
             return $mapped;
         };
@@ -663,6 +672,17 @@ class OrderController extends Controller
     }
 
     /**
+     * Find the pickup slot window from available_pickup_slots that encompasses a given 24h time string (HH:MM).
+     *
+     * @param  array<int, array<string, mixed>>  $slots
+     * @return ?array<string, mixed>
+     */
+    protected function findEncompassingPickupSlot(string $time, array $slots): ?array
+    {
+        return StoreSetting::current()->findEncompassingPickupSlot($time, $slots);
+    }
+
+    /**
      * Build fulfillment and capacity slot labels from validated choices and current store settings.
      *
      * @param  array<string, mixed>  $data
@@ -751,6 +771,7 @@ class OrderController extends Controller
             $time = $data['pickup_time'] ?? '';
             $label = '';
             $capacitySlot = null;
+            $slotLabel = '';
             if (($data['pickup_timing_type'] ?? '') === 'slot') {
                 $slot = collect($storeInfo->available_pickup_slots)->firstWhere('label', $data['pickup_slot'] ?? '');
                 if (! $slot || ! preg_match('/^(\d{1,2}):(\d{2})\s*(AM|PM)/i', $slot['label'], $parts)) {
@@ -762,18 +783,8 @@ class OrderController extends Controller
                 $hour = ((int) $parts[1] % 12) + (strtoupper($parts[3]) === 'PM' ? 12 : 0);
                 $time = sprintf('%02d:%02d', $hour, (int) $parts[2]);
                 $label = $slot['label'];
+                $slotLabel = $slot['label'];
                 $capacitySlot = "{$date} · {$slot['label']}";
-
-                // Check slot capacity limit: placed orders
-                $maxCapacity = (int) ($storeInfo->max_orders_per_slot ?? 0);
-                if ($maxCapacity > 0) {
-                    if (Order::bookedInSlot($capacitySlot) >= $maxCapacity) {
-                        throw ValidationException::withMessages([
-                            'pickup_slot' => "This pickup window ({$slot['label']}) has reached its capacity limit. Please select another time window.",
-                            'error_code' => 'slot_full',
-                        ]);
-                    }
-                }
             }
 
             if ($time === '') {
@@ -781,6 +792,26 @@ class OrderController extends Controller
                     'pickup_time' => 'Choose a pickup time.',
                     'error_code' => 'slot_missing',
                 ]);
+            }
+
+            if (($data['pickup_timing_type'] ?? '') === 'custom') {
+                $encompassing = $this->findEncompassingPickupSlot($time, (array) $storeInfo->available_pickup_slots);
+                if (! $encompassing) {
+                    throw ValidationException::withMessages([
+                        'pickup_time' => 'The selected pickup time does not fall within an active pickup window within store hours.',
+                        'error_code' => 'slot_inactive',
+                    ]);
+                }
+                $slotLabel = $encompassing['label'];
+                $capacitySlot = "{$date} · {$encompassing['label']}";
+            }
+
+            if (preg_match('/^(\d{1,2}):(\d{2})(?::\d{2})?(?:\s*(AM|PM))?$/i', trim($time), $tp)) {
+                $h = (int) $tp[1];
+                if (! empty($tp[3])) {
+                    $h = ($h % 12) + (strtoupper($tp[3]) === 'PM' ? 12 : 0);
+                }
+                $time = sprintf('%02d:%02d', $h, (int) $tp[2]);
             }
 
             $pickupAt = $now->copy()->setDateFrom($date)->setTimeFromTimeString($time.':00');
@@ -791,6 +822,18 @@ class OrderController extends Controller
                     'pickup_time' => 'Choose a future pickup time within store hours, allowing time for preparation.',
                     'error_code' => 'slot_expired',
                 ]);
+            }
+
+            // Enforce capacity limit for both preset slot and custom pickup times
+            $maxCapacity = (int) ($storeInfo->max_orders_per_slot ?? 0);
+            if ($maxCapacity > 0 && $capacitySlot) {
+                if (Order::bookedInSlot($capacitySlot) >= $maxCapacity) {
+                    $field = ($data['pickup_timing_type'] ?? '') === 'custom' ? 'pickup_time' : 'pickup_slot';
+                    throw ValidationException::withMessages([
+                        $field => "This pickup window ({$slotLabel}) has reached its capacity limit. Please select another time window.",
+                        'error_code' => 'slot_full',
+                    ]);
+                }
             }
 
             $displaySlot = $date.' · '.($label ?: $pickupAt->format('g:i A').' (Custom Time)');
@@ -830,6 +873,7 @@ class OrderController extends Controller
                 'customer_name' => $order->customer_name,
                 'subtotal' => (float) $order->subtotal,
                 'discount' => (float) $order->discount,
+                'delivery_fee' => (float) ($order->delivery_fee ?? 0),
                 'total' => (float) $order->total,
                 'refunded_total' => (float) ($order->refunded_total ?? 0),
                 'points_earned' => $order->points_earned,

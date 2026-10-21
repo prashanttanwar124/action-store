@@ -6,6 +6,7 @@ use Database\Factories\ProductFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Validation\ValidationException;
 
 class Product extends Model
@@ -87,8 +88,10 @@ class Product extends Model
 
     /**
      * Recipe kits that include this product as an ingredient.
+     *
+     * @return BelongsToMany<RecipeKit, $this>
      */
-    public function recipeKits()
+    public function recipeKits(): BelongsToMany
     {
         return $this->belongsToMany(RecipeKit::class, 'recipe_kit_products')
             ->withPivot(['quantity', 'unit_notes', 'is_optional', 'sort_order'])

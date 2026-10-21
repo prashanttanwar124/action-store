@@ -26,6 +26,7 @@ class RecipeKitController extends Controller
     {
         $kit = RecipeKit::query()
             ->with('products')
+            ->where('is_active', true)
             ->where('slug', $slug)
             ->firstOrFail();
 

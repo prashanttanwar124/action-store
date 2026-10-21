@@ -122,6 +122,16 @@ class Order extends Model
             }
         }
 
+        $targetPoints = $this->status === 'cancelled'
+            ? 0
+            : (int) floor(max(0, (float) $this->total - (float) ($this->refunded_total ?? 0)));
+
+        if ($this->points_earned !== $targetPoints) {
+            DB::table('orders')->where('id', $this->id)->update(['points_earned' => $targetPoints]);
+            $this->points_earned = $targetPoints;
+            $this->syncOriginalAttribute('points_earned');
+        }
+
         if (! $currentUserId) {
             return;
         }
@@ -130,10 +140,6 @@ class Order extends Model
         if (! $user) {
             return;
         }
-
-        $targetPoints = $this->status === 'cancelled'
-            ? 0
-            : (int) floor(max(0, (float) $this->total - (float) ($this->refunded_total ?? 0)));
 
         $currentPoints = (int) RewardPoint::where('order_id', $this->id)->where('user_id', $user->id)->sum('points');
         $adjustment = $targetPoints - $currentPoints;
@@ -164,10 +170,51 @@ class Order extends Model
      */
     public static function bookedInSlot(string $capacitySlot): int
     {
-        return static::query()
+        $directMatches = static::query()
             ->where('pickup_slot', $capacitySlot)
             ->where('status', '!=', 'cancelled')
             ->count();
+
+        if (! str_contains($capacitySlot, ' · ')) {
+            return $directMatches;
+        }
+
+        [$date, $slotLabel] = explode(' · ', $capacitySlot, 2);
+        if (! preg_match('/^(\d{1,2}):(\d{2})\s*(AM|PM)\s*[\x{2014}\x{2013}–-]\s*(\d{1,2}):(\d{2})\s*(AM|PM)/u', $slotLabel, $m)) {
+            return $directMatches;
+        }
+
+        $startMinutes = (((int) $m[1] % 12) + (strtoupper($m[3]) === 'PM' ? 12 : 0)) * 60 + (int) $m[2];
+        $endMinutes = (((int) $m[4] % 12) + (strtoupper($m[6]) === 'PM' ? 12 : 0)) * 60 + (int) $m[5];
+
+        $storeInfo = StoreSetting::current();
+        $activeSlots = array_values(array_filter((array) ($storeInfo->available_pickup_slots ?? []), fn ($s) => ($s['active'] ?? true)));
+        $isLastSlot = ! empty($activeSlots) && (($activeSlots[count($activeSlots) - 1]['label'] ?? '') === $slotLabel);
+
+        if (! $isLastSlot && ! empty($storeInfo->pickup_slot_end_time)) {
+            [$seh, $sem] = explode(':', $storeInfo->pickup_slot_end_time);
+            $storeEndMinutes = ((int) $seh) * 60 + (int) $sem;
+            if ($endMinutes === $storeEndMinutes) {
+                $isLastSlot = true;
+            }
+        }
+
+        $customOrders = static::query()
+            ->where('pickup_slot', 'like', "{$date} · % (Custom Time)")
+            ->where('status', '!=', 'cancelled')
+            ->pluck('pickup_slot');
+
+        $customMatches = 0;
+        foreach ($customOrders as $customSlot) {
+            if (preg_match('/·\s*(\d{1,2}):(\d{2})\s*(AM|PM)\s*\(Custom Time\)/i', (string) $customSlot, $cm)) {
+                $cMinutes = (((int) $cm[1] % 12) + (strtoupper($cm[3]) === 'PM' ? 12 : 0)) * 60 + (int) $cm[2];
+                if ($cMinutes >= $startMinutes && ($cMinutes < $endMinutes || ($isLastSlot && $cMinutes <= $endMinutes))) {
+                    $customMatches++;
+                }
+            }
+        }
+
+        return $directMatches + $customMatches;
     }
 
     /**
@@ -202,21 +249,27 @@ class Order extends Model
      *
      * @return bool Whether this call cancelled the order.
      */
-    public function cancelAndRestock(?string $reason = null): bool
+    public function cancelAndRestock(?string $reason = null, ?float $refundedTotal = null): bool
     {
-        $cancelled = DB::transaction(function () use ($reason) {
+        $cancelled = DB::transaction(function () use ($reason, $refundedTotal) {
             $locked = static::whereKey($this->id)->lockForUpdate()->first();
-            if (! $locked || $locked->status === 'cancelled') {
+            if (! $locked || $locked->status === 'completed' || $locked->status === 'cancelled') {
                 return false;
             }
 
             Product::returnToStock($locked->reservedStockQuantities());
 
             $noteSuffix = $reason ? " [Cancelled: {$reason}]" : ' [Cancelled]';
-            $locked->update([
+            $updateData = [
                 'status' => 'cancelled',
                 'notes' => trim(($locked->notes ?? '').$noteSuffix),
-            ]);
+            ];
+
+            if ($refundedTotal !== null) {
+                $updateData['refunded_total'] = $refundedTotal;
+            }
+
+            $locked->update($updateData);
 
             return true;
         });

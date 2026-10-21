@@ -568,15 +568,37 @@ const isKitCompletelyOOS = (kit) => {
 };
 
 const handleAddKitToCart = (kit) => {
-    if (kit.products && kit.products.length > 0) {
-        if (isKitCompletelyOOS(kit)) {
-            store.showStockToast(`"${kit.name}" is currently out of stock.`);
-            return;
+    if (isKitCompletelyOOS(kit)) {
+        store.showStockToast('Out of Stock', `"${kit.name}" is currently out of stock.`, 'error');
+        return;
+    }
+
+    const available = getKitAvailableProducts(kit);
+    const oos = getKitOOSProducts(kit);
+
+    if (oos.length === 0 || !kit.products || kit.products.length === 0) {
+        // Full kit is available: Add recipe kit bundle at bundle price matching RecipeKitDetail.vue
+        const ok = store.addToCart({
+            id: `kit-${kit.id}`,
+            slug: kit.slug,
+            type: 'recipe-kit',
+            isRecipeKit: true,
+            name: `${kit.name} (Recipe Kit)`,
+            price: Number(kit.price),
+            originalPrice: Number(kit.originalPrice || kit.original_price || kit.price),
+            weight: kit.servings || 'Recipe Kit',
+            quantity: 1,
+            image: kit.image,
+            products: kit.products || [],
+        });
+        if (ok) {
+            store.showStockToast('Kit Added to Cart', `Added "${kit.name}" to your cart at the bundle price.`, 'success');
         }
-        const available = getKitAvailableProducts(kit);
-        const oos = getKitOOSProducts(kit);
+    } else {
+        // Partial kit: when some ingredients are out of stock, add only available individual items
+        let addedCount = 0;
         available.forEach((p) => {
-            store.addToCart({
+            const ok = store.addToCart({
                 id: p.id,
                 slug: p.slug,
                 name: p.name,
@@ -587,22 +609,17 @@ const handleAddKitToCart = (kit) => {
                 stock: p.stock,
                 stock_badge: p.stock_badge,
             });
+            if (ok) {
+                addedCount++;
+            }
         });
-        if (oos.length > 0) {
+        if (addedCount > 0) {
             store.showStockToast(
-                `Added ${available.length} available kit items (Skipped out-of-stock: ${oos.map((i) => i.name).join(", ")}).`,
+                'Partial Kit Added',
+                `Added ${addedCount} available kit items (Skipped out-of-stock: ${oos.map((i) => i.name).join(', ')}).`,
+                'info'
             );
         }
-    } else {
-        store.addToCart({
-            id: kit.slug || kit.id,
-            slug: kit.slug,
-            type: "recipe-kit",
-            isRecipeKit: true,
-            name: kit.name,
-            price: kit.price,
-            image: kit.image,
-        });
     }
 };
 </script>

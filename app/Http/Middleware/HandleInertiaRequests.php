@@ -43,8 +43,8 @@ class HandleInertiaRequests extends Middleware
         return [
             ...parent::share($request),
             'auth' => [
-                'user' => ! $isAdmin ? $request->user()?->fresh() : null,
-                'admin' => $isAdmin && $request->user('admin') ? [
+                'user' => fn () => ! $isAdmin ? $request->user() : null,
+                'admin' => fn () => $isAdmin && $request->user('admin') ? [
                     'id' => $request->user('admin')->id,
                     'name' => $request->user('admin')->name,
                     'email' => $request->user('admin')->email,

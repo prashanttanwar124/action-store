@@ -18,13 +18,15 @@ class ProductController extends Controller
         $product = Product::query()->where('slug', $slug)->first();
 
         if (! $product) {
-            $kit = RecipeKit::query()->with('products')->where('slug', $slug)->first();
+            $kit = RecipeKit::query()->with('products')->where('is_active', true)->where('slug', $slug)->first();
             if ($kit) {
                 return redirect()->route('recipe-kits.show', $slug);
             }
 
             abort(404);
         }
+
+        abort_if(isset($product->is_active) && ! $product->is_active, 404);
 
         $fbtProducts = $this->resolveFrequentlyBoughtTogether($product);
         $product->setAttribute('frequently_bought_together', $fbtProducts);

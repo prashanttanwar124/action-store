@@ -33,8 +33,21 @@ class CartController extends Controller
     public function stockCheck(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'ids' => ['required', 'array'],
-            'ids.*' => ['required', 'string', 'max:120'],
+            'ids' => ['required', 'array', 'min:1', 'max:50'],
+            'ids.*' => [
+                'required',
+                function ($attribute, $value, $fail) {
+                    if (! is_string($value) && ! is_int($value)) {
+                        $fail("The {$attribute} must be a valid product or kit identifier.");
+
+                        return;
+                    }
+                    $str = (string) $value;
+                    if (trim($str) === '' || strlen($str) > 120) {
+                        $fail("The {$attribute} length must be between 1 and 120 characters.");
+                    }
+                },
+            ],
         ]);
 
         $numericIds = [];
@@ -43,6 +56,7 @@ class CartController extends Controller
         $kitSlugs = [];
 
         foreach ($validated['ids'] as $rawId) {
+            $rawId = (string) $rawId;
             if (str_starts_with($rawId, 'kit-')) {
                 $cleanKit = substr($rawId, 4);
                 if (is_numeric($cleanKit)) {
@@ -122,6 +136,12 @@ class CartController extends Controller
                 if (count($parts) === 2) {
                     $d = trim($parts[0]);
                     $l = trim($parts[1]);
+                    if (preg_match('/^(\d{1,2}:\d{2}\s*(?:AM|PM))\s*\(Custom Time\)$/i', $l, $cm)) {
+                        $encompassing = $storeInfo->findEncompassingPickupSlot($cm[1]);
+                        if ($encompassing && ! empty($encompassing['label'])) {
+                            $l = $encompassing['label'];
+                        }
+                    }
                     $bookedSlots[$d][$l] = ($bookedSlots[$d][$l] ?? 0) + 1;
                 }
             }

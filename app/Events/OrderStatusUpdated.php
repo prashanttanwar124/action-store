@@ -27,7 +27,7 @@ class OrderStatusUpdated implements ShouldBroadcastNow
 
         return [
             new PrivateChannel('admin.orders'),
-            new Channel('orders.'.$channelKey),
+            new PrivateChannel('orders.'.$channelKey),
         ];
     }
 

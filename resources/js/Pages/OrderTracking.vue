@@ -128,7 +128,7 @@ const orderChannelName = computed(() => {
 onMounted(() => {
   if (typeof window !== 'undefined' && window.Echo) {
     try {
-      window.Echo.channel(orderChannelName.value)
+      window.Echo.private(orderChannelName.value)
         .listen('.order.status.updated', (payload) => {
           currentStatus.value = payload.status;
           if (payload.status === 'cancelled' && !liveRefundedTotal.value) {
@@ -165,7 +165,7 @@ onMounted(() => {
 
 onUnmounted(() => {
   if (typeof window !== 'undefined' && window.Echo) {
-    window.Echo.leaveChannel(orderChannelName.value);
+    window.Echo.leave(orderChannelName.value);
   }
 });
 </script>

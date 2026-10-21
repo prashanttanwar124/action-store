@@ -26,7 +26,7 @@ class StoreSliderRequest extends FormRequest
             'title' => ['required', 'string', 'max:255'],
             'tag' => ['nullable', 'string', 'max:255'],
             'cta_text' => ['required', 'string', 'max:100'],
-            'link_url' => ['required', 'string', 'max:500'],
+            'link_url' => ['required', 'string', 'max:500', 'regex:/^(https?:\/\/|\/)/i'],
             'photo_label' => ['nullable', 'string', 'max:100'],
             'bg_color' => ['nullable', 'string', 'max:50'],
             'sort_order' => ['nullable', 'integer', 'min:0'],

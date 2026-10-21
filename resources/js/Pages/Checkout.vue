@@ -548,7 +548,27 @@ async function completeOrder() {
     const errors = error.response?.data?.errors;
     const errorCode = Array.isArray(errors?.error_code) ? errors.error_code[0] : errors?.error_code;
     const firstMsg = (field) => Array.isArray(errors?.[field]) ? errors[field][0] : errors?.[field];
-    
+
+    // Contextual routing: Price change or out-of-stock errors
+    if (errorCode === 'price_changed' || errorCode === 'out_of_stock' || errors?.total || errors?.items) {
+      await store.refreshCartStock();
+      if (store.hasStockIssues) {
+        store.resolveStockIssues();
+      }
+
+      const msg = firstMsg('total')
+        || firstMsg('items')
+        || (errorCode === 'price_changed'
+            ? 'Item prices have changed. We have updated your cart with the latest pricing. Please review and confirm your order.'
+            : 'Some items in your cart are no longer available or out of stock. Your cart has been updated.');
+
+      generalError.value = msg;
+      errorMessage.value = msg;
+      isProcessing.value = false;
+      document.getElementById('payment-section')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      return;
+    }
+
     // Contextual routing: Pickup errors
     const pickupErrorCodes = [
       'slot_inactive', 'slot_full', 'slot_missing', 'store_closed',
@@ -1364,7 +1384,7 @@ async function collectPayment(clientSecret) {
             <div v-if="paymentError || generalError" class="p-3 bg-rose-50 border border-rose-200 text-rose-900 text-xs rounded-md flex items-start gap-2.5 shadow-xs">
               <AlertCircle class="w-4 h-4 shrink-0 text-rose-600 mt-0.5" />
               <div class="flex-1">
-                <span class="font-semibold block text-rose-950">Payment Authorization Issue</span>
+                <span class="font-semibold block text-rose-950">{{ paymentError ? 'Payment Authorization Issue' : (generalError && (generalError.includes('total') || generalError.includes('price') || generalError.includes('Order total')) ? 'Price Update Notice' : 'Order Notice') }}</span>
                 <span class="text-rose-800 leading-relaxed">{{ paymentError || generalError }}</span>
               </div>
             </div>

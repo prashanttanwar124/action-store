@@ -170,6 +170,7 @@ class AdminProductController extends Controller
             'defaultCategories' => $this->getCategoriesList(),
             'suppliers' => Supplier::where('status', 'active')
                 ->orderBy('name')
+                ->limit(25)
                 ->get(['id', 'name', 'code']),
         ]);
     }
@@ -185,6 +186,10 @@ class AdminProductController extends Controller
         $slug = ! empty($validated['slug'])
             ? Str::slug($validated['slug'])
             : Str::slug($validated['name']);
+
+        if (empty($slug)) {
+            $slug = 'product';
+        }
 
         $originalSlug = $slug;
         $existingSlugs = Product::where('slug', $slug)
@@ -257,6 +262,7 @@ class AdminProductController extends Controller
         $suppliers = Supplier::where('status', 'active')
             ->when($product->supplier_id, fn ($q) => $q->orWhere('id', $product->supplier_id))
             ->orderBy('name')
+            ->limit(25)
             ->get(['id', 'name', 'code']);
 
         return Inertia::render('Admin/Products/Edit', [
@@ -294,11 +300,32 @@ class AdminProductController extends Controller
     {
         $validated = $request->validated();
 
-        if (empty($validated['slug'])) {
-            $validated['slug'] = Str::slug($validated['name']);
-        } else {
-            $validated['slug'] = Str::slug($validated['slug']);
+        $slug = ! empty($validated['slug'])
+            ? Str::slug($validated['slug'])
+            : Str::slug($validated['name']);
+
+        if (empty($slug)) {
+            $slug = 'product';
         }
+
+        $originalSlug = $slug;
+        $existingSlugs = Product::where('id', '!=', $product->id)
+            ->where(function ($query) use ($originalSlug) {
+                $query->where('slug', $originalSlug)
+                    ->orWhere('slug', 'like', "{$originalSlug}-%");
+            })
+            ->pluck('slug')
+            ->flip()
+            ->all();
+
+        if (isset($existingSlugs[$slug])) {
+            $counter = 1;
+            while (isset($existingSlugs["{$originalSlug}-{$counter}"])) {
+                $counter++;
+            }
+            $slug = "{$originalSlug}-{$counter}";
+        }
+        $validated['slug'] = $slug;
 
         $categoriesList = $this->getCategoriesList($validated['category'] ?? $product->category);
         if (empty($validated['category_title']) && isset($categoriesList[$validated['category']])) {
@@ -364,8 +391,8 @@ class AdminProductController extends Controller
         if (is_array($product->images)) {
             foreach ($product->images as $img) {
                 if (str_starts_with($img, '/storage/products/')) {
-                    $relative = str_replace('/storage/', '', $img);
-                    Storage::disk('public')->delete($relative);
+                    $filename = basename($img);
+                    Storage::disk('public')->delete('products/'.$filename);
                 }
             }
         }

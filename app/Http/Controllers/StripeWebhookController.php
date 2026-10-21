@@ -7,6 +7,7 @@ use App\Models\Order;
 use App\Services\StripePayments;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Stripe\Exception\SignatureVerificationException;
 use Stripe\Webhook;
@@ -175,25 +176,43 @@ class StripeWebhookController extends Controller
             return;
         }
 
-        if (empty($charge->refunded)) {
-            $refundedDollars = round(((int) ($charge->amount_refunded ?? 0)) / 100, 2);
-            $refunded = number_format($refundedDollars, 2);
+        $refundedDollars = ! empty($charge->amount_refunded)
+            ? round(((int) $charge->amount_refunded) / 100, 2)
+            : (float) $order->total;
+        $refunded = number_format($refundedDollars, 2);
 
-            if (round((float) $order->refunded_total, 2) < $refundedDollars) {
-                $order->update([
-                    'refunded_total' => $refundedDollars,
-                    'notes' => trim(($order->notes ?? '')." [PARTIAL REFUND ON STRIPE: \${$refunded}]"),
-                ]);
-            }
+        if (empty($charge->refunded)) {
+            DB::transaction(function () use ($order, $refundedDollars, $refunded) {
+                $locked = Order::whereKey($order->id)->lockForUpdate()->first();
+                if ($locked && round((float) $locked->refunded_total, 2) < $refundedDollars) {
+                    $locked->update([
+                        'refunded_total' => $refundedDollars,
+                        'notes' => trim(($locked->notes ?? '')." [PARTIAL REFUND ON STRIPE: \${$refunded}]"),
+                    ]);
+                }
+            });
             Log::info("Stripe webhook: Recorded partial refund of \${$refunded} for order {$order->order_number}.");
 
             return;
         }
 
-        if ($order->cancelAndRestock('Refunded via Stripe')) {
-            $order->update(['refunded_total' => $order->total]);
-            Log::info("Stripe webhook: Cancelled and restocked order {$order->order_number} following Stripe refund.");
-        }
+        DB::transaction(function () use ($order, $refundedDollars, $refunded) {
+            $targetRefundTotal = max((float) $order->total, $refundedDollars);
+            if ($order->cancelAndRestock('Refunded via Stripe', $targetRefundTotal)) {
+                Log::info("Stripe webhook: Cancelled and restocked order {$order->order_number} following Stripe refund.");
+
+                return;
+            }
+
+            $locked = Order::whereKey($order->id)->lockForUpdate()->first();
+            if ($locked && round((float) $locked->refunded_total, 2) < $targetRefundTotal) {
+                $locked->update([
+                    'refunded_total' => $targetRefundTotal,
+                    'notes' => trim(($locked->notes ?? '')." [REFUNDED ON STRIPE: \${$refunded}]"),
+                ]);
+                Log::info("Stripe webhook: Recorded full refund of \${$refunded} for {$locked->status} order {$locked->order_number}.");
+            }
+        });
     }
 
     /**

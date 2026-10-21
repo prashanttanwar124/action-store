@@ -1810,12 +1810,12 @@ function getStatusBadge(status, fulfillmentType = '') {
               </div>
 
               <!-- Mini 4-Step Visual Progress Stepper (Interactive on active orders) -->
-              <div v-if="order.status !== 'cancelled'" class="grid grid-cols-4 gap-1 pt-0.5">
+              <div v-if="order.status !== 'cancelled' && order.status !== 'completed'" class="grid grid-cols-4 gap-1 pt-0.5">
                 <button
                   v-for="step in workflowSteps"
                   :key="step.key"
                   type="button"
-                  :disabled="updatingOrderId === order.id || order.status === step.key"
+                  :disabled="updatingOrderId === order.id || order.status === step.key || order.status === 'completed'"
                   @click="updateOrderStatus(order, step.key)"
                   class="py-1 px-1.5 rounded-lg text-[10px] font-bold text-center transition-all cursor-pointer disabled:cursor-default truncate border"
                   :class="[
@@ -2595,7 +2595,7 @@ function getStatusBadge(status, fulfillmentType = '') {
           <div v-if="selectedOrderForModal" class="space-y-4 py-2 text-xs">
 
             <!-- Interactive 4-Step Order Progress Switcher -->
-            <div v-if="selectedOrderForModal.status !== 'cancelled'" class="space-y-1.5">
+            <div v-if="selectedOrderForModal.status !== 'cancelled' && selectedOrderForModal.status !== 'completed'" class="space-y-1.5">
               <div class="text-[10px] font-mono uppercase tracking-wider text-zinc-400 font-semibold px-1">
                 Order Stage (Click any stage to switch status)
               </div>
@@ -2604,7 +2604,7 @@ function getStatusBadge(status, fulfillmentType = '') {
                   v-for="step in workflowSteps"
                   :key="step.key"
                   type="button"
-                  :disabled="updatingOrderId === selectedOrderForModal.id || selectedOrderForModal.status === step.key"
+                  :disabled="updatingOrderId === selectedOrderForModal.id || selectedOrderForModal.status === step.key || selectedOrderForModal.status === 'completed'"
                   @click="updateOrderStatus(selectedOrderForModal, step.key)"
                   class="text-center py-2 px-2 rounded-md text-[11px] font-bold transition-all cursor-pointer disabled:cursor-default"
                   :class="selectedOrderForModal.status === step.key

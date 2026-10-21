@@ -35,8 +35,8 @@ class AdminSliderController extends Controller
      */
     public function create(): Response
     {
-        $products = Product::select('id', 'name', 'slug', 'price')->orderBy('name')->get();
-        $recipeKits = RecipeKit::select('id', 'name', 'slug', 'price')->orderBy('name')->get();
+        $products = Product::select('id', 'name', 'slug', 'price')->orderBy('name')->limit(20)->get();
+        $recipeKits = RecipeKit::select('id', 'name', 'slug', 'price')->orderBy('name')->limit(20)->get();
 
         return Inertia::render('Admin/Sliders/Create', [
             'products' => $products,
@@ -74,8 +74,8 @@ class AdminSliderController extends Controller
      */
     public function edit(Slider $slider): Response
     {
-        $products = Product::select('id', 'name', 'slug', 'price')->orderBy('name')->get();
-        $recipeKits = RecipeKit::select('id', 'name', 'slug', 'price')->orderBy('name')->get();
+        $products = Product::select('id', 'name', 'slug', 'price')->orderBy('name')->limit(20)->get();
+        $recipeKits = RecipeKit::select('id', 'name', 'slug', 'price')->orderBy('name')->limit(20)->get();
 
         return Inertia::render('Admin/Sliders/Edit', [
             'slider' => $slider,
@@ -116,8 +116,8 @@ class AdminSliderController extends Controller
         $title = $slider->title;
 
         if (str_starts_with($slider->image, '/storage/sliders/')) {
-            $relative = str_replace('/storage/', '', $slider->image);
-            Storage::disk('public')->delete($relative);
+            $filename = basename($slider->image);
+            Storage::disk('public')->delete('sliders/'.$filename);
         }
 
         $slider->delete();

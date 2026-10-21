@@ -1,6 +1,6 @@
 <script setup>
-import { ref, computed } from 'vue';
-import { Head, Link, usePage } from '@inertiajs/vue3';
+import { ref, computed, watch } from 'vue';
+import { Head, Link, router, usePage } from '@inertiajs/vue3';
 import StoreLayout from '../Layouts/StoreLayout.vue';
 import { useStore } from '../stores/cart';
 import { 
@@ -21,6 +21,17 @@ const props = defineProps({
     type: Array,
     default: () => [],
   },
+  ordersPagination: {
+    type: Object,
+    default: () => ({
+      current_page: 1,
+      last_page: 1,
+      per_page: 10,
+      total: 0,
+      has_more: false,
+      next_page_url: null,
+    }),
+  },
   activeSection: {
     type: String,
     default: '',
@@ -31,6 +42,26 @@ const store = useStore();
 const page = usePage();
 const reorderedNotification = ref(false);
 const reorderedItemCount = ref(0);
+const loadingMoreOrders = ref(false);
+const accumulatedOrders = ref([...(props.dbOrders || [])]);
+
+watch(
+  () => props.dbOrders,
+  (newOrders) => {
+    const incoming = newOrders || [];
+    if ((props.ordersPagination?.current_page || 1) <= 1) {
+      accumulatedOrders.value = [...incoming];
+      return;
+    }
+
+    const existingIds = new Set(accumulatedOrders.value.map((o) => o.id));
+    incoming.forEach((order) => {
+      if (!existingIds.has(order.id)) {
+        accumulatedOrders.value.push(order);
+      }
+    });
+  }
+);
 
 const storeInfo = computed(() => page.props.storeInfo || {});
 
@@ -41,8 +72,36 @@ const displayOrders = computed(() => {
   if (!authUser.value) {
     return [];
   }
-  return props.dbOrders || [];
+  return accumulatedOrders.value;
 });
+
+const totalOrdersCount = computed(() => {
+  return props.ordersPagination?.total ?? displayOrders.value.length;
+});
+
+const hasMoreOrders = computed(() => {
+  return Boolean(props.ordersPagination?.has_more && props.ordersPagination?.next_page_url);
+});
+
+function loadMoreOrders() {
+  if (!hasMoreOrders.value || loadingMoreOrders.value) {
+    return;
+  }
+
+  loadingMoreOrders.value = true;
+  router.get(
+    props.ordersPagination.next_page_url,
+    {},
+    {
+      preserveState: true,
+      preserveScroll: true,
+      only: ['dbOrders', 'ordersPagination'],
+      onFinish: () => {
+        loadingMoreOrders.value = false;
+      },
+    }
+  );
+}
 
 const userPoints = computed(() => {
   if (!authUser.value) {
@@ -247,7 +306,7 @@ function isOrderItemFullyRefunded(item) {
             <span class="font-devanagari text-xs text-[#7a5620] bg-[#f5eee2] px-2 py-0.5 rounded-md border border-[#e0d9cc]">पिछला ऑर्डर</span>
           </div>
           <span v-if="displayOrders.length > 0" class="text-xs font-normal text-[#6e6e73]">
-            {{ displayOrders.length }} order{{ displayOrders.length > 1 ? 's' : '' }}
+            Showing {{ displayOrders.length }} of {{ totalOrdersCount }} order{{ totalOrdersCount > 1 ? 's' : '' }}
           </span>
         </div>
 
@@ -343,6 +402,19 @@ function isOrderItemFullyRefunded(item) {
                 <span>Reorder ({{ order.itemCount }})</span>
               </button>
             </div>
+          </div>
+
+          <!-- Load More Button -->
+          <div v-if="hasMoreOrders" class="pt-2">
+            <button
+              type="button"
+              :disabled="loadingMoreOrders"
+              @click="loadMoreOrders"
+              class="w-full h-11 rounded-lg border border-[#e0d9cc] bg-white hover:bg-[#f3efe7] disabled:opacity-60 text-[#1d1d1f] font-semibold text-xs transition-colors flex items-center justify-center gap-2 cursor-pointer shadow-xs"
+            >
+              <RefreshCw class="w-3.5 h-3.5" :class="{ 'animate-spin': loadingMoreOrders }" />
+              <span>{{ loadingMoreOrders ? 'Loading more orders...' : 'Load More Orders' }}</span>
+            </button>
           </div>
         </div>
 

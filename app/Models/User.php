@@ -10,9 +10,10 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 
-#[Fillable(['name', 'email', 'password', 'email_verified_at', 'reward_points'])]
+#[Fillable(['name', 'email', 'password', 'email_verified_at'])]
 #[Hidden(['password', 'remember_token'])]
 class User extends Authenticatable
 {
@@ -111,6 +112,12 @@ class User extends Authenticatable
         DB::table('users')->where('id', $this->id)->update(['reward_points' => $balance]);
         $this->reward_points = $balance;
         $this->syncOriginalAttribute('reward_points');
+
+        $authUser = Auth::guard('web')->user();
+        if ($authUser instanceof self && (int) $authUser->id === (int) $this->id) {
+            $authUser->reward_points = $balance;
+            $authUser->syncOriginalAttribute('reward_points');
+        }
 
         return $balance;
     }

@@ -158,6 +158,19 @@ class HomeController extends Controller
             });
         }
 
+        if ($category !== 'all' && $category !== '') {
+            $recipeKitsQuery->whereHas('products', function ($q) use ($category) {
+                $q->where('category', $category);
+            });
+        }
+
+        if ($inStock) {
+            $recipeKitsQuery->whereDoesntHave('products', function ($q) {
+                $q->where('stock', '<=', 0)
+                    ->orWhere('stock_badge', 'like', '%out%');
+            });
+        }
+
         if ($sort === 'price_asc') {
             $recipeKitsQuery->orderBy('price', 'asc');
         } elseif ($sort === 'price_desc') {

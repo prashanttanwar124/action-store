@@ -167,11 +167,21 @@ class StoreSetting extends Model
      *
      * @return array<int, array{id: string, startHour: int, label: string, active: bool}>
      */
-    public static function generateDefaultSlots(int $startHour = 9, int $endHour = 21, int $durationMinutes = 60): array
+    public static function generateDefaultSlots(int|string $startHour = 9, int|string $endHour = 21, int $durationMinutes = 60): array
     {
+        $toMinutes = static function (int|string $value): int {
+            if (is_int($value) || ! str_contains((string) $value, ':')) {
+                return ((int) $value) * 60;
+            }
+
+            [$hours, $minutes] = array_pad(explode(':', trim((string) $value), 2), 2, '0');
+
+            return ((int) $hours) * 60 + (int) $minutes;
+        };
+
         $slots = [];
-        $current = $startHour * 60;
-        $end = $endHour * 60;
+        $current = $toMinutes($startHour);
+        $end = $toMinutes($endHour);
 
         while ($current + $durationMinutes <= $end) {
             $startMinutes = $current;
@@ -218,11 +228,11 @@ class StoreSetting extends Model
             return array_values(array_filter($this->pickup_slots, fn ($s) => ($s['active'] ?? true)));
         }
 
-        $startHour = (int) explode(':', $this->pickup_slot_start_time ?? '09:00')[0];
-        $endHour = (int) explode(':', $this->pickup_slot_end_time ?? '21:00')[0];
+        $startTime = $this->pickup_slot_start_time ?? '09:00';
+        $endTime = $this->pickup_slot_end_time ?? '21:00';
         $duration = (int) ($this->pickup_slot_duration_minutes ?: 60);
 
-        return static::generateDefaultSlots($startHour, $endHour, $duration);
+        return static::generateDefaultSlots($startTime, $endTime, $duration);
     }
 
     /**
@@ -359,5 +369,44 @@ class StoreSetting extends Model
         }
 
         return in_array($dayOfWeek, array_map('strtolower', $allowedDays), true);
+    }
+
+    /**
+     * Find the pickup slot window from available_pickup_slots that encompasses a given time string.
+     *
+     * @param  ?array<int, array<string, mixed>>  $slots
+     * @return ?array<string, mixed>
+     */
+    public function findEncompassingPickupSlot(string $time, ?array $slots = null): ?array
+    {
+        if (! preg_match('/^(\d{1,2}):(\d{2})(?::\d{2})?(?:\s*(AM|PM))?$/i', trim($time), $timeParts)) {
+            return null;
+        }
+
+        $hour = (int) $timeParts[1];
+        if (! empty($timeParts[3])) {
+            $hour = ($hour % 12) + (strtoupper($timeParts[3]) === 'PM' ? 12 : 0);
+        }
+        $timeMinutes = $hour * 60 + (int) $timeParts[2];
+        $slotList = $slots ?? (array) $this->available_pickup_slots;
+        $activeSlots = array_values(array_filter($slotList, fn ($s) => ($s['active'] ?? true)));
+        $totalActive = count($activeSlots);
+
+        foreach ($activeSlots as $index => $slot) {
+            $label = $slot['label'] ?? '';
+            if (! preg_match('/^(\d{1,2}):(\d{2})\s*(AM|PM)\s*[\x{2014}\x{2013}–-]\s*(\d{1,2}):(\d{2})\s*(AM|PM)/u', $label, $m)) {
+                continue;
+            }
+
+            $startMinutes = (((int) $m[1] % 12) + (strtoupper($m[3]) === 'PM' ? 12 : 0)) * 60 + (int) $m[2];
+            $endMinutes = (((int) $m[4] % 12) + (strtoupper($m[6]) === 'PM' ? 12 : 0)) * 60 + (int) $m[5];
+
+            $isLast = ($index === $totalActive - 1);
+            if ($timeMinutes >= $startMinutes && ($timeMinutes < $endMinutes || ($isLast && $timeMinutes <= $endMinutes))) {
+                return $slot;
+            }
+        }
+
+        return null;
     }
 }

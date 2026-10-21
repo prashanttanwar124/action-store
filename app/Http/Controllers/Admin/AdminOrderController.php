@@ -96,20 +96,27 @@ class AdminOrderController extends Controller
         });
 
         // Compute live KDS summary metrics in a single aggregate SQL query
-        $todayDate = Carbon::today()->toDateString();
+        $todayStart = Carbon::today()->startOfDay();
+        $todayEnd = Carbon::today()->endOfDay();
+
         $agg = Order::query()
             ->selectRaw("
                 COUNT(*) as total_all,
-                SUM(CASE WHEN DATE(created_at) = ? THEN 1 ELSE 0 END) as total_today,
+                SUM(CASE WHEN created_at BETWEEN ? AND ? THEN 1 ELSE 0 END) as total_today,
                 SUM(CASE WHEN status = 'confirmed' THEN 1 ELSE 0 END) as confirmed,
                 SUM(CASE WHEN status = 'packing' THEN 1 ELSE 0 END) as packing,
                 SUM(CASE WHEN status = 'ready_for_pickup' THEN 1 ELSE 0 END) as ready_for_pickup,
                 SUM(CASE WHEN status = 'completed' THEN 1 ELSE 0 END) as completed,
-                SUM(CASE WHEN DATE(created_at) = ? AND status = 'completed' THEN 1 ELSE 0 END) as completed_today,
+                SUM(CASE WHEN created_at BETWEEN ? AND ? AND status = 'completed' THEN 1 ELSE 0 END) as completed_today,
                 SUM(CASE WHEN status = 'cancelled' THEN 1 ELSE 0 END) as cancelled,
-                SUM(CASE WHEN DATE(created_at) = ? AND status = 'cancelled' THEN 1 ELSE 0 END) as cancelled_today,
-                COALESCE(SUM(CASE WHEN DATE(created_at) = ? AND status != 'cancelled' THEN total - COALESCE(refunded_total, 0) ELSE 0 END), 0) as revenue_today
-            ", [$todayDate, $todayDate, $todayDate, $todayDate])
+                SUM(CASE WHEN created_at BETWEEN ? AND ? AND status = 'cancelled' THEN 1 ELSE 0 END) as cancelled_today,
+                COALESCE(SUM(CASE WHEN created_at BETWEEN ? AND ? AND status != 'cancelled' THEN total - COALESCE(refunded_total, 0) ELSE 0 END), 0) as revenue_today
+            ", [
+                $todayStart, $todayEnd,
+                $todayStart, $todayEnd,
+                $todayStart, $todayEnd,
+                $todayStart, $todayEnd,
+            ])
             ->first();
 
         $stats = [
@@ -146,16 +153,28 @@ class AdminOrderController extends Controller
 
         $newStatus = $validated['status'];
 
-        if ($order->status === 'cancelled' && $newStatus !== 'cancelled') {
-            throw ValidationException::withMessages([
-                'status' => 'A cancelled order cannot be reopened: its stock was returned and any payment refunded.',
-            ]);
-        }
-
         if ($newStatus === 'cancelled') {
             $this->cancelOrder($order, $payments);
         } else {
-            $order->update(['status' => $newStatus]);
+            DB::transaction(function () use ($order, $newStatus) {
+                $lockedOrder = Order::whereKey($order->id)->lockForUpdate()->firstOrFail();
+
+                if ($lockedOrder->status === 'completed' && $newStatus !== 'completed') {
+                    throw ValidationException::withMessages([
+                        'status' => 'Completed orders cannot be modified or reopened.',
+                    ]);
+                }
+
+                if ($lockedOrder->status === 'cancelled' && $newStatus !== 'cancelled') {
+                    throw ValidationException::withMessages([
+                        'status' => 'A cancelled order cannot be reopened: its stock was returned and any payment refunded.',
+                    ]);
+                }
+
+                $lockedOrder->update(['status' => $newStatus]);
+            });
+
+            $order->refresh();
         }
 
         // Broadcast real-time status update to both Admin KDS and Customer tracking screens
@@ -249,8 +268,16 @@ class AdminOrderController extends Controller
         $zeroProductStock = (bool) ($validated['zero_product_stock'] ?? true);
         $reason = trim((string) ($validated['reason'] ?? 'Out of stock')) ?: 'Out of stock';
 
-        $remainingOrderBalance = max(0.0, round((float) $order->total - (float) ($order->refunded_total ?? 0), 2));
-        $refundAmount = min($remainingOrderBalance, round((float) $item->unit_price * $qtyToRefund, 2));
+        $order->loadMissing('items');
+        $baseOrderRefundedTotal = round((float) ($order->refunded_total ?? 0), 2);
+        $remainingOrderBalance = max(0.0, round((float) $order->total - $baseOrderRefundedTotal, 2));
+        $itemRefundAmount = min($remainingOrderBalance, round((float) $item->unit_price * $qtyToRefund, 2));
+
+        $totalActiveUnitsBefore = $order->items->sum(
+            fn ($i) => max(0, (int) $i->quantity - (int) ($i->refunded_quantity ?? 0))
+        );
+        $willCancelOrder = ($totalActiveUnitsBefore - $qtyToRefund) <= 0;
+        $refundAmount = $willCancelOrder ? $remainingOrderBalance : $itemRefundAmount;
         $refundCents = (int) round($refundAmount * 100);
         $newRefundedQty = $alreadyRefundedQty + $qtyToRefund;
 
@@ -281,11 +308,11 @@ class AdminOrderController extends Controller
 
         $previousStatus = $order->status;
 
-        DB::transaction(function () use ($order, $item, $qtyToRefund, $newRefundedQty, $refundAmount, $reason, $zeroProductStock) {
+        DB::transaction(function () use ($order, $item, $qtyToRefund, $newRefundedQty, $itemRefundAmount, $refundAmount, $baseOrderRefundedTotal, $reason, $zeroProductStock) {
             $lockedOrder = Order::whereKey($order->id)->lockForUpdate()->firstOrFail();
             $lockedItem = OrderItem::whereKey($item->id)->lockForUpdate()->firstOrFail();
 
-            $newItemRefundedAmount = round((float) ($lockedItem->refunded_amount ?? 0) + $refundAmount, 2);
+            $newItemRefundedAmount = round((float) ($lockedItem->refunded_amount ?? 0) + $itemRefundAmount, 2);
             $fullyRefundedItem = $newRefundedQty >= (int) $lockedItem->quantity;
 
             $lockedItem->update([
@@ -304,20 +331,23 @@ class AdminOrderController extends Controller
                 $reservedStock[$lockedItem->product_id] = max(0, (int) $reservedStock[$lockedItem->product_id] - $qtyToRefund);
             }
 
-            $newOrderRefundedTotal = min(
-                (float) $lockedOrder->total,
-                round((float) ($lockedOrder->refunded_total ?? 0) + $refundAmount, 2)
-            );
-
-            $formattedRefund = number_format($refundAmount, 2);
-            $noteEntry = "[Refunded {$qtyToRefund}× {$lockedItem->name} (\${$formattedRefund}) — {$reason}]";
-            $updatedNotes = trim(($lockedOrder->notes ?? '').' '.$noteEntry);
-
             $remainingActiveUnits = $lockedOrder->items()
                 ->get()
                 ->sum(fn ($i) => max(0, (int) $i->quantity - (int) ($i->refunded_quantity ?? 0)));
 
             $nextStatus = $remainingActiveUnits <= 0 ? 'cancelled' : $lockedOrder->status;
+            $expectedOrderRefundedTotal = $remainingActiveUnits <= 0
+                ? (float) $lockedOrder->total
+                : round($baseOrderRefundedTotal + $refundAmount, 2);
+
+            $newOrderRefundedTotal = min(
+                (float) $lockedOrder->total,
+                max(round((float) ($lockedOrder->refunded_total ?? 0), 2), $expectedOrderRefundedTotal)
+            );
+
+            $formattedRefund = number_format($refundAmount, 2);
+            $noteEntry = "[Refunded {$qtyToRefund}× {$lockedItem->name} (\${$formattedRefund}) — {$reason}]";
+            $updatedNotes = trim(($lockedOrder->notes ?? '').' '.$noteEntry);
 
             $lockedOrder->update([
                 'refunded_total' => $newOrderRefundedTotal,
@@ -378,6 +408,14 @@ class AdminOrderController extends Controller
      */
     private function cancelOrder(Order $order, StripePayments $payments): void
     {
+        $order->refresh();
+
+        if ($order->status === 'completed') {
+            throw ValidationException::withMessages([
+                'status' => 'Completed orders cannot be cancelled or refunded.',
+            ]);
+        }
+
         if ($order->status === 'cancelled') {
             return;
         }
@@ -408,7 +446,8 @@ class AdminOrderController extends Controller
             }
         }
 
-        $order->cancelAndRestock('Cancelled by admin');
-        $order->update(['refunded_total' => $order->total]);
+        DB::transaction(function () use ($order) {
+            $order->cancelAndRestock('Cancelled by admin', (float) $order->total);
+        });
     }
 }

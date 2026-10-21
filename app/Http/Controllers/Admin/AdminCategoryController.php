@@ -10,6 +10,7 @@ use App\Models\Product;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
@@ -66,9 +67,11 @@ class AdminCategoryController extends Controller
             ];
         });
 
+        $categoryStats = Category::selectRaw('COUNT(*) as total, SUM(CASE WHEN is_active = 1 THEN 1 ELSE 0 END) as active')->first();
+
         $metrics = [
-            'total_categories' => Category::count(),
-            'active_categories' => Category::where('is_active', true)->count(),
+            'total_categories' => (int) ($categoryStats->total ?? 0),
+            'active_categories' => (int) ($categoryStats->active ?? 0),
             'total_products' => Product::count(),
         ];
 
@@ -128,6 +131,25 @@ class AdminCategoryController extends Controller
             ? Str::slug($validated['slug'])
             : Str::slug($validated['name']);
 
+        if (empty($slug)) {
+            $slug = 'category';
+        }
+
+        $originalSlug = $slug;
+        $existingSlugs = Category::where('slug', $slug)
+            ->orWhere('slug', 'like', "{$originalSlug}-%")
+            ->pluck('slug')
+            ->flip()
+            ->all();
+
+        if (isset($existingSlugs[$slug])) {
+            $counter = 1;
+            while (isset($existingSlugs["{$originalSlug}-{$counter}"])) {
+                $counter++;
+            }
+            $slug = "{$originalSlug}-{$counter}";
+        }
+
         // Handle image upload or URL
         $image = null;
         if ($request->hasFile('image_file')) {
@@ -160,7 +182,34 @@ class AdminCategoryController extends Controller
     {
         $validated = $request->validated();
         $oldSlug = $category->slug;
-        $newSlug = Str::slug($validated['slug']);
+
+        $slug = ! empty($validated['slug'])
+            ? Str::slug($validated['slug'])
+            : Str::slug($validated['name']);
+
+        if (empty($slug)) {
+            $slug = 'category';
+        }
+
+        $originalSlug = $slug;
+        $existingSlugs = Category::where('id', '!=', $category->id)
+            ->where(function ($query) use ($originalSlug) {
+                $query->where('slug', $originalSlug)
+                    ->orWhere('slug', 'like', "{$originalSlug}-%");
+            })
+            ->pluck('slug')
+            ->flip()
+            ->all();
+
+        if (isset($existingSlugs[$slug])) {
+            $counter = 1;
+            while (isset($existingSlugs["{$originalSlug}-{$counter}"])) {
+                $counter++;
+            }
+            $slug = "{$originalSlug}-{$counter}";
+        }
+
+        $newSlug = $slug;
 
         $updateData = [
             'name' => $validated['name'],
@@ -179,15 +228,17 @@ class AdminCategoryController extends Controller
             $updateData['image'] = $validated['image_url'];
         }
 
-        $category->update($updateData);
+        DB::transaction(function () use ($category, $updateData, $oldSlug, $newSlug) {
+            $category->update($updateData);
 
-        // If slug or name changed, synchronize existing products referencing this category
-        if ($oldSlug !== $newSlug || $category->wasChanged('name')) {
-            Product::where('category', $oldSlug)->update([
-                'category' => $newSlug,
-                'category_title' => $category->name,
-            ]);
-        }
+            // If slug or name changed, synchronize existing products referencing this category
+            if ($oldSlug !== $newSlug || $category->wasChanged('name')) {
+                Product::where('category', $oldSlug)->update([
+                    'category' => $newSlug,
+                    'category_title' => $category->name,
+                ]);
+            }
+        });
 
         return back()->with('success', "Category '{$category->name}' updated successfully.");
     }
@@ -200,13 +251,15 @@ class AdminCategoryController extends Controller
         $name = $category->name;
         $slug = $category->slug;
 
-        // If products exist in this category, re-assign them to general 'grocery'
-        Product::where('category', $slug)->update([
-            'category' => 'grocery',
-            'category_title' => 'Pantry & Groceries',
-        ]);
+        DB::transaction(function () use ($category, $slug) {
+            // If products exist in this category, re-assign them to general 'grocery'
+            Product::where('category', $slug)->update([
+                'category' => 'grocery',
+                'category_title' => 'Pantry & Groceries',
+            ]);
 
-        $category->delete();
+            $category->delete();
+        });
 
         return back()->with('success', "Category '{$name}' deleted successfully.");
     }

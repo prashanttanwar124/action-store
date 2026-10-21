@@ -195,7 +195,7 @@ class Checkout extends Model
                 'discount' => 0.00,
                 'delivery_fee' => $locked->delivery_fee,
                 'total' => $locked->total,
-                'points_earned' => (int) floor((float) $locked->subtotal),
+                'points_earned' => (int) floor((float) $locked->total),
                 'payment_method' => $locked->payment_method,
                 'stripe_payment_id' => $paymentIntentId,
                 'fulfillment_type' => $locked->fulfillment_type,

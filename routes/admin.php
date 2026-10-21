@@ -30,10 +30,12 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::get('/dashboard', [AdminDashboardController::class, 'index'])->name('dashboard');
 
         // Real-Time Live Orders (KDS) powered by Laravel Reverb
-        Route::get('/orders', [AdminOrderController::class, 'index'])->name('orders.index');
-        Route::patch('/orders/{order}/status', [AdminOrderController::class, 'updateStatus'])->name('orders.status.update');
-        Route::patch('/orders/{order}/items/packed', [AdminOrderController::class, 'updateItemsPacked'])->name('orders.items.packed');
-        Route::post('/orders/{order}/items/{item}/refund', [AdminOrderController::class, 'refundOrderItem'])->name('orders.items.refund');
+        Route::middleware('permission:manage orders,admin')->group(function () {
+            Route::get('/orders', [AdminOrderController::class, 'index'])->name('orders.index');
+            Route::patch('/orders/{order}/status', [AdminOrderController::class, 'updateStatus'])->name('orders.status.update');
+            Route::patch('/orders/{order}/items/packed', [AdminOrderController::class, 'updateItemsPacked'])->name('orders.items.packed');
+            Route::post('/orders/{order}/items/{item}/refund', [AdminOrderController::class, 'refundOrderItem'])->name('orders.items.refund');
+        });
 
         // Product Management (with Multi-Image Uploads)
         Route::middleware('permission:manage products,admin')->group(function () {
