@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, watch, watchEffect } from 'vue';
+import { ref, computed, watch, watchEffect, onMounted } from 'vue';
 import { Head, Link, router, usePage } from '@inertiajs/vue3';
 import StoreLayout from '../Layouts/StoreLayout.vue';
 import { useStore } from '../stores/cart';
@@ -69,6 +69,7 @@ const reorderedNotification = ref(false);
 const reorderedItemCount = ref(0);
 const loadingMoreOrders = ref(false);
 const accumulatedOrders = ref([...(props.dbOrders || [])]);
+const paginationState = ref({ ...(props.ordersPagination || {}) });
 const showAllLedger = ref(false);
 const selectedCategory = ref('all');
 
@@ -94,23 +95,49 @@ watchEffect(() => {
   }
 });
 
-watch(
-  () => props.dbOrders,
-  (newOrders) => {
-    const incoming = newOrders || [];
-    if ((props.ordersPagination?.current_page || 1) <= 1) {
-      accumulatedOrders.value = [...incoming];
-      return;
-    }
+function mergeIncomingOrders(incomingOrders, incomingPagination) {
+  const incoming = Array.isArray(incomingOrders) ? incomingOrders : [];
+  const pag = incomingPagination || props.ordersPagination || {};
+  paginationState.value = { ...pag };
 
-    const existingIds = new Set(accumulatedOrders.value.map((o) => o.id));
-    incoming.forEach((order) => {
-      if (!existingIds.has(order.id)) {
-        accumulatedOrders.value.push(order);
-      }
-    });
+  if ((pag.current_page || 1) <= 1) {
+    accumulatedOrders.value = [...incoming];
+    return;
+  }
+
+  const existingIds = new Set(accumulatedOrders.value.map((o) => o.id));
+  incoming.forEach((order) => {
+    if (!existingIds.has(order.id)) {
+      accumulatedOrders.value.push(order);
+    }
+  });
+}
+
+watch(
+  [() => props.dbOrders, () => props.ordersPagination],
+  ([newOrders, newPagination]) => {
+    mergeIncomingOrders(newOrders, newPagination);
   }
 );
+
+onMounted(() => {
+  if (typeof window !== 'undefined' && window.location.search.includes('page=')) {
+    const cleanPath = window.location.pathname;
+    window.history.replaceState(window.history.state, '', cleanPath);
+    if ((props.ordersPagination?.current_page || 1) > 1) {
+      router.get(
+        cleanPath,
+        {},
+        {
+          replace: true,
+          preserveState: true,
+          preserveScroll: true,
+          only: ['dbOrders', 'ordersPagination'],
+        }
+      );
+    }
+  }
+});
 
 const isReorderMode = computed(() => props.activeSection === 'reorder');
 const storeInfo = computed(() => page.props.storeInfo || {});
@@ -125,11 +152,15 @@ const displayOrders = computed(() => {
 });
 
 const totalOrdersCount = computed(() => {
-  return props.ordersPagination?.total ?? displayOrders.value.length;
+  return paginationState.value?.total ?? props.ordersPagination?.total ?? displayOrders.value.length;
 });
 
 const hasMoreOrders = computed(() => {
-  return Boolean(props.ordersPagination?.has_more && props.ordersPagination?.next_page_url);
+  return Boolean(
+    paginationState.value?.has_more &&
+    paginationState.value?.next_page_url &&
+    displayOrders.value.length < totalOrdersCount.value
+  );
 });
 
 function loadMoreOrders() {
@@ -137,14 +168,25 @@ function loadMoreOrders() {
     return;
   }
 
+  const targetUrl = paginationState.value.next_page_url;
+  const savedScrollY = typeof window !== 'undefined' ? window.scrollY : 0;
   loadingMoreOrders.value = true;
+
   router.get(
-    props.ordersPagination.next_page_url,
+    targetUrl,
     {},
     {
       preserveState: true,
       preserveScroll: true,
+      replace: true,
       only: ['dbOrders', 'ordersPagination'],
+      onSuccess: (pageResp) => {
+        mergeIncomingOrders(pageResp?.props?.dbOrders, pageResp?.props?.ordersPagination);
+        if (typeof window !== 'undefined') {
+          window.history.replaceState(window.history.state, '', window.location.pathname);
+          window.scrollTo({ top: savedScrollY, behavior: 'instant' });
+        }
+      },
       onFinish: () => {
         loadingMoreOrders.value = false;
       },
