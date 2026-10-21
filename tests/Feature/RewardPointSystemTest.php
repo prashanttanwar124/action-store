@@ -384,44 +384,6 @@ class RewardPointSystemTest extends TestCase
         }
     }
 
-    public function test_bulk_inserted_orders_can_be_synced_via_user_sync_all_reward_points(): void
-    {
-        $user = User::factory()->create();
-        $this->assertSame(100, (int) $user->reward_points);
-
-        // Simulate raw bulk insert that bypassed Eloquent saved hooks
-        DB::table('orders')->insert([
-            'order_number' => '#MM-BULK-9901',
-            'user_id' => $user->id,
-            'customer_name' => $user->name,
-            'customer_email' => $user->email,
-            'customer_phone' => '+15551234567',
-            'subtotal' => 42.50,
-            'discount' => 0.00,
-            'delivery_fee' => 0.00,
-            'total' => 42.50,
-            'points_earned' => 42,
-            'payment_method' => 'card',
-            'fulfillment_type' => 'Store Pickup',
-            'status' => 'confirmed',
-            'created_at' => now(),
-            'updated_at' => now(),
-        ]);
-
-        // Before sync, ledger does not have the bulk order
-        $this->assertSame(100, (int) $user->fresh()->reward_points);
-
-        // Run syncAllRewardPoints
-        $newBalance = $user->syncAllRewardPoints();
-
-        $this->assertSame(142, $newBalance);
-        $this->assertSame(142, (int) $user->fresh()->reward_points);
-        $this->assertDatabaseHas('reward_points', [
-            'user_id' => $user->id,
-            'points' => 42,
-        ]);
-    }
-
     public function test_order_reassignment_via_direct_database_query_reconciles_both_users(): void
     {
         $userA = User::factory()->create();
@@ -479,39 +441,6 @@ class RewardPointSystemTest extends TestCase
         $this->assertSame(0, RewardPoint::where('order_id', $order->id)->count(), 'Orphaned reward points for guest order must be deleted');
     }
 
-    public function test_user_created_without_events_receives_welcome_bonus_on_inertia_request(): void
-    {
-        // Insert user directly via DB query bypassing model events
-        $userId = DB::table('users')->insertGetId([
-            'name' => 'Raw DB User',
-            'email' => 'raw_db@example.com',
-            'password' => bcrypt('password'),
-            'reward_points' => 100,
-            'created_at' => now(),
-            'updated_at' => now(),
-        ]);
-
-        $user = User::find($userId);
-
-        // Verify no ledger entry exists yet
-        $this->assertSame(0, RewardPoint::where('user_id', $user->id)->count());
-
-        // Visiting /account should detect missing ledger entry and create welcome bonus
-        $this->actingAs($user)->get('/account')
-            ->assertOk()
-            ->assertInertia(fn (Assert $page) => $page
-                ->component('Account')
-                ->where('auth.user.reward_points', 100)
-            );
-
-        $this->assertDatabaseHas('reward_points', [
-            'user_id' => $user->id,
-            'order_id' => null,
-            'points' => 100,
-            'description' => 'Welcome bonus',
-        ]);
-    }
-
     public function test_zero_and_negative_dollar_orders_do_not_produce_points(): void
     {
         $user = User::factory()->create();
@@ -534,51 +463,6 @@ class RewardPointSystemTest extends TestCase
 
         $this->assertSame(100, (int) $user->fresh()->reward_points);
         $this->assertSame(0, RewardPoint::where('order_id', $negativeOrder->id)->count());
-    }
-
-    public function test_sync_all_reward_points_is_strictly_idempotent(): void
-    {
-        $user = User::factory()->create();
-
-        Order::factory()->create([
-            'user_id' => $user->id,
-            'total' => 35.50,
-            'status' => 'confirmed',
-        ]);
-
-        $this->assertSame(135, (int) $user->fresh()->reward_points);
-        $initialLedgerCount = RewardPoint::where('user_id', $user->id)->count();
-
-        // Run syncAllRewardPoints 3 times in a row
-        $user->syncAllRewardPoints();
-        $user->syncAllRewardPoints();
-        $user->syncAllRewardPoints();
-
-        $this->assertSame(135, (int) $user->fresh()->reward_points);
-        $this->assertSame($initialLedgerCount, RewardPoint::where('user_id', $user->id)->count());
-    }
-
-    public function test_raw_sql_order_deletion_cascades_and_sync_cleans_user_balance(): void
-    {
-        $user = User::factory()->create();
-
-        $order = Order::factory()->create([
-            'user_id' => $user->id,
-            'total' => 88.00,
-            'status' => 'confirmed',
-        ]);
-
-        $this->assertSame(188, (int) $user->fresh()->reward_points);
-
-        // Delete order via raw SQL (bypassing Order::delete model hook)
-        DB::table('orders')->where('id', $order->id)->delete();
-
-        // After running syncAllRewardPoints, user balance must be back to 100
-        $newBalance = $user->syncAllRewardPoints();
-
-        $this->assertSame(100, $newBalance);
-        $this->assertSame(100, (int) $user->fresh()->reward_points);
-        $this->assertSame(0, RewardPoint::where('order_id', $order->id)->count());
     }
 
     public function test_unsaved_order_sync_reward_points_does_not_wipe_out_welcome_bonuses(): void
@@ -625,12 +509,11 @@ class RewardPointSystemTest extends TestCase
         $this->assertSame(100, (int) $user2->fresh()->reward_points);
     }
 
-    public function test_unsaved_user_balance_refresh_and_sync_does_not_crash_with_query_exception(): void
+    public function test_unsaved_user_balance_refresh_does_not_crash_with_query_exception(): void
     {
         $unsavedUser = new User;
 
         $this->assertSame(100, $unsavedUser->refreshRewardPointsBalance());
-        $this->assertSame(100, $unsavedUser->syncAllRewardPoints());
     }
 
     public function test_user_created_with_custom_points_creates_consistent_ledger_entry_and_persists_balance(): void

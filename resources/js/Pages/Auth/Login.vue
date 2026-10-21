@@ -17,7 +17,6 @@ defineProps({
 
 const page = usePage();
 const storeInfo = computed(() => page.props.storeInfo || {});
-const storeBrandName = computed(() => storeInfo.value?.brand_name || (storeInfo.value?.name ? storeInfo.value.name.split(/\s*[—–]\s*|\s+-\s+/)[0].trim() : 'Store'));
 
 const showPassword = ref(false);
 
@@ -42,7 +41,7 @@ const fillDemo = (email, password = 'password') => {
 
 <template>
   <GuestLayout>
-    <Head :title="`Sign In — ${storeBrandName}`" />
+    <Head :title="`Sign In — ${storeInfo.brand_name}`" />
 
     <div class="space-y-6">
       <!-- Card Title & Subtitle -->
@@ -55,7 +54,7 @@ const fillDemo = (email, password = 'password') => {
           Welcome Back
         </h1>
         <p class="text-xs text-[#6e6e73]">
-          Sign in to manage orders and {{ storeBrandName }} Rewards points.
+          Sign in to manage orders and {{ storeInfo.brand_name }} Rewards points.
         </p>
       </div>
 
@@ -170,7 +169,7 @@ const fillDemo = (email, password = 'password') => {
       <!-- Switch to Register -->
       <div class="text-center pt-2 border-t border-[#e0d9cc]/60">
         <p class="text-xs text-[#6e6e73]">
-          New to {{ storeBrandName }}?
+          New to {{ storeInfo.brand_name }}?
           <Link :href="route('register')" class="font-semibold text-[#1d1d1f] hover:text-[#a47a3c] underline ml-1">
             Create an account
           </Link>

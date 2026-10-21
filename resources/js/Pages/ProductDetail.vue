@@ -23,7 +23,6 @@ const props = defineProps({
 const store = useStore();
 const page = usePage();
 const storeInfo = computed(() => page.props.storeInfo || {});
-const storeBrandName = computed(() => storeInfo.value?.brand_name || (storeInfo.value?.name ? storeInfo.value.name.split(/\s*[—–]\s*|\s+-\s+/)[0].trim() : 'Store'));
 
 const product = computed(() => {
   let base;
@@ -330,7 +329,7 @@ function handleAddAllFbt() {
 </script>
 
 <template>
-  <Head :title="`${product.name} — ${storeBrandName}`" />
+  <Head :title="`${product.name} — ${storeInfo.brand_name}`" />
 
   <StoreLayout 
     headerMode="pdp" 

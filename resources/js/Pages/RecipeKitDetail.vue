@@ -31,7 +31,6 @@ const props = defineProps({
 const store = useStore();
 const page = usePage();
 const storeInfo = computed(() => page.props.storeInfo || {});
-const storeBrandName = computed(() => storeInfo.value?.brand_name || (storeInfo.value?.name ? storeInfo.value.name.split(/\s*[—–]\s*|\s+-\s+/)[0].trim() : 'Store'));
 
 
 const activeImage = ref(props.kit.image || (props.kit.images?.[0]) || '/images/products/paneer_curry.jpg');
@@ -170,7 +169,7 @@ function handleAddKitToCart() {
 </script>
 
 <template>
-  <Head :title="`${kit.name} — Recipe Kit Group Buy — ${storeBrandName}`" />
+  <Head :title="`${kit.name} — Recipe Kit Group Buy — ${storeInfo.brand_name}`" />
 
   <StoreLayout 
     headerMode="pdp" 

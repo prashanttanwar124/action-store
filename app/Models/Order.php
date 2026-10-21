@@ -103,9 +103,8 @@ class Order extends Model
         }
 
         $currentUserId = $this->user_id ? (int) $this->user_id : null;
-        $previousUserId = $this->getOriginal('user_id') ? (int) $this->getOriginal('user_id') : null;
 
-        // Clean up any ledger records belonging to previous or different users for this order (handles DB updates & in-memory changes)
+        // Clean up any ledger records belonging to previous or different users for this order
         $foreignOrStaleLedgers = RewardPoint::where('order_id', $this->id)
             ->when($currentUserId, fn ($q) => $q->where('user_id', '!=', $currentUserId))
             ->get();
@@ -123,17 +122,7 @@ class Order extends Model
             }
         }
 
-        // Also handle in-memory getOriginal user change if not captured above
-        if ($previousUserId && $previousUserId !== $currentUserId) {
-            RewardPoint::where('order_id', $this->id)->where('user_id', $previousUserId)->delete();
-            if ($previousUser = User::find($previousUserId)) {
-                $previousUser->refreshRewardPointsBalance();
-            }
-        }
-
         if (! $currentUserId) {
-            RewardPoint::where('order_id', $this->id)->delete();
-
             return;
         }
 

@@ -62,7 +62,6 @@ function activeItemQty(item) {
 
 const page = usePage();
 const storeInfo = computed(() => page.props.storeInfo || {});
-const storeBrandName = computed(() => storeInfo.value?.brand_name || (storeInfo.value?.name ? storeInfo.value.name.split(/\s*[—–]\s*|\s+-\s+/)[0].trim() : 'Store'));
 
 const isDelivery = computed(() => {
   const type = String(props.order.fulfillment_type || '').toLowerCase();
@@ -72,14 +71,14 @@ const isDelivery = computed(() => {
 const steps = computed(() => {
   if (isDelivery.value) {
     return [
-      { id: 'confirmed', label: 'Order Received', desc: `Sent to ${storeBrandName.value} store` },
+      { id: 'confirmed', label: 'Order Received', desc: `Sent to ${storeInfo.value.brand_name} store` },
       { id: 'packing', label: 'Being Picked & Packed', desc: 'Hand-selecting fresh groceries' },
       { id: 'ready_for_pickup', label: 'Out for Delivery', desc: 'Driver is on the way to your address' },
       { id: 'completed', label: 'Delivered', desc: 'Safely delivered to your door' },
     ];
   }
   return [
-    { id: 'confirmed', label: 'Order Received', desc: `Sent to ${storeBrandName.value} store` },
+    { id: 'confirmed', label: 'Order Received', desc: `Sent to ${storeInfo.value.brand_name} store` },
     { id: 'packing', label: 'Being Picked & Packed', desc: 'Hand-selecting fresh groceries' },
     { id: 'ready_for_pickup', label: 'Ready for Pickup', desc: 'Park in Curbside Bay 3' },
     { id: 'completed', label: 'Completed', desc: 'Handed over to customer' },
@@ -172,7 +171,7 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <Head :title="`Order ${order.order_number} Tracking — ${storeBrandName}`" />
+  <Head :title="`Order ${order.order_number} Tracking — ${storeInfo.brand_name}`" />
 
   <StoreLayout :showHeader="true" :showFooter="true" :showBottomNav="true" headerMode="simple" :headerTitle="'Order ' + order.order_number">
     <div class="max-w-3xl mx-auto py-6 space-y-6 pb-28">

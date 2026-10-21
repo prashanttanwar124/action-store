@@ -6,7 +6,9 @@ use App\Models\Admin;
 use App\Models\StoreSetting;
 use Database\Seeders\AdminSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Hash;
 use Inertia\Testing\AssertableInertia as Assert;
+use Spatie\Permission\Models\Role;
 use Tests\TestCase;
 
 class AdminStoreSettingTest extends TestCase
@@ -182,5 +184,29 @@ class AdminStoreSettingTest extends TestCase
             ->where('storeInfo.name', 'Masala Mart Express')
             ->where('storeInfo.pickup_time', 'Ready in 20 mins')
         );
+    }
+
+    public function test_permission_scoping_on_settings_routes(): void
+    {
+        $catalogAdmin = Admin::create([
+            'name' => 'Catalog Admin',
+            'email' => 'catalog@masalamart.com',
+            'password' => Hash::make('password123'),
+        ]);
+        $catalogRole = Role::findOrCreate('Catalog Only', 'admin');
+        $catalogRole->syncPermissions(['manage products']);
+        $catalogAdmin->assignRole($catalogRole);
+
+        $this->actingAs($catalogAdmin, 'admin')->get(route('admin.store-info.edit'))->assertStatus(403);
+        $this->actingAs($catalogAdmin, 'admin')->put(route('admin.store-info.update'), ['name' => 'Hacked'])->assertStatus(403);
+        $this->actingAs($catalogAdmin, 'admin')->post(route('admin.store-info.busy-mode'), ['busy_mode_extra_minutes' => 15])->assertStatus(403);
+        $this->actingAs($catalogAdmin, 'admin')->get(route('admin.pickup-settings.edit'))->assertStatus(403);
+        $this->actingAs($catalogAdmin, 'admin')->put(route('admin.pickup-settings.update'), ['is_pickup_active' => false])->assertStatus(403);
+
+        $manager = Admin::where('email', 'manager@masalamart.com')->first();
+        $this->assertNotNull($manager);
+
+        $this->actingAs($manager, 'admin')->get(route('admin.store-info.edit'))->assertStatus(200);
+        $this->actingAs($manager, 'admin')->get(route('admin.pickup-settings.edit'))->assertStatus(200);
     }
 }

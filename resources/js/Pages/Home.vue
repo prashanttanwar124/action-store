@@ -48,7 +48,6 @@ const props = defineProps({
 const store = useStore();
 const page = usePage();
 const storeInfo = computed(() => page.props.storeInfo || {});
-const storeBrandName = computed(() => storeInfo.value?.brand_name || (storeInfo.value?.name ? storeInfo.value.name.split(/\s*[—–]\s*|\s+-\s+/)[0].trim() : 'Store'));
 
 // Hero Banner Interactive Carousel Slides (Dynamic from DB / Admin)
 const defaultBannerSlides = [
@@ -609,7 +608,7 @@ const handleAddKitToCart = (kit) => {
 </script>
 
 <template>
-  <Head :title="`${storeBrandName} — ${storeInfo.tagline || 'Indian Groceries & Fresh Click-and-Collect'}`" />
+  <Head :title="`${storeInfo.brand_name} — ${storeInfo.tagline || 'Indian Groceries & Fresh Click-and-Collect'}`" />
 
     <StoreLayout>
         <div class="space-y-7 sm:space-y-10">

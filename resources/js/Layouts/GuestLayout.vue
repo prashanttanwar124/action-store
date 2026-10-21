@@ -5,7 +5,6 @@ import { ArrowLeft, Sparkles, ShieldCheck, Clock, Store } from 'lucide-vue-next'
 
 const page = usePage();
 const storeInfo = computed(() => page.props.storeInfo || {});
-const storeBrandName = computed(() => storeInfo.value?.brand_name || (storeInfo.value?.name ? storeInfo.value.name.split(/\s*[—–]\s*|\s+-\s+/)[0].trim() : 'Store'));
 </script>
 
 <template>
@@ -41,7 +40,7 @@ const storeBrandName = computed(() => storeInfo.value?.brand_name || (storeInfo.
       <div class="text-center mb-6 space-y-1.5">
         <Link href="/" class="inline-flex items-center gap-2 group">
           <span class="text-3xl sm:text-4xl font-serif font-medium text-[#1d1d1f] tracking-tight group-hover:text-[#a47a3c] transition-colors">
-            {{ storeBrandName }}
+            {{ storeInfo.brand_name }}
           </span>
           <span class="font-devanagari text-xs text-[#7a5620] font-medium bg-[#f5eee2] px-2 py-0.5 rounded-md border border-[#e0d9cc]">
             {{ storeInfo.hindi_tagline || 'किराना' }}
@@ -71,7 +70,7 @@ const storeBrandName = computed(() => storeInfo.value?.brand_name || (storeInfo.
         <span>·</span>
         <div class="flex items-center gap-1.5">
           <Sparkles class="w-3.5 h-3.5 text-[#a47a3c]" />
-          <span>{{ storeBrandName }} Rewards</span>
+          <span>{{ storeInfo.brand_name }} Rewards</span>
         </div>
       </div>
 
@@ -80,7 +79,7 @@ const storeBrandName = computed(() => storeInfo.value?.brand_name || (storeInfo.
     <!-- Simple Footer -->
     <footer class="w-full py-4 text-center text-xs text-[#86868b] border-t border-[#e0d9cc]/60 bg-[#f4efe6]/50">
       <div class="max-w-5xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-2">
-        <span>© 2026 {{ storeBrandName }}. All rights reserved.</span>
+        <span>© 2026 {{ storeInfo.brand_name }}. All rights reserved.</span>
         <div class="flex items-center gap-3 text-[11px]">
           <Link href="/" class="hover:text-[#1d1d1f]">Home</Link>
           <span>·</span>

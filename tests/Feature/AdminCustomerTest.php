@@ -183,4 +183,57 @@ class AdminCustomerTest extends TestCase
             'customer_name' => 'Customer To Delete',
         ]);
     }
+
+    public function test_admin_customer_recent_orders_query_does_not_starve_low_volume_customers(): void
+    {
+        $customerB = User::factory()->create(['name' => 'Customer B', 'created_at' => now()->subMinutes(10)]);
+        for ($i = 0; $i < 3; $i++) {
+            Order::factory()->create([
+                'user_id' => $customerB->id,
+                'customer_name' => $customerB->name,
+                'customer_email' => $customerB->email,
+                'created_at' => now()->subHours(2)->addMinutes($i),
+            ]);
+        }
+
+        $customerC = User::factory()->create(['name' => 'Customer C', 'created_at' => now()->subMinutes(15)]);
+        Order::factory()->create([
+            'user_id' => $customerC->id,
+            'customer_name' => $customerC->name,
+            'customer_email' => $customerC->email,
+            'created_at' => now()->subHours(3),
+        ]);
+
+        $customerA = User::factory()->create(['name' => 'Customer A', 'created_at' => now()->subMinutes(5)]);
+        for ($i = 0; $i < 25; $i++) {
+            Order::factory()->create([
+                'user_id' => $customerA->id,
+                'customer_name' => $customerA->name,
+                'customer_email' => $customerA->email,
+                'created_at' => now()->subMinutes(25 - $i),
+            ]);
+        }
+
+        $response = $this->actingAs($this->admin, 'admin')->get(route('admin.customers.index'));
+
+        $response->assertStatus(200);
+        $response->assertInertia(function (Assert $page) use ($customerA, $customerB, $customerC) {
+            $page->component('Admin/Customers/Index');
+
+            $props = $page->toArray()['props'];
+            $customers = collect($props['customers']['data']);
+
+            $cA = $customers->firstWhere('id', $customerA->id);
+            $cB = $customers->firstWhere('id', $customerB->id);
+            $cC = $customers->firstWhere('id', $customerC->id);
+
+            $this->assertNotNull($cA);
+            $this->assertNotNull($cB);
+            $this->assertNotNull($cC);
+
+            $this->assertCount(5, $cA['recent_orders']);
+            $this->assertCount(3, $cB['recent_orders']);
+            $this->assertCount(1, $cC['recent_orders']);
+        });
+    }
 }

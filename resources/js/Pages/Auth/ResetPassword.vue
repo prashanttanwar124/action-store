@@ -17,7 +17,6 @@ const props = defineProps({
 
 const page = usePage();
 const storeInfo = computed(() => page.props.storeInfo || {});
-const storeBrandName = computed(() => storeInfo.value?.brand_name || (storeInfo.value?.name ? storeInfo.value.name.split(/\s*[—–]\s*|\s+-\s+/)[0].trim() : 'Store'));
 
 const showPassword = ref(false);
 
@@ -37,7 +36,7 @@ const submit = () => {
 
 <template>
   <GuestLayout>
-    <Head :title="`Set New Password — ${storeBrandName}`" />
+    <Head :title="`Set New Password — ${storeInfo.brand_name}`" />
 
     <div class="space-y-6">
       

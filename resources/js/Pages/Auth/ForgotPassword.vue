@@ -17,7 +17,6 @@ const form = useForm({
 
 const page = usePage();
 const storeInfo = computed(() => page.props.storeInfo || {});
-const storeBrandName = computed(() => storeInfo.value?.brand_name || (storeInfo.value?.name ? storeInfo.value.name.split(/\s*[—–]\s*|\s+-\s+/)[0].trim() : 'Store'));
 
 const submit = () => {
   form.post(route('password.email'));
@@ -26,7 +25,7 @@ const submit = () => {
 
 <template>
   <GuestLayout>
-    <Head :title="`Reset Password — ${storeBrandName}`" />
+    <Head :title="`Reset Password — ${storeInfo.brand_name}`" />
 
     <div class="space-y-6">
       

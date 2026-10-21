@@ -3,9 +3,7 @@
 namespace App\Http\Middleware;
 
 use App\Models\StoreSetting;
-use App\Models\User;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 use Inertia\Middleware;
 
 class HandleInertiaRequests extends Middleware
@@ -41,28 +39,11 @@ class HandleInertiaRequests extends Middleware
     public function share(Request $request): array
     {
         $isAdmin = $request->is('admin*');
-        $user = ! $isAdmin ? $request->user() : null;
-
-        if ($user instanceof User) {
-            $user = clone $user;
-            if (! $user->rewardPoints()->whereNull('order_id')->exists()) {
-                $user->rewardPoints()->create([
-                    'order_id' => null,
-                    'points' => 100,
-                    'description' => 'Welcome bonus',
-                ]);
-                $points = (int) $user->refreshRewardPointsBalance();
-            } else {
-                $dbPoints = DB::table('users')->where('id', $user->id)->value('reward_points');
-                $points = $dbPoints !== null ? (int) $dbPoints : (int) $user->refreshRewardPointsBalance();
-            }
-            $user->setAttribute('reward_points', $points);
-        }
 
         return [
             ...parent::share($request),
             'auth' => [
-                'user' => $user,
+                'user' => ! $isAdmin ? $request->user()?->fresh() : null,
                 'admin' => $isAdmin && $request->user('admin') ? [
                     'id' => $request->user('admin')->id,
                     'name' => $request->user('admin')->name,

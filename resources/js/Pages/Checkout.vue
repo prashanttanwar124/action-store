@@ -51,7 +51,6 @@ const page = usePage();
 const store = useStore();
 
 const storeInfo = computed(() => page.props.storeInfo || {});
-const storeBrandName = computed(() => storeInfo.value?.brand_name || (storeInfo.value?.name ? storeInfo.value.name.split(/\s*[—–]\s*|\s+-\s+/)[0].trim() : 'Store'));
 const pickupSlotWindowLabel = computed(() => {
   if (storeInfo.value?.pickup_slot_window_label) {
     return storeInfo.value.pickup_slot_window_label;
@@ -748,7 +747,7 @@ async function collectPayment(clientSecret) {
 </script>
 
 <template>
-  <Head :title="`Checkout — ${storeBrandName}`" />
+  <Head :title="`Checkout — ${storeInfo.brand_name}`" />
 
   <StoreLayout 
     headerMode="cart" 
@@ -865,7 +864,7 @@ async function collectPayment(clientSecret) {
             <span class="font-serif font-bold text-lg text-[#1d1d1f]">${{ confirmedTotalPaid }}</span>
           </div>
           <div class="flex justify-between items-center">
-            <span class="text-stone-600 font-normal">{{ storeBrandName }} Points Earned:</span>
+            <span class="text-stone-600 font-normal">{{ storeInfo.brand_name }} Points Earned:</span>
             <span class="font-bold text-[#7a5620]">+{{ confirmedPointsEarned }} pts</span>
           </div>
         </div>

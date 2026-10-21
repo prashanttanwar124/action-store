@@ -2,12 +2,15 @@
 
 namespace Tests\Feature;
 
+use App\Http\Controllers\OrderController;
 use App\Models\Product;
 use App\Models\RecipeKit;
 use App\Models\StoreSetting;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
+use ReflectionClass;
 use Tests\TestCase;
 
 class CheckoutValidationTest extends TestCase
@@ -365,6 +368,62 @@ class CheckoutValidationTest extends TestCase
         $this->assertDatabaseHas('orders', ['total' => 18]);
         $this->assertDatabaseHas('order_items', ['name' => 'Masala Chai Kit', 'unit_price' => 18]);
         $this->assertDatabaseHas('products', ['id' => $product->id, 'stock' => 8]);
+    }
+
+    public function test_checkout_validation_executes_bounded_queries(): void
+    {
+        $this->travelTo(now()->setTime(12, 0));
+
+        $products = Product::factory()->count(15)->create(['stock' => 100]);
+        $kits = [];
+        for ($k = 0; $k < 5; $k++) {
+            $kit = RecipeKit::create([
+                'name' => "Paneer Kit {$k}",
+                'slug' => "paneer-kit-{$k}",
+                'price' => 30,
+                'is_active' => true,
+            ]);
+            $kit->products()->attach($products[$k], ['quantity' => 1]);
+            $kits[] = $kit;
+        }
+
+        $controller = app()->make(OrderController::class);
+        $storeInfo = StoreSetting::current();
+
+        $measure = function (int $numItems) use ($controller, $storeInfo, $products, $kits) {
+            $items = [];
+            for ($i = 0; $i < $numItems; $i++) {
+                if ($i % 3 === 0 && isset($kits[$i / 3])) {
+                    $kit = $kits[$i / 3];
+                    $items[] = ['id' => $kit->slug, 'type' => 'recipe-kit', 'name' => $kit->name, 'price' => 30, 'quantity' => 1];
+                } else {
+                    $prod = $products[$i % count($products)];
+                    $items[] = ['id' => $prod->id, 'name' => $prod->name, 'price' => $prod->price, 'quantity' => 1];
+                }
+            }
+
+            $validated = [
+                'items' => $items,
+                'fulfillment_type' => 'Store Pickup',
+                'pickup_timing_mode' => 'asap',
+            ];
+
+            DB::flushQueryLog();
+            DB::enableQueryLog();
+
+            $reflection = new ReflectionClass($controller);
+            $method = $reflection->getMethod('validateOrderRequirements');
+            $method->setAccessible(true);
+            $method->invoke($controller, $validated, $storeInfo);
+
+            return count(DB::getQueryLog());
+        };
+
+        $q5 = $measure(5);
+        $q15 = $measure(15);
+
+        $this->assertEquals($q5, $q15, "Query count for 15 items ($q15) must not exceed query count for 5 items ($q5)");
+        $this->assertLessThanOrEqual(4, $q15, 'Query count must be bounded at <= 4 queries');
     }
 
     /**

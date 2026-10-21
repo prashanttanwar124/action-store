@@ -38,22 +38,15 @@ class User extends Authenticatable
         });
 
         static::created(function (User $user) {
-            if (! $user->rewardPoints()->whereNull('order_id')->exists()) {
+            $user->ensureWelcomeBonus();
+
+            $initialBalance = (int) ($user->reward_points ?? 100);
+            if ($initialBalance !== 100) {
                 $user->rewardPoints()->create([
                     'order_id' => null,
-                    'points' => 100,
-                    'description' => 'Welcome bonus',
+                    'points' => $initialBalance - 100,
+                    'description' => 'Initial balance adjustment',
                 ]);
-
-                $initialBalance = (int) ($user->reward_points ?? 100);
-                if ($initialBalance !== 100) {
-                    $diff = $initialBalance - 100;
-                    $user->rewardPoints()->create([
-                        'order_id' => null,
-                        'points' => $diff,
-                        'description' => 'Initial balance adjustment',
-                    ]);
-                }
             }
         });
     }
@@ -89,6 +82,20 @@ class User extends Authenticatable
     }
 
     /**
+     * Ensure the user has a base welcome bonus ledger entry.
+     */
+    public function ensureWelcomeBonus(): void
+    {
+        if (! empty($this->id) && ! $this->rewardPoints()->whereNull('order_id')->exists()) {
+            $this->rewardPoints()->create([
+                'order_id' => null,
+                'points' => 100,
+                'description' => 'Welcome bonus',
+            ]);
+        }
+    }
+
+    /**
      * Recalculate and persist the authoritative reward points balance from the ledger.
      */
     public function refreshRewardPointsBalance(): int
@@ -97,13 +104,7 @@ class User extends Authenticatable
             return 100;
         }
 
-        if (! $this->rewardPoints()->whereNull('order_id')->exists()) {
-            $this->rewardPoints()->create([
-                'order_id' => null,
-                'points' => 100,
-                'description' => 'Welcome bonus',
-            ]);
-        }
+        $this->ensureWelcomeBonus();
 
         $balance = (int) $this->rewardPoints()->sum('points');
 
@@ -112,34 +113,5 @@ class User extends Authenticatable
         $this->syncOriginalAttribute('reward_points');
 
         return $balance;
-    }
-
-    /**
-     * Synchronize all reward point ledger entries for this user and refresh balance.
-     */
-    public function syncAllRewardPoints(): int
-    {
-        if (empty($this->id)) {
-            return 100;
-        }
-
-        if (! $this->rewardPoints()->whereNull('order_id')->exists()) {
-            $this->rewardPoints()->create([
-                'order_id' => null,
-                'points' => 100,
-                'description' => 'Welcome bonus',
-            ]);
-        }
-
-        // Clean up any ledger records pointing to orders that no longer belong to this user
-        $userOrderIds = $this->orders()->pluck('id')->all();
-        $this->rewardPoints()
-            ->whereNotNull('order_id')
-            ->whereNotIn('order_id', $userOrderIds)
-            ->delete();
-
-        $this->orders()->each(fn (Order $order) => $order->syncRewardPoints());
-
-        return $this->refreshRewardPointsBalance();
     }
 }

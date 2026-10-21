@@ -68,7 +68,6 @@ const props = defineProps({
 const store = useStore();
 const page = usePage();
 const storeInfo = computed(() => page.props.storeInfo || {});
-const storeBrandName = computed(() => storeInfo.value?.brand_name || (storeInfo.value?.name ? storeInfo.value.name.split(/\s*[—–]\s*|\s+-\s+/)[0].trim() : 'Store'));
 
 // Local Filter States synced with Laravel props
 const searchQuery = ref(props.filters.q || '');
@@ -339,7 +338,7 @@ watch([() => props.products?.current_page, () => props.recipeKits?.current_page]
 </script>
 
 <template>
-  <Head :title="`Search Catalogue — ${storeBrandName}`" />
+  <Head :title="`Search Catalogue — ${storeInfo.brand_name}`" />
 
   <StoreLayout :showHeader="true" :showFooter="true" :showBottomNav="true" :showCartBar="true" headerMode="search">
     <div class="space-y-4 sm:space-y-6 pb-24 pt-1 sm:pt-3">

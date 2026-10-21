@@ -6,7 +6,6 @@ import { Trash2, AlertTriangle, Lock, X } from 'lucide-vue-next';
 
 const page = usePage();
 const storeInfo = computed(() => page.props.storeInfo || {});
-const storeBrandName = computed(() => storeInfo.value?.brand_name || (storeInfo.value?.name ? storeInfo.value.name.split(/\s*[—–]\s*|\s+-\s+/)[0].trim() : 'Store'));
 
 const confirmingUserDeletion = ref(false);
 const passwordInput = ref(null);
@@ -39,7 +38,7 @@ const closeModal = () => {
 <template>
   <div class="space-y-4">
     <div class="text-xs text-[#6e6e73] leading-relaxed">
-      Once your account is deleted, all of your saved grocery preferences, past orders, and {{ storeBrandName }} Rewards points will be permanently erased.
+      Once your account is deleted, all of your saved grocery preferences, past orders, and {{ storeInfo.brand_name }} Rewards points will be permanently erased.
     </div>
 
     <div>

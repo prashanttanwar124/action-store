@@ -28,7 +28,6 @@ const props = defineProps({
 const store = useStore();
 const page = usePage();
 const storeInfo = computed(() => page.props.storeInfo || {});
-const storeBrandName = computed(() => storeInfo.value?.brand_name || (storeInfo.value?.name ? storeInfo.value.name.split(/\s*[—–]\s*|\s+-\s+/)[0].trim() : 'Store'));
 
 onMounted(() => {
   store.refreshCartStock();
@@ -36,7 +35,7 @@ onMounted(() => {
 </script>
 
 <template>
-  <Head :title="`Shopping Cart — ${storeBrandName}`" />
+  <Head :title="`Shopping Cart — ${storeInfo.brand_name}`" />
 
   <StoreLayout 
     headerMode="cart" 
@@ -78,7 +77,7 @@ onMounted(() => {
                 100% Free In-Store & Curbside Pickup
               </h1>
               <p class="text-xs text-stone-400 font-normal mt-0.5">
-                Packaged fresh in thermal insulated bags at <strong class="text-stone-200">{{ storeInfo.name || storeBrandName }}</strong> (Bay 3 or Front Counter).
+                Packaged fresh in thermal insulated bags at <strong class="text-stone-200">{{ storeInfo.name || storeInfo.brand_name }}</strong> (Bay 3 or Front Counter).
               </p>
             </div>
           </div>
@@ -326,7 +325,7 @@ onMounted(() => {
             <!-- Points Box -->
             <div class="bg-[#f5eee2] border border-[#e0d9cc] rounded-lg p-3 text-xs text-[#7a5620] flex items-center gap-2">
               <Sparkles class="w-4 h-4 shrink-0 text-[#a47a3c]" />
-              <span class="font-normal">You will earn <strong class="font-bold text-[#7a5620]">+{{ Math.floor(store.subtotal) }} {{ storeBrandName }} Points</strong> on this order.</span>
+              <span class="font-normal">You will earn <strong class="font-bold text-[#7a5620]">+{{ Math.floor(store.subtotal) }} {{ storeInfo.brand_name }} Points</strong> on this order.</span>
             </div>
 
             <!-- Desktop Checkout CTA Button -->

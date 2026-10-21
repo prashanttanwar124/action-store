@@ -18,7 +18,7 @@ class OrderSeeder extends Seeder
     public function run(): void
     {
         Schema::disableForeignKeyConstraints();
-        RewardPoint::truncate();
+        RewardPoint::whereNotNull('order_id')->delete();
         OrderItem::truncate();
         Order::truncate();
         Schema::enableForeignKeyConstraints();
@@ -239,26 +239,6 @@ class OrderSeeder extends Seeder
                 'is_subscribed' => false,
                 'image' => $dal->image,
             ]);
-        }
-
-        // Ensure all users have welcome bonus and accurate order points ledger entries & balance
-        $users = User::all();
-        foreach ($users as $user) {
-            RewardPoint::firstOrCreate(
-                ['user_id' => $user->id, 'order_id' => null],
-                [
-                    'points' => 100,
-                    'description' => 'Welcome bonus',
-                    'created_at' => $user->created_at ?? now(),
-                    'updated_at' => $user->created_at ?? now(),
-                ]
-            );
-
-            Order::where('user_id', $user->id)->each(function (Order $order) {
-                $order->syncRewardPoints();
-            });
-
-            $user->refreshRewardPointsBalance();
         }
     }
 }

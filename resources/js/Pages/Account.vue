@@ -33,7 +33,6 @@ const reorderedNotification = ref(false);
 const reorderedItemCount = ref(0);
 
 const storeInfo = computed(() => page.props.storeInfo || {});
-const storeBrandName = computed(() => storeInfo.value?.brand_name || (storeInfo.value?.name ? storeInfo.value.name.split(/\s*[—–]\s*|\s+-\s+/)[0].trim() : 'Store'));
 
 const authUser = computed(() => page.props.auth?.user);
 const userName = computed(() => authUser.value ? authUser.value.name.split(' ')[0] : 'there');
@@ -95,7 +94,7 @@ function isOrderItemFullyRefunded(item) {
 </script>
 
 <template>
-  <Head :title="`Customer Dashboard — ${storeBrandName}`" />
+  <Head :title="`Customer Dashboard — ${storeInfo.brand_name}`" />
 
   <StoreLayout :showHeader="false" :showFooter="false" :showBottomNav="true" :showCartBar="false">
     <div class="space-y-6 sm:space-y-8 max-w-xl mx-auto pb-24 pt-2 sm:pt-4">
@@ -120,7 +119,7 @@ function isOrderItemFullyRefunded(item) {
         <div>
           <div class="flex items-center gap-2">
             <h1 class="text-2xl sm:text-3xl font-serif font-medium text-[#1d1d1f] tracking-tight">
-              {{ authUser ? 'Hi, ' + userName : 'Welcome to ' + storeBrandName }}
+              {{ authUser ? 'Hi, ' + userName : 'Welcome to ' + storeInfo.brand_name }}
             </h1>
             <span v-if="authUser" class="w-2 h-2 rounded-full bg-emerald-500" title="Signed in"></span>
           </div>
@@ -174,7 +173,7 @@ function isOrderItemFullyRefunded(item) {
           <div class="flex items-center gap-2">
             <Sparkles class="w-4 h-4 text-[#a47a3c]" />
             <span class="text-xs font-bold text-[#1d1d1f] uppercase tracking-wider">
-              Unlock Your {{ storeBrandName }} Rewards
+              Unlock Your {{ storeInfo.brand_name }} Rewards
             </span>
           </div>
           <p class="text-xs text-[#6e6e73] leading-relaxed">
@@ -201,7 +200,7 @@ function isOrderItemFullyRefunded(item) {
       <div class="bg-[#1a1a1a] text-white p-5 sm:p-6 rounded-lg shadow-sm space-y-3.5 border border-[#e0d9cc]/20">
         <div class="flex items-center justify-between">
           <span class="text-[10px] font-semibold uppercase tracking-wider text-[#a47a3c]">
-            {{ storeBrandName.toUpperCase() }} REWARDS
+            {{ storeInfo.brand_name }} REWARDS
           </span>
           <span class="text-xs text-stone-300 font-normal">
             Gold Member
@@ -212,7 +211,7 @@ function isOrderItemFullyRefunded(item) {
           <span class="text-3xl sm:text-4xl font-serif font-medium tracking-tight text-white leading-none">
             {{ userPoints.toLocaleString() }}
           </span>
-          <span class="text-sm text-stone-400 font-normal ml-1.5">{{ storeBrandName }} Points</span>
+          <span class="text-sm text-stone-400 font-normal ml-1.5">{{ storeInfo.brand_name }} Points</span>
         </div>
 
         <!-- 10-Segment Progress Meter -->
