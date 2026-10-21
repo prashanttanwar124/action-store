@@ -44,26 +44,35 @@ class ProductController extends Controller
     protected function resolveFrequentlyBoughtTogether(Product $product): array
     {
         $fbt = $product->frequently_bought_together ?? [];
-        $configuredIdentifiers = [];
+        $configuredIds = [];
+        $configuredSlugs = [];
 
         if (is_array($fbt) && ! empty($fbt)) {
             foreach ($fbt as $item) {
-                if (isset($item['slug'])) {
-                    $configuredIdentifiers[] = (string) $item['slug'];
-                } elseif (isset($item['id'])) {
-                    $configuredIdentifiers[] = (string) $item['id'];
+                $val = is_array($item) ? ($item['slug'] ?? $item['id'] ?? null) : $item;
+                if ($val === null || $val === '') {
+                    continue;
+                }
+                if (is_numeric($val)) {
+                    $configuredIds[] = (int) $val;
+                } else {
+                    $configuredSlugs[] = (string) $val;
                 }
             }
         }
 
         $matchedProducts = collect();
 
-        if (! empty($configuredIdentifiers)) {
+        if (! empty($configuredIds) || ! empty($configuredSlugs)) {
             $matchedProducts = Product::query()
                 ->where('id', '!=', $product->id)
-                ->where(function ($q) use ($configuredIdentifiers) {
-                    $q->whereIn('slug', $configuredIdentifiers)
-                        ->orWhereIn('id', $configuredIdentifiers);
+                ->where(function ($q) use ($configuredIds, $configuredSlugs) {
+                    if (! empty($configuredIds)) {
+                        $q->whereIn('id', array_values(array_unique($configuredIds)));
+                    }
+                    if (! empty($configuredSlugs)) {
+                        $q->orWhereIn('slug', array_values(array_unique($configuredSlugs)));
+                    }
                 })
                 ->get();
         }

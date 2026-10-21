@@ -44,7 +44,7 @@ class AdminProductController extends Controller
             $query->orWhere('slug', $includeSlug);
         }
 
-        $dbCategories = $query->orderBy('sort_order')->limit(20)->pluck('name', 'slug')->toArray();
+        $dbCategories = $query->orderBy('sort_order')->pluck('name', 'slug')->toArray();
         if (! empty($dbCategories)) {
             if ($includeSlug && ! isset($dbCategories[$includeSlug]) && isset($this->defaultCategories[$includeSlug])) {
                 $dbCategories[$includeSlug] = $this->defaultCategories[$includeSlug];
@@ -170,7 +170,6 @@ class AdminProductController extends Controller
             'defaultCategories' => $this->getCategoriesList(),
             'suppliers' => Supplier::where('status', 'active')
                 ->orderBy('name')
-                ->limit(15)
                 ->get(['id', 'name', 'code']),
         ]);
     }
@@ -256,16 +255,9 @@ class AdminProductController extends Controller
     public function edit(Product $product): Response
     {
         $suppliers = Supplier::where('status', 'active')
+            ->when($product->supplier_id, fn ($q) => $q->orWhere('id', $product->supplier_id))
             ->orderBy('name')
-            ->limit(15)
             ->get(['id', 'name', 'code']);
-
-        if ($product->supplier_id && ! $suppliers->contains('id', $product->supplier_id)) {
-            $currentSupplier = Supplier::find($product->supplier_id, ['id', 'name', 'code']);
-            if ($currentSupplier) {
-                $suppliers->prepend($currentSupplier);
-            }
-        }
 
         return Inertia::render('Admin/Products/Edit', [
             'product' => [
@@ -308,7 +300,7 @@ class AdminProductController extends Controller
             $validated['slug'] = Str::slug($validated['slug']);
         }
 
-        $categoriesList = $this->getCategoriesList();
+        $categoriesList = $this->getCategoriesList($validated['category'] ?? $product->category);
         if (empty($validated['category_title']) && isset($categoriesList[$validated['category']])) {
             $validated['category_title'] = $categoriesList[$validated['category']];
         }

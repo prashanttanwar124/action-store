@@ -28,7 +28,6 @@ export const useStore = defineStore('masalaStore', () => {
   const currentUserId = ref(null);
   const isInitialized = ref(false);
   const cart = ref([]);
-  const pastOrders = ref([]);
   const rewardPoints = ref(0);
 
   // Storage helper
@@ -97,12 +96,10 @@ export const useStore = defineStore('masalaStore', () => {
       } else {
         rewardPoints.value = 0;
       }
-      pastOrders.value = [];
     } else {
       // Guest mode
       cart.value = loadUserStorage('masala_cart_guest', []);
       rewardPoints.value = 0;
-      pastOrders.value = [];
     }
 
     isInitialized.value = true;
@@ -284,6 +281,7 @@ export const useStore = defineStore('masalaStore', () => {
         sizeMain: kit.servings || 'Recipe Kit',
         size: kit.servings || 'Recipe Kit',
         isRecipeKit: true,
+        isActive: kit.is_active !== undefined ? Boolean(kit.is_active) : true,
         type: 'recipe-kit',
         kitProducts: Array.isArray(kit.products) ? kit.products : [],
       };
@@ -363,6 +361,9 @@ export const useStore = defineStore('masalaStore', () => {
     const prod = findCatalogProduct(itemOrId, isKit);
 
     if (isKit) {
+      if (prod?.isActive === false || obj?.is_active === false || obj?.isActive === false) {
+        return 0;
+      }
       const kitProducts = obj?.products || obj?.kitProducts || prod?.kitProducts || [];
       if (Array.isArray(kitProducts) && kitProducts.length > 0) {
         let maxKits = Infinity;
@@ -522,16 +523,6 @@ export const useStore = defineStore('masalaStore', () => {
     return cart.value.reduce((sum, item) => sum + item.quantity, 0);
   });
 
-  const rawSubtotal = computed(() => {
-    const sum = cart.value.reduce((acc, item) => {
-      const isKit = item.type === 'recipe-kit' || Boolean(item.isRecipeKit) || (typeof item.id === 'string' && item.id.startsWith('kit-'));
-      const prod = findCatalogProduct(item, isKit);
-      const price = prod ? prod.price : Number(item.price || 0);
-      return acc + (price * item.quantity);
-    }, 0);
-    return Number(sum.toFixed(2));
-  });
-
   const subtotal = computed(() => {
     return Number(cartItems.value.reduce((sum, item) => sum + item.total, 0).toFixed(2));
   });
@@ -653,13 +644,6 @@ export const useStore = defineStore('masalaStore', () => {
     cart.value = [];
   }
 
-  function reorderAll(orderId) {
-    const order = pastOrders.value.find(o => o.id === orderId);
-    if (order && Array.isArray(order.items)) {
-      order.items.forEach(item => addToCart(item, item.quantity || 1));
-    }
-  }
-
   function getProductBySlug(slug) {
     if (!slug) return null;
     return products.value.find(p => p.slug === slug || String(p.id) === String(slug)) || null;
@@ -674,11 +658,18 @@ export const useStore = defineStore('masalaStore', () => {
     const ids = Array.from(
       new Set(
         cart.value
-          .flatMap(item => [item.id, item.slug])
+          .map(item => {
+            const isKit = item.type === 'recipe-kit' || Boolean(item.isRecipeKit) || (typeof item.id === 'string' && item.id.startsWith('kit-'));
+            const identifier = String(item.id ?? item.slug ?? '').trim();
+            if (!identifier) return null;
+            if (isKit) {
+              return identifier.startsWith('kit-') ? identifier : `kit-${item.slug || identifier}`;
+            }
+            return identifier;
+          })
           .filter(Boolean)
-          .map(val => String(val))
       )
-    ).slice(0, 50);
+    );
 
     if (ids.length === 0) return;
 
@@ -707,7 +698,6 @@ export const useStore = defineStore('masalaStore', () => {
     products,
     impulseItems,
     recipeKits,
-    pastOrders,
     cart,
     cartItems,
     stockIssues,
@@ -721,7 +711,6 @@ export const useStore = defineStore('masalaStore', () => {
     isOutOfStock,
     canAddMore,
     totalItemCount,
-    rawSubtotal,
     subtotal,
     total,
     rewardPoints,
@@ -735,7 +724,6 @@ export const useStore = defineStore('masalaStore', () => {
     removeFromCart,
     deleteItem,
     clearCart,
-    reorderAll,
     getProductBySlug,
     setProducts,
     setRecipeKits,

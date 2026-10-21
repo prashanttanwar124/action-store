@@ -531,27 +531,27 @@ class OrderController extends Controller
 
         $products = (! empty($productIds) || ! empty($productSlugs))
             ? Product::query()
-                ->when(! empty($productIds) && ! empty($productSlugs), function ($query) use ($productIds, $productSlugs) {
-                    $query->where(function ($sub) use ($productIds, $productSlugs) {
-                        $sub->whereIn('id', $productIds)
-                            ->orWhereIn('slug', $productSlugs);
-                    });
+                ->where(function ($query) use ($productIds, $productSlugs) {
+                    if (! empty($productIds)) {
+                        $query->whereIn('id', $productIds);
+                    }
+                    if (! empty($productSlugs)) {
+                        $query->orWhereIn('slug', $productSlugs);
+                    }
                 })
-                ->when(! empty($productIds) && empty($productSlugs), fn ($query) => $query->whereIn('id', $productIds))
-                ->when(empty($productIds) && ! empty($productSlugs), fn ($query) => $query->whereIn('slug', $productSlugs))
                 ->get()
             : collect();
 
         $recipeKits = (! empty($kitIds) || ! empty($kitSlugs))
             ? RecipeKit::with('products')
-                ->when(! empty($kitIds) && ! empty($kitSlugs), function ($query) use ($kitIds, $kitSlugs) {
-                    $query->where(function ($sub) use ($kitIds, $kitSlugs) {
-                        $sub->whereIn('id', $kitIds)
-                            ->orWhereIn('slug', $kitSlugs);
-                    });
+                ->where(function ($query) use ($kitIds, $kitSlugs) {
+                    if (! empty($kitIds)) {
+                        $query->whereIn('id', $kitIds);
+                    }
+                    if (! empty($kitSlugs)) {
+                        $query->orWhereIn('slug', $kitSlugs);
+                    }
                 })
-                ->when(! empty($kitIds) && empty($kitSlugs), fn ($query) => $query->whereIn('id', $kitIds))
-                ->when(empty($kitIds) && ! empty($kitSlugs), fn ($query) => $query->whereIn('slug', $kitSlugs))
                 ->get()
             : collect();
 
@@ -610,10 +610,13 @@ class OrderController extends Controller
             $subtotal += round($unitPrice * $quantity, 2);
         }
 
-        // Validate stock
-        $products = Product::whereIn('id', array_keys($requiredProductQuantities))->get()->keyBy('id');
+        // Validate stock using the already-loaded catalog and kit products
+        $allLoadedProducts = $products
+            ->concat($recipeKits->pluck('products')->flatten())
+            ->keyBy('id');
+
         foreach ($requiredProductQuantities as $productId => $totalQty) {
-            $product = $products->get($productId);
+            $product = $allLoadedProducts->get($productId);
             $isBadgeOut = $product && str_contains(strtolower((string) $product->stock_badge), 'out');
             if (! $product || $isBadgeOut || (int) ($product->stock ?? 0) < $totalQty) {
                 $name = $product ? $product->name : "Item #{$productId}";

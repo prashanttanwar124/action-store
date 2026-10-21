@@ -55,19 +55,24 @@ const userPoints = computed(() => {
 });
 
 function handleReorderOrder(order) {
-  if (order && Array.isArray(order.items) && order.items.length > 0) {
-    order.items.forEach(item => {
-      store.addToCart(item, item.quantity || 1);
-    });
-    reorderedItemCount.value = order.items.length;
-  } else {
-    store.reorderAll(order?.id);
-    reorderedItemCount.value = order?.itemCount || 1;
+  if (!order || !Array.isArray(order.items) || order.items.length === 0) {
+    return;
   }
-  reorderedNotification.value = true;
-  setTimeout(() => {
-    reorderedNotification.value = false;
-  }, 2500);
+
+  let addedCount = 0;
+  order.items.forEach(item => {
+    if (store.addToCart(item, item.quantity || 1)) {
+      addedCount += 1;
+    }
+  });
+
+  if (addedCount > 0) {
+    reorderedItemCount.value = addedCount;
+    reorderedNotification.value = true;
+    setTimeout(() => {
+      reorderedNotification.value = false;
+    }, 2500);
+  }
 }
 
 function isOrderFullyRefunded(order) {

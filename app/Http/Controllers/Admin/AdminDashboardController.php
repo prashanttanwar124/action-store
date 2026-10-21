@@ -46,7 +46,7 @@ class AdminDashboardController extends Controller
             ->selectRaw('role_id, count(*) as count')
             ->pluck('count', 'role_id');
 
-        $roles = Role::where('guard_name', 'admin')->with('permissions')->limit(50)->get()->map(function (Role $role) use ($roleUserCounts) {
+        $roles = Role::where('guard_name', 'admin')->with('permissions')->get()->map(function (Role $role) use ($roleUserCounts) {
             return [
                 'id' => $role->id,
                 'name' => $role->name,
@@ -55,7 +55,7 @@ class AdminDashboardController extends Controller
             ];
         });
 
-        $permissions = Permission::where('guard_name', 'admin')->limit(100)->pluck('name');
+        $permissions = Permission::where('guard_name', 'admin')->pluck('name');
 
         return Inertia::render('Admin/Dashboard', [
             'stats' => $stats,

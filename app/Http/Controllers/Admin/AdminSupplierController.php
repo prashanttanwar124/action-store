@@ -52,22 +52,14 @@ class AdminSupplierController extends Controller
         };
 
         $paginated = $query->paginate(15)->withQueryString();
-        $supplierIds = $paginated->getCollection()->pluck('id')->all();
 
-        $productsBySupplier = collect();
-        if (! empty($supplierIds)) {
-            $productsBySupplier = Product::query()
+        $paginated->load([
+            'products' => fn ($q) => $q
                 ->select('id', 'supplier_id', 'name', 'price', 'image', 'stock', 'category')
-                ->whereIn('supplier_id', $supplierIds)
-                ->limit(count($supplierIds) * 5)
-                ->get()
-                ->groupBy('supplier_id')
-                ->map(fn ($items) => $items->take(5));
-        }
+                ->limit(5),
+        ]);
 
-        $suppliers = $paginated->through(function (Supplier $supplier) use ($productsBySupplier) {
-            $supplierProducts = $productsBySupplier->get($supplier->id, collect());
-
+        $suppliers = $paginated->through(function (Supplier $supplier) {
             return [
                 'id' => $supplier->id,
                 'name' => $supplier->name,
@@ -85,7 +77,7 @@ class AdminSupplierController extends Controller
                 'status' => $supplier->status,
                 'notes' => $supplier->notes,
                 'products_count' => (int) $supplier->products_count,
-                'products' => $supplierProducts->map(fn (Product $p) => [
+                'products' => $supplier->products->map(fn (Product $p) => [
                     'id' => $p->id,
                     'name' => $p->name,
                     'price' => (float) $p->price,

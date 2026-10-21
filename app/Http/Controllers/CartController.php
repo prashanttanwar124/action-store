@@ -33,7 +33,7 @@ class CartController extends Controller
     public function stockCheck(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'ids' => ['required', 'array', 'max:50'],
+            'ids' => ['required', 'array'],
             'ids.*' => ['required', 'string', 'max:120'],
         ]);
 
@@ -47,15 +47,13 @@ class CartController extends Controller
                 $cleanKit = substr($rawId, 4);
                 if (is_numeric($cleanKit)) {
                     $kitNumericIds[] = (int) $cleanKit;
-                } else {
+                } elseif ($cleanKit !== '') {
                     $kitSlugs[] = $cleanKit;
                 }
             } elseif (is_numeric($rawId)) {
                 $numericIds[] = (int) $rawId;
-                $kitNumericIds[] = (int) $rawId;
             } else {
                 $slugs[] = $rawId;
-                $kitSlugs[] = $rawId;
             }
         }
 
@@ -65,13 +63,12 @@ class CartController extends Controller
                 ->select(['id', 'slug', 'name', 'price', 'original_price', 'size_main', 'image', 'stock', 'stock_badge', 'category'])
                 ->where(function ($query) use ($numericIds, $slugs) {
                     if (! empty($numericIds)) {
-                        $query->whereIn('id', array_unique($numericIds));
+                        $query->whereIn('id', array_values(array_unique($numericIds)));
                     }
                     if (! empty($slugs)) {
-                        $query->orWhereIn('slug', array_unique($slugs));
+                        $query->orWhereIn('slug', array_values(array_unique($slugs)));
                     }
                 })
-                ->limit(50)
                 ->get();
         }
 
@@ -79,16 +76,14 @@ class CartController extends Controller
         if (! empty($kitNumericIds) || ! empty($kitSlugs)) {
             $recipeKits = RecipeKit::query()
                 ->with(['products:id,slug,name,price,size_main,image,stock,stock_badge'])
-                ->where('is_active', true)
                 ->where(function ($query) use ($kitNumericIds, $kitSlugs) {
                     if (! empty($kitNumericIds)) {
-                        $query->whereIn('id', array_unique($kitNumericIds));
+                        $query->whereIn('id', array_values(array_unique($kitNumericIds)));
                     }
                     if (! empty($kitSlugs)) {
-                        $query->orWhereIn('slug', array_unique($kitSlugs));
+                        $query->orWhereIn('slug', array_values(array_unique($kitSlugs)));
                     }
                 })
-                ->limit(25)
                 ->get();
         }
 

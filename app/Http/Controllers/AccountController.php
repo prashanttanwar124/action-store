@@ -42,7 +42,6 @@ class AccountController extends Controller
         return Order::with('items')
             ->where('user_id', Auth::id())
             ->latest()
-            ->limit(25)
             ->get()
             ->map(fn (Order $order) => [
                 'id' => $order->order_number,

@@ -120,7 +120,6 @@ class AdminRecipeKitController extends Controller
     {
         $availableProducts = Product::select('id', 'name', 'price', 'image', 'size_main', 'category')
             ->orderBy('name')
-            ->limit(15)
             ->get();
 
         return Inertia::render('Admin/RecipeKits/Create', [
@@ -211,7 +210,6 @@ class AdminRecipeKitController extends Controller
 
         $availableProducts = Product::select('id', 'name', 'price', 'image', 'size_main', 'category')
             ->orderBy('name')
-            ->limit(15)
             ->get();
 
         return Inertia::render('Admin/RecipeKits/Edit', [
