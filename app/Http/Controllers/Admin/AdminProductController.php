@@ -70,6 +70,8 @@ class AdminProductController extends Controller
             $query->where(function ($q) use ($search) {
                 $q->where('name', 'like', "%{$search}%")
                     ->orWhere('slug', 'like', "%{$search}%")
+                    ->orWhere('barcode', 'like', "%{$search}%")
+                    ->orWhere('sku', 'like', "%{$search}%")
                     ->orWhere('category', 'like', "%{$search}%")
                     ->orWhere('description', 'like', "%{$search}%");
             });
@@ -84,10 +86,14 @@ class AdminProductController extends Controller
                 'id' => $product->id,
                 'name' => $product->name,
                 'slug' => $product->slug,
+                'barcode' => $product->barcode,
+                'sku' => $product->sku,
                 'category' => $product->category,
                 'category_title' => $product->category_title,
                 'price' => $product->price,
                 'original_price' => $product->original_price,
+                'unit_type' => $product->unit_type ?? 'each',
+                'is_taxable' => (bool) $product->is_taxable,
                 'stock' => $product->stock,
                 'stock_badge' => $product->stock_badge,
                 'size_main' => $product->size_main,
@@ -131,11 +137,13 @@ class AdminProductController extends Controller
         $limit = min(max((int) $request->input('limit', 10), 1), 25);
 
         $products = Product::query()
-            ->select('id', 'name', 'slug', 'price', 'image', 'size_main', 'category')
+            ->select('id', 'name', 'slug', 'barcode', 'sku', 'price', 'unit_type', 'is_taxable', 'image', 'size_main', 'category')
             ->when($q !== '', function ($query) use ($q) {
                 $query->where(function ($sub) use ($q) {
                     $sub->where('name', 'like', "%{$q}%")
                         ->orWhere('slug', 'like', "%{$q}%")
+                        ->orWhere('barcode', 'like', "%{$q}%")
+                        ->orWhere('sku', 'like', "%{$q}%")
                         ->orWhere('category', 'like', "%{$q}%");
                 });
             })
@@ -147,10 +155,14 @@ class AdminProductController extends Controller
                 'value' => (string) $p->id,
                 'label' => $p->name,
                 'sublabel' => '($'.number_format((float) $p->price, 2).')',
-                'badge' => $p->size_main ?: $p->category,
+                'badge' => $p->sku ?: ($p->size_main ?: $p->category),
                 'name' => $p->name,
                 'slug' => $p->slug,
+                'barcode' => $p->barcode,
+                'sku' => $p->sku,
                 'price' => (float) $p->price,
+                'unit_type' => $p->unit_type ?? 'each',
+                'is_taxable' => (bool) $p->is_taxable,
                 'image' => $p->image,
                 'size_main' => $p->size_main,
                 'category' => $p->category,
@@ -237,6 +249,11 @@ class AdminProductController extends Controller
 
         unset($validated['image_files'], $validated['image_urls']);
 
+        $validated['barcode'] = ! empty($validated['barcode']) ? trim((string) $validated['barcode']) : null;
+        $validated['sku'] = ! empty($validated['sku']) ? trim((string) $validated['sku']) : null;
+        $validated['unit_type'] = $validated['unit_type'] ?? 'each';
+        $validated['is_taxable'] = (bool) ($validated['is_taxable'] ?? false);
+
         if (isset($validated['stock'])) {
             $stockVal = (int) $validated['stock'];
             if ($stockVal <= 0) {
@@ -271,12 +288,16 @@ class AdminProductController extends Controller
                 'supplier_id' => $product->supplier_id,
                 'name' => $product->name,
                 'slug' => $product->slug,
+                'barcode' => $product->barcode,
+                'sku' => $product->sku,
                 'subtitle_tag' => $product->subtitle_tag,
                 'category' => $product->category,
                 'category_title' => $product->category_title,
                 'price' => (float) $product->price,
                 'original_price' => $product->original_price ? (float) $product->original_price : null,
                 'unit_price' => $product->unit_price,
+                'unit_type' => $product->unit_type ?? 'each',
+                'is_taxable' => (bool) $product->is_taxable,
                 'stock' => (int) ($product->stock ?? 50),
                 'stock_badge' => $product->stock_badge,
                 'photo_label' => $product->photo_label,
@@ -362,6 +383,19 @@ class AdminProductController extends Controller
         }
 
         unset($validated['image_files'], $validated['existing_images'], $validated['image_urls']);
+
+        if (array_key_exists('barcode', $validated)) {
+            $validated['barcode'] = ! empty($validated['barcode']) ? trim((string) $validated['barcode']) : null;
+        }
+        if (array_key_exists('sku', $validated)) {
+            $validated['sku'] = ! empty($validated['sku']) ? trim((string) $validated['sku']) : null;
+        }
+        if (array_key_exists('unit_type', $validated)) {
+            $validated['unit_type'] = $validated['unit_type'] ?: 'each';
+        }
+        if (array_key_exists('is_taxable', $validated)) {
+            $validated['is_taxable'] = (bool) $validated['is_taxable'];
+        }
 
         if (isset($validated['stock'])) {
             $stockVal = (int) $validated['stock'];

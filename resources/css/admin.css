@@ -163,16 +163,19 @@ h1, h2, h3, h4, h5, h6, .font-serif {
   border-radius: 0.5rem !important;
 }
 
-/* Thermal Kitchen Packing Ticket Print Isolation */
+/* Thermal Kitchen Packing Ticket & 80mm POS Receipt Print Isolation */
 @media print {
   body * {
     visibility: hidden !important;
   }
   #printable-kitchen-ticket,
-  #printable-kitchen-ticket * {
+  #printable-kitchen-ticket *,
+  #printable-pos-receipt,
+  #printable-pos-receipt * {
     visibility: visible !important;
   }
-  #printable-kitchen-ticket {
+  #printable-kitchen-ticket,
+  #printable-pos-receipt {
     position: fixed !important;
     left: 0 !important;
     top: 0 !important;

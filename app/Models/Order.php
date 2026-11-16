@@ -17,18 +17,30 @@ class Order extends Model
      */
     protected $fillable = [
         'order_number',
+        'idempotency_key',
+        'channel',
         'user_id',
+        'admin_id',
+        'pos_shift_id',
         'customer_name',
         'customer_email',
         'customer_phone',
         'subtotal',
         'discount',
+        'tax',
         'delivery_fee',
         'total',
         'refunded_total',
         'points_earned',
+        'points_redeemed',
+        'points_discount',
         'payment_method',
+        'cash_amount',
+        'terminal_amount',
+        'cash_tendered',
+        'change_due',
         'stripe_payment_id',
+        'payment_reference',
         'fulfillment_type',
         'pickup_slot',
         'pickup_location',
@@ -44,10 +56,17 @@ class Order extends Model
     protected $casts = [
         'subtotal' => 'decimal:2',
         'discount' => 'decimal:2',
+        'tax' => 'decimal:2',
         'delivery_fee' => 'decimal:2',
         'total' => 'decimal:2',
         'refunded_total' => 'decimal:2',
+        'points_discount' => 'decimal:2',
+        'cash_amount' => 'decimal:2',
+        'terminal_amount' => 'decimal:2',
+        'cash_tendered' => 'decimal:2',
+        'change_due' => 'decimal:2',
         'points_earned' => 'integer',
+        'points_redeemed' => 'integer',
         'reserved_stock' => 'array',
     ];
 
@@ -141,14 +160,39 @@ class Order extends Model
             return;
         }
 
+        $redeemedPoints = max(0, (int) ($this->points_redeemed ?? 0));
+        $ledgerUpdated = false;
+
+        if ($this->status !== 'cancelled' && $redeemedPoints > 0) {
+            $hasRedemptionEntry = RewardPoint::where('order_id', $this->id)
+                ->where('user_id', $user->id)
+                ->where('points', '<', 0)
+                ->where('description', 'like', 'Redeemed %')
+                ->exists();
+
+            if (! $hasRedemptionEntry) {
+                RewardPoint::create([
+                    'user_id' => $user->id,
+                    'order_id' => $this->id,
+                    'points' => -$redeemedPoints,
+                    'description' => "Redeemed {$redeemedPoints} pts on order {$this->order_number}",
+                ]);
+                $ledgerUpdated = true;
+            }
+        }
+
+        $netTarget = $this->status === 'cancelled'
+            ? 0
+            : ($targetPoints - $redeemedPoints);
+
         $currentPoints = (int) RewardPoint::where('order_id', $this->id)->where('user_id', $user->id)->sum('points');
-        $adjustment = $targetPoints - $currentPoints;
+        $adjustment = $netTarget - $currentPoints;
 
         if ($adjustment !== 0) {
             $description = match (true) {
                 $this->status === 'cancelled' => "Cancelled order {$this->order_number}",
                 $adjustment < 0 => "Refund adjustment for order {$this->order_number}",
-                $currentPoints === 0 => "Points earned for order {$this->order_number}",
+                $currentPoints === -$redeemedPoints => "Points earned for order {$this->order_number}",
                 default => "Points adjustment for order {$this->order_number}",
             };
 
@@ -159,6 +203,10 @@ class Order extends Model
                 'description' => $description,
             ]);
 
+            $ledgerUpdated = true;
+        }
+
+        if ($ledgerUpdated) {
             $user->refreshRewardPointsBalance();
         }
     }
@@ -306,5 +354,21 @@ class Order extends Model
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    /**
+     * @return BelongsTo<Admin, $this>
+     */
+    public function admin(): BelongsTo
+    {
+        return $this->belongsTo(Admin::class, 'admin_id');
+    }
+
+    /**
+     * @return BelongsTo<PosShift, $this>
+     */
+    public function posShift(): BelongsTo
+    {
+        return $this->belongsTo(PosShift::class, 'pos_shift_id');
     }
 }

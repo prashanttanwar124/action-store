@@ -9,8 +9,8 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Spatie\Permission\Traits\HasRoles;
 
-#[Fillable(['name', 'email', 'password'])]
-#[Hidden(['password', 'remember_token'])]
+#[Fillable(['name', 'email', 'password', 'pos_pin'])]
+#[Hidden(['password', 'remember_token', 'pos_pin'])]
 class Admin extends Authenticatable
 {
     use HasFactory, HasRoles, Notifiable;
@@ -29,6 +29,15 @@ class Admin extends Authenticatable
     {
         return [
             'password' => 'hashed',
+            'pos_pin' => 'hashed',
         ];
+    }
+
+    /**
+     * Determine whether this admin has configured a POS quick-switch PIN.
+     */
+    public function hasPosPin(): bool
+    {
+        return ! empty($this->attributes['pos_pin'] ?? null);
     }
 }

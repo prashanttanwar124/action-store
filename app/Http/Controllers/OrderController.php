@@ -396,6 +396,7 @@ class OrderController extends Controller
             'customer_email' => $user->email,
             'customer_phone' => $validated['customer_phone'] ?? $user->phone ?? null,
             'subtotal' => $result['subtotal'],
+            'tax' => $result['tax'],
             'delivery_fee' => $result['delivery_fee'],
             'total' => $result['total'],
             'payment_method' => $validated['payment_method'] ?? 'card',
@@ -410,8 +411,11 @@ class OrderController extends Controller
                 'recipe_kit_id' => $item['catalog_item'] instanceof RecipeKit ? $item['catalog_item']->id : null,
                 'name' => $item['name'],
                 'size' => $item['size'] ?? ($item['weight'] ?? null),
+                'unit_type' => $item['unit_type'] ?? 'each',
                 'unit_price' => $item['price'],
                 'quantity' => (int) $item['quantity'],
+                'is_taxable' => (bool) ($item['is_taxable'] ?? false),
+                'tax_amount' => $item['tax_amount'] ?? 0.00,
                 'total_price' => round($item['price'] * (int) $item['quantity'], 2),
                 'is_subscribed' => false,
                 'image' => $item['image'] ?? null,
@@ -449,6 +453,7 @@ class OrderController extends Controller
 
         return $cents($checkout->total) === $cents($attributes['total'])
             && $cents($checkout->subtotal) === $cents($attributes['subtotal'])
+            && $cents($checkout->tax ?? 0) === $cents($attributes['tax'] ?? 0)
             && $cents($checkout->delivery_fee) === $cents($attributes['delivery_fee'])
             && $normalizeLines($checkout->items ?? []) === $normalizeLines($attributes['items'])
             && (array) $checkout->reserved_stock == $attributes['reserved_stock'];
@@ -498,6 +503,8 @@ class OrderController extends Controller
     protected function validateOrderRequirements(array $validated, StoreSetting $storeInfo): array
     {
         $subtotal = 0;
+        $taxableSubtotal = 0.0;
+        $taxRate = max(0.0, (float) ($storeInfo->tax_rate ?? 0));
         $resolvedItems = [];
         $requiredProductQuantities = [];
 
@@ -610,13 +617,23 @@ class OrderController extends Controller
                 }
             }
 
+            $lineTotal = round($unitPrice * $quantity, 2);
+            $isTaxable = $catalogItem instanceof Product ? (bool) $catalogItem->is_taxable : false;
+            $lineTax = ($isTaxable && $taxRate > 0) ? round($lineTotal * ($taxRate / 100), 2) : 0.00;
+            if ($isTaxable) {
+                $taxableSubtotal += $lineTotal;
+            }
+
             $item['price'] = $unitPrice;
             $item['name'] = $catalogItem->name;
             $item['image'] = $catalogItem->image;
             $item['size'] = $catalogItem instanceof Product ? $catalogItem->size_main : null;
+            $item['unit_type'] = $catalogItem instanceof Product ? ($catalogItem->unit_type ?: 'each') : 'each';
+            $item['is_taxable'] = $isTaxable;
+            $item['tax_amount'] = $lineTax;
             $item['catalog_item'] = $catalogItem;
             $resolvedItems[] = $item;
-            $subtotal += round($unitPrice * $quantity, 2);
+            $subtotal += $lineTotal;
         }
 
         // Validate stock using the already-loaded catalog and kit products
@@ -657,10 +674,12 @@ class OrderController extends Controller
         }
 
         [$pickupSlot, $capacitySlot] = $this->resolvePickupSlot($validated, $storeInfo, $fulfillmentType);
-        $total = max(0, round($subtotal + $deliveryFee, 2));
+        $tax = $taxRate > 0 ? round($taxableSubtotal * ($taxRate / 100), 2) : 0.00;
+        $total = max(0, round($subtotal + $tax + $deliveryFee, 2));
 
         return [
             'subtotal' => $subtotal,
+            'tax' => $tax,
             'delivery_fee' => $deliveryFee,
             'total' => $total,
             'pickup_slot' => $pickupSlot,

@@ -22,6 +22,7 @@ import {
   ChevronRight,
   Sparkles,
   BarChart3,
+  Wallet,
   Sliders,
   UtensilsCrossed,
   Truck,
@@ -102,7 +103,34 @@ const handleLogout = () => {
   logoutForm.post(route('admin.logout'));
 };
 
-const navigationItems = [
+const safeRoute = (name, fallback) => {
+  try {
+    if (typeof route === 'function' && route().has(name)) {
+      return route(name);
+    }
+  } catch {
+    // fallback
+  }
+  return fallback;
+};
+
+const safeIsCurrent = (pattern) => {
+  try {
+    return typeof route === 'function' ? route().current(pattern) : false;
+  } catch {
+    return false;
+  }
+};
+
+const posRegisterHref = computed(() => safeRoute('pos.register', '/pos'));
+
+const hasPermission = (permission) => {
+  if (!permission) return true;
+  const permissions = admin.value?.permissions;
+  return Array.isArray(permissions) ? permissions.includes(permission) : false;
+};
+
+const rawNavigationItems = [
   {
     group: 'Overview',
     items: [
@@ -112,6 +140,22 @@ const navigationItems = [
         icon: LayoutDashboard,
         isCurrent: () => route().current('admin.dashboard'),
         badge: null,
+      },
+      {
+        name: 'Analytics & Payments',
+        href: route('admin.analytics.index'),
+        icon: BarChart3,
+        isCurrent: () => route().current('admin.analytics.*'),
+        badge: 'Finance',
+        permission: 'view reports',
+      },
+      {
+        name: 'Till & Shift Logs',
+        href: safeRoute('admin.tills.index', '/admin/tills'),
+        icon: Wallet,
+        isCurrent: () => safeIsCurrent('admin.tills.*'),
+        badge: null,
+        permission: 'view reports',
       },
     ],
   },
@@ -203,6 +247,15 @@ const navigationItems = [
     ],
   },
 ];
+
+const navigationItems = computed(() =>
+  rawNavigationItems
+    .map((group) => ({
+      ...group,
+      items: group.items.filter((item) => hasPermission(item.permission)),
+    }))
+    .filter((group) => group.items.length > 0),
+);
 </script>
 
 <template>
@@ -293,8 +346,19 @@ const navigationItems = [
             </component>
           </div>
 
-          <!-- Customer Storefront Shortcut -->
-          <div class="pt-2 border-t border-zinc-800/80">
+          <!-- Storefront Shortcut Group -->
+          <div class="pt-2 border-t border-zinc-800/80 space-y-0.5">
+            <a
+              :href="posRegisterHref"
+              target="_blank"
+              class="flex items-center justify-between px-2.5 py-2 rounded-md text-xs font-semibold text-emerald-300 hover:text-white hover:bg-emerald-950/60 transition-colors group"
+            >
+              <div class="flex items-center gap-2.5">
+                <Sparkles class="w-4 h-4 text-emerald-400" />
+                <span>In-Store POS Register</span>
+              </div>
+              <ExternalLink class="w-3.5 h-3.5 text-emerald-500 group-hover:text-emerald-300" />
+            </a>
             <a 
               href="/" 
               target="_blank"
@@ -407,10 +471,21 @@ const navigationItems = [
         </div>
 
         <!-- Storefront Shortcut Group -->
-        <div class="pt-2 border-t border-zinc-800/80">
+        <div class="pt-2 border-t border-zinc-800/80 space-y-0.5">
           <div class="text-[10px] font-mono uppercase tracking-wider text-zinc-500 font-semibold px-2.5 py-1">
-            External
+            Terminals &amp; Storefront
           </div>
+          <a
+            :href="posRegisterHref"
+            target="_blank"
+            class="flex items-center justify-between px-2.5 py-1.5 rounded-md text-xs font-semibold text-emerald-300 hover:text-white hover:bg-emerald-950/60 transition-colors group"
+          >
+            <div class="flex items-center gap-2.5">
+              <Sparkles class="w-4 h-4 text-emerald-400" />
+              <span>POS Register</span>
+            </div>
+            <ExternalLink class="w-3.5 h-3.5 text-emerald-500 group-hover:text-emerald-300" />
+          </a>
           <a 
             href="/" 
             target="_blank"

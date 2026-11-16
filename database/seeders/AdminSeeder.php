@@ -27,6 +27,7 @@ class AdminSeeder extends Seeder
             'manage roles',
             'view reports',
             'manage settings',
+            'operate pos',
         ];
 
         foreach ($permissions as $permissionName) {
@@ -47,7 +48,7 @@ class AdminSeeder extends Seeder
             'name' => 'Store Manager',
             'guard_name' => 'admin',
         ]);
-        $storeManagerRole->syncPermissions(['manage products', 'manage orders', 'manage users', 'view reports', 'manage settings']);
+        $storeManagerRole->syncPermissions(['manage products', 'manage orders', 'manage users', 'view reports', 'manage settings', 'operate pos']);
 
         $orderHandlerRole = Role::firstOrCreate([
             'name' => 'Order Handler',
@@ -55,14 +56,24 @@ class AdminSeeder extends Seeder
         ]);
         $orderHandlerRole->syncPermissions(['manage orders']);
 
+        $cashierRole = Role::firstOrCreate([
+            'name' => 'Cashier',
+            'guard_name' => 'admin',
+        ]);
+        $cashierRole->syncPermissions(['operate pos']);
+
         // Default Super Admin User
         $superAdmin = Admin::firstOrCreate(
             ['email' => 'admin@masalamart.com'],
             [
                 'name' => 'Priya Sharma (Head Chef & Owner)',
                 'password' => Hash::make('password'),
+                'pos_pin' => '1111',
             ]
         );
+        if (! $superAdmin->hasPosPin()) {
+            $superAdmin->update(['pos_pin' => '1111']);
+        }
         $superAdmin->assignRole($superAdminRole);
 
         // Default Store Manager
@@ -71,8 +82,12 @@ class AdminSeeder extends Seeder
             [
                 'name' => 'Rohan Verma (Operations)',
                 'password' => Hash::make('password'),
+                'pos_pin' => '2222',
             ]
         );
+        if (! $storeManager->hasPosPin()) {
+            $storeManager->update(['pos_pin' => '2222']);
+        }
         $storeManager->assignRole($storeManagerRole);
     }
 }

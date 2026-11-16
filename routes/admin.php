@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Admin\AdminAnalyticsController;
 use App\Http\Controllers\Admin\AdminCategoryController;
 use App\Http\Controllers\Admin\AdminCustomerController;
 use App\Http\Controllers\Admin\AdminDashboardController;
@@ -12,6 +13,7 @@ use App\Http\Controllers\Admin\AdminRoleController;
 use App\Http\Controllers\Admin\AdminSliderController;
 use App\Http\Controllers\Admin\AdminStoreSettingController;
 use App\Http\Controllers\Admin\AdminSupplierController;
+use App\Http\Controllers\Admin\AdminTillController;
 use App\Models\User;
 use Illuminate\Support\Facades\Route;
 
@@ -28,6 +30,16 @@ Route::prefix('admin')->name('admin.')->group(function () {
     Route::middleware('auth:admin')->group(function () {
         Route::post('/logout', [AdminLoginController::class, 'destroy'])->name('logout');
         Route::get('/dashboard', [AdminDashboardController::class, 'index'])->name('dashboard');
+
+        // Payment & Revenue Analytics + POS Till Audit Logs (requires view reports permission)
+        Route::middleware('permission:view reports,admin')->group(function () {
+            Route::get('/analytics', [AdminAnalyticsController::class, 'index'])->name('analytics.index');
+            Route::get('/analytics/export', [AdminAnalyticsController::class, 'export'])->name('analytics.export');
+            Route::get('/tills', [AdminTillController::class, 'index'])->name('tills.index');
+            Route::get('/tills/export', [AdminTillController::class, 'export'])->name('tills.export');
+            Route::get('/tills/{shift}', [AdminTillController::class, 'show'])->name('tills.show');
+            Route::post('/tills/{shift}/close', [AdminTillController::class, 'forceClose'])->name('tills.close');
+        });
 
         // Real-Time Live Orders (KDS) powered by Laravel Reverb
         Route::middleware('permission:manage orders,admin')->group(function () {
@@ -114,6 +126,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::middleware('permission:manage roles,admin')->group(function () {
             Route::post('/roles', [AdminRoleController::class, 'storeRole'])->name('roles.store');
             Route::post('/admins/{admin}/roles', [AdminRoleController::class, 'syncAdminRoles'])->name('admins.roles.sync');
+            Route::post('/admins/{admin}/pin', [AdminRoleController::class, 'updateAdminPin'])->name('admins.pin.update');
         });
     });
 });

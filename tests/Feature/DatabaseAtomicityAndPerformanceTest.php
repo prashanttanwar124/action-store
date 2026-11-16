@@ -385,7 +385,9 @@ class DatabaseAtomicityAndPerformanceTest extends TestCase
      */
     public function test_artisan_migrate_rollback_and_remigrate_succeeds_for_orders_indexes(): void
     {
-        $exitCode = Artisan::call('migrate:rollback', ['--step' => 1]);
+        $exitCode = Artisan::call('migrate:rollback', [
+            '--path' => 'database/migrations/2026_10_21_132434_add_status_and_user_indexes_to_orders_table.php',
+        ]);
         $this->assertSame(0, $exitCode);
 
         $this->assertFalse($this->hasIndexOnOrders(['status', 'created_at']));

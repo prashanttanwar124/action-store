@@ -178,7 +178,7 @@ const getCategoryBadgeClass = (category) => {
               v-model="searchQuery"
               @input="handleSearchInput"
               type="text"
-              placeholder="Search products by title, slug, tag..."
+              placeholder="Search by title, barcode, SKU/PLU, slug..."
               class="w-full pl-9 pr-4 h-9 text-xs bg-[#fafafa] rounded-md"
             />
           </div>
@@ -261,6 +261,14 @@ const getCategoryBadgeClass = (category) => {
                       <div class="text-[11px] font-mono text-[#71717a] truncate max-w-xs">
                         /products/{{ prod.slug }}
                       </div>
+                      <div v-if="prod.barcode || prod.sku" class="flex flex-wrap items-center gap-1.5 mt-1">
+                        <span v-if="prod.sku" class="text-[10px] font-mono font-semibold text-zinc-700 bg-zinc-100 border border-zinc-200 px-1.5 py-0.5 rounded">
+                          SKU: {{ prod.sku }}
+                        </span>
+                        <span v-if="prod.barcode" class="text-[10px] font-mono text-zinc-600 bg-zinc-50 border border-zinc-200 px-1.5 py-0.5 rounded">
+                          EAN: {{ prod.barcode }}
+                        </span>
+                      </div>
                       <div v-if="prod.supplier" class="inline-flex items-center gap-1 mt-1 text-[10px] font-medium text-[#27272a] bg-[#fafafa] border border-[#e4e4e7] px-1.5 py-0.5 rounded-md">
                         <span class="w-1.5 h-1.5 rounded-full bg-[#18181b]"></span>
                         <span class="truncate max-w-[140px]">{{ prod.supplier.name }}</span>
@@ -282,8 +290,9 @@ const getCategoryBadgeClass = (category) => {
 
                 <!-- Price -->
                 <td class="py-3.5 px-4">
-                  <div class="font-medium text-[#09090b]">
-                    ${{ Number(prod.price).toFixed(2) }}
+                  <div class="font-medium text-[#09090b] flex items-center gap-1">
+                    <span>${{ Number(prod.price).toFixed(2) }}</span>
+                    <span v-if="prod.unit_type && prod.unit_type !== 'each'" class="text-[10px] font-mono text-zinc-500">/{{ prod.unit_type }}</span>
                   </div>
                   <div 
                     v-if="prod.original_price && prod.original_price > prod.price" 
@@ -291,6 +300,9 @@ const getCategoryBadgeClass = (category) => {
                   >
                     ${{ Number(prod.original_price).toFixed(2) }}
                   </div>
+                  <span v-if="prod.is_taxable" class="inline-block mt-0.5 text-[9.5px] font-semibold text-amber-800 bg-amber-50 border border-amber-200 px-1.5 py-0.2 rounded">
+                    +Tax
+                  </span>
                 </td>
 
                 <!-- Size & Stock -->
@@ -299,9 +311,9 @@ const getCategoryBadgeClass = (category) => {
                     <span>{{ prod.size_main || 'Standard' }}</span>
                     <span 
                       class="text-[10.5px] font-bold px-1.5 py-0.5 rounded-md"
-                      :class="(prod.stock ?? 50) <= 0 ? 'bg-red-100 text-red-700' : ((prod.stock ?? 50) <= 10 ? 'bg-amber-100 text-amber-800' : 'bg-zinc-100 text-zinc-700')"
+                      :class="(prod.stock ?? 50) < 0 ? 'bg-rose-100 text-rose-800 border border-rose-300' : ((prod.stock ?? 50) === 0 ? 'bg-red-100 text-red-700' : ((prod.stock ?? 50) <= 10 ? 'bg-amber-100 text-amber-800' : 'bg-zinc-100 text-zinc-700'))"
                     >
-                      {{ prod.stock ?? 50 }} left
+                      {{ (prod.stock ?? 50) < 0 ? `Audit: ${prod.stock}` : `${prod.stock ?? 50} left` }}
                     </span>
                   </div>
                   <div 
@@ -309,7 +321,7 @@ const getCategoryBadgeClass = (category) => {
                     :class="(prod.stock ?? 50) <= 0 ? 'text-red-600 font-semibold' : ((prod.stock ?? 50) <= 10 ? 'text-amber-700 font-medium' : 'text-emerald-700 font-medium')"
                   >
                     <span class="inline-block w-1.5 h-1.5 rounded-full" :class="(prod.stock ?? 50) <= 0 ? 'bg-red-500' : ((prod.stock ?? 50) <= 10 ? 'bg-amber-500' : 'bg-emerald-500')"></span>
-                    <span>{{ (prod.stock ?? 50) <= 0 ? 'Out of stock' : ((prod.stock ?? 50) <= 10 ? 'Low stock' : 'In stock') }}</span>
+                    <span>{{ (prod.stock ?? 50) < 0 ? 'POS negative stock (audit needed)' : ((prod.stock ?? 50) === 0 ? 'Out of stock' : ((prod.stock ?? 50) <= 10 ? 'Low stock' : 'In stock')) }}</span>
                   </div>
                 </td>
 

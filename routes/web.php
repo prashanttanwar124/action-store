@@ -10,6 +10,8 @@ use App\Http\Controllers\RecipeKitController;
 use App\Http\Controllers\StripeWebhookController;
 use Illuminate\Support\Facades\Route;
 
+require __DIR__.'/pos.php';
+
 // 1a: Home / Storefront
 Route::get('/', [HomeController::class, 'index'])->name('home');
 Route::get('/search', [HomeController::class, 'search'])->name('search');

@@ -15,19 +15,35 @@ class Product extends Model
     use HasFactory;
 
     /**
+     * The model's default values for attributes.
+     *
+     * @var array<string, mixed>
+     */
+    protected $attributes = [
+        'unit_type' => 'each',
+        'is_taxable' => false,
+    ];
+
+    /**
      * The attributes that are mass assignable.
      *
      * @var list<string>
      */
     protected $fillable = [
         'slug',
+        'barcode',
+        'alternate_barcodes',
+        'sku',
         'name',
         'subtitle_tag',
         'category',
         'category_title',
         'price',
+        'cost_price',
         'original_price',
         'unit_price',
+        'unit_type',
+        'is_taxable',
         'stock',
         'stock_badge',
         'photo_label',
@@ -60,8 +76,11 @@ class Product extends Model
     protected function casts(): array
     {
         return [
+            'alternate_barcodes' => 'array',
             'price' => 'float',
+            'cost_price' => 'float',
             'original_price' => 'float',
+            'is_taxable' => 'boolean',
             'stock' => 'integer',
             'images' => 'array',
             'buy_again' => 'boolean',
@@ -113,7 +132,7 @@ class Product extends Model
             return [$this->image];
         }
 
-        return ['/images/products/atta.jpg'];
+        return ['/images/products/placeholder.jpg'];
     }
 
     /**
@@ -147,10 +166,10 @@ class Product extends Model
      *
      * @throws ValidationException
      */
-    public function decrementStock(int $quantity = 1): void
+    public function decrementStock(int $quantity = 1, bool $allowNegative = false): void
     {
         $currentStock = (int) ($this->stock ?? 0);
-        if ($currentStock < $quantity) {
+        if (! $allowNegative && $currentStock < $quantity) {
             throw ValidationException::withMessages([
                 'items' => ["Insufficient stock for '{$this->name}'. Only {$currentStock} available in stock."],
             ]);

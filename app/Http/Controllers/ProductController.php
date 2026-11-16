@@ -88,8 +88,12 @@ class ProductController extends Controller
                 'staples' => ['dairy', 'spices', 'produce'],
                 'produce' => ['spices', 'dairy', 'staples'],
                 'spices' => ['produce', 'dairy', 'staples'],
-                'snacks' => ['sweets', 'snacks'],
-                'sweets' => ['snacks'],
+                'snacks' => ['beverages', 'bakery', 'sweets'],
+                'bakery' => ['beverages', 'snacks', 'sweets'],
+                'beverages' => ['bakery', 'snacks', 'sweets'],
+                'sweets' => ['snacks', 'bakery', 'beverages'],
+                'personal-care' => ['personal-care', 'grocery'],
+                'puja-home' => ['puja-home', 'sweets', 'produce'],
                 default => ['staples', 'spices', 'dairy'],
             };
 
@@ -125,6 +129,8 @@ class ProductController extends Controller
                 'name' => $p->name,
                 'price' => (float) $p->price,
                 'original_price' => $p->original_price ? (float) $p->original_price : (float) $p->price,
+                'unit_type' => $p->unit_type ?: 'each',
+                'is_taxable' => (bool) $p->is_taxable,
                 'size' => $p->size_main ?? ($p->size_sub ?? ''),
                 'image' => $p->image,
                 'category' => $p->category,

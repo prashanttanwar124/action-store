@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Admin;
 use App\Models\Product;
 use App\Models\User;
+use App\Services\PaymentAnalyticsService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
@@ -18,7 +19,7 @@ class AdminDashboardController extends Controller
     /**
      * Display the admin dashboard.
      */
-    public function index(Request $request): Response
+    public function index(Request $request, PaymentAnalyticsService $analytics): Response
     {
         $currentAdmin = $request->user('admin');
 
@@ -36,6 +37,7 @@ class AdminDashboardController extends Controller
                 'name' => $admin->name,
                 'email' => $admin->email,
                 'roles' => $admin->getRoleNames(),
+                'has_pos_pin' => $admin->hasPosPin(),
                 'created_at' => $admin->created_at?->format('M d, Y'),
             ];
         });
@@ -56,12 +58,16 @@ class AdminDashboardController extends Controller
         });
 
         $permissions = Permission::where('guard_name', 'admin')->pluck('name');
+        $paymentSnapshot = $currentAdmin && $currentAdmin->can('view reports')
+            ? $analytics->todaySnapshot()
+            : null;
 
         return Inertia::render('Admin/Dashboard', [
             'stats' => $stats,
             'admins' => $admins,
             'roles' => $roles,
             'availablePermissions' => $permissions,
+            'paymentSnapshot' => $paymentSnapshot,
         ]);
     }
 }

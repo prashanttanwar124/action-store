@@ -39,6 +39,7 @@ class UpdateCustomerRequest extends FormRequest
                 'max:255',
                 Rule::unique(User::class)->ignore($userId),
             ],
+            'phone' => ['nullable', 'string', 'max:30'],
             'password' => ['nullable', 'string', Password::defaults()],
             'email_verified' => ['nullable', 'boolean'],
         ];

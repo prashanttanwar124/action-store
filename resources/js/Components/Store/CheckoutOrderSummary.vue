@@ -3,6 +3,8 @@ defineProps({
   items: { type: Array, required: true },
   itemCount: { type: Number, required: true },
   subtotal: { type: Number, required: true },
+  taxRate: { type: Number, default: 0 },
+  taxAmount: { type: Number, default: 0 },
   fulfillmentMode: { type: String, required: true },
   deliveryFeeAmount: { type: Number, required: true },
   checkoutTotal: { type: String, required: true },
@@ -74,6 +76,10 @@ defineProps({
           <span :class="deliveryFeeAmount === 0 ? 'text-[#8a6b32] font-bold tracking-wide' : 'text-[#1d1d1f] font-bold'">
             {{ deliveryFeeAmount === 0 ? 'FREE' : `$${deliveryFeeAmount.toFixed(2)}` }}
           </span>
+        </div>
+        <div v-if="taxAmount > 0 || taxRate > 0" class="flex justify-between text-stone-700 font-medium">
+          <span>Sales Tax ({{ taxRate }}%)</span>
+          <span class="font-serif font-bold text-[#1d1d1f]">${{ taxAmount.toFixed(2) }}</span>
         </div>
 
         <div class="pt-3 border-t border-[#e0d9cc] flex justify-between items-baseline text-[#1d1d1f]">

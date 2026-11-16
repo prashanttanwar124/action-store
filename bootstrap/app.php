@@ -1,6 +1,8 @@
 <?php
 
 use App\Http\Middleware\HandleInertiaRequests;
+use App\Http\Middleware\RestrictPosIp;
+use App\Support\PosRequest;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -26,7 +28,13 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
 
         $middleware->redirectTo(
-            guests: fn (Request $request) => $request->is('admin*') ? route('admin.login') : route('login'),
+            guests: function (Request $request): string {
+                if (PosRequest::matches($request)) {
+                    return route('pos.login');
+                }
+
+                return $request->is('admin*') ? route('admin.login') : route('login');
+            },
         );
 
         $middleware->validateCsrfTokens(except: [
@@ -37,6 +45,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'role' => RoleMiddleware::class,
             'permission' => PermissionMiddleware::class,
             'role_or_permission' => RoleOrPermissionMiddleware::class,
+            'pos.ip' => RestrictPosIp::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

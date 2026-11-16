@@ -433,7 +433,21 @@ class ProductSeeder extends Seeder
             ],
         ];
 
-        foreach ($products as $item) {
+        $pluMap = [
+            'okra' => ['sku' => '4066', 'unit_type' => 'lb'],
+            'coriander' => ['sku' => '4889', 'unit_type' => 'each'],
+            'curry-leaves' => ['sku' => '4890', 'unit_type' => 'each'],
+            'green-chillies' => ['sku' => '4688', 'unit_type' => 'lb'],
+        ];
+
+        foreach ($products as $index => $item) {
+            $slug = $item['slug'];
+            $sequence = str_pad((string) ($index + 1), 4, '0', STR_PAD_LEFT);
+            $item['barcode'] ??= "89010520{$sequence}";
+            $item['sku'] ??= $pluMap[$slug]['sku'] ?? "MM-{$sequence}";
+            $item['unit_type'] ??= $pluMap[$slug]['unit_type'] ?? 'each';
+            $item['is_taxable'] ??= false;
+
             Product::create($item);
         }
     }

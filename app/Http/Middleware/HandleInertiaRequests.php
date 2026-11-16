@@ -3,6 +3,7 @@
 namespace App\Http\Middleware;
 
 use App\Models\StoreSetting;
+use App\Support\PosRequest;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
 
@@ -20,6 +21,10 @@ class HandleInertiaRequests extends Middleware
      */
     public function rootView(Request $request): string
     {
+        if (PosRequest::matches($request)) {
+            return 'pos';
+        }
+
         return $request->is('admin*') ? 'admin' : 'app';
     }
 
@@ -39,17 +44,21 @@ class HandleInertiaRequests extends Middleware
     public function share(Request $request): array
     {
         $isAdmin = $request->is('admin*');
+        $isPos = PosRequest::matches($request);
+        $usesAdminGuard = $isAdmin || $isPos;
+        $admin = $usesAdminGuard ? $request->user('admin') : null;
 
         return [
             ...parent::share($request),
             'auth' => [
-                'user' => fn () => ! $isAdmin ? $request->user() : null,
-                'admin' => fn () => $isAdmin && $request->user('admin') ? [
-                    'id' => $request->user('admin')->id,
-                    'name' => $request->user('admin')->name,
-                    'email' => $request->user('admin')->email,
-                    'roles' => $request->user('admin')->getRoleNames(),
-                    'permissions' => $request->user('admin')->getAllPermissions()->pluck('name'),
+                'user' => fn () => ! $usesAdminGuard ? $request->user() : null,
+                'admin' => fn () => $admin ? [
+                    'id' => $admin->id,
+                    'name' => $admin->name,
+                    'email' => $admin->email,
+                    'has_pos_pin' => $admin->hasPosPin(),
+                    'roles' => $admin->getRoleNames(),
+                    'permissions' => $admin->getAllPermissions()->pluck('name'),
                 ] : null,
             ],
             'flash' => [

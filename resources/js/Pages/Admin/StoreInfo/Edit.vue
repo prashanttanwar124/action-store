@@ -58,6 +58,7 @@ const form = useForm({
   delivery_fee: props.storeInfo.delivery_fee ?? 4.99,
   free_delivery_threshold: props.storeInfo.free_delivery_threshold ?? 50.00,
   delivery_estimated_time: props.storeInfo.delivery_estimated_time || 'Same Day 5:00 PM – 8:00 PM',
+  tax_rate: props.storeInfo.tax_rate ?? 0,
 });
 
 const weekDays = [
@@ -497,6 +498,27 @@ const submit = () => {
                 class="w-full px-3.5 py-1.5 bg-white border border-zinc-200 rounded-md text-xs text-zinc-900 focus:bg-white focus:border-[#18181b] focus:ring-3 focus:ring-[#18181b]/10 focus:outline-none"
               />
               <p v-if="form.errors.announcement" class="text-xs text-rose-500 mt-1">{{ form.errors.announcement }}</p>
+            </div>
+
+            <div class="pt-3 border-t border-zinc-100 grid grid-cols-1 sm:grid-cols-2 gap-4 items-center">
+              <div>
+                <label class="block text-xs font-semibold text-zinc-900 mb-1">
+                  Store Sales Tax Rate (%)
+                </label>
+                <input
+                  v-model.number="form.tax_rate"
+                  type="number"
+                  step="0.001"
+                  min="0"
+                  max="30"
+                  placeholder="0.000"
+                  class="w-full px-3.5 py-1.5 bg-white border border-zinc-200 rounded-md text-xs font-mono font-semibold text-zinc-900 focus:bg-white focus:border-[#18181b] focus:ring-3 focus:ring-[#18181b]/10 focus:outline-none"
+                />
+                <p v-if="form.errors.tax_rate" class="text-xs text-rose-500 mt-1">{{ form.errors.tax_rate }}</p>
+              </div>
+              <p class="text-[11px] text-zinc-500 leading-relaxed">
+                Applied automatically to products marked <strong>Taxable</strong> across both Online Storefront Checkout and the In-Store POS Register. Tax-exempt groceries remain at $0.00 tax.
+              </p>
             </div>
           </div>
 

@@ -18,13 +18,7 @@ class CartController extends Controller
      */
     public function index(): Response
     {
-        $impulseItems = Product::query()
-            ->whereIn('slug', ['coriander', 'saunf-mints', 'green-chillies', 'masala-noodles'])
-            ->get();
-
-        return Inertia::render('Cart', [
-            'impulseItems' => $impulseItems,
-        ]);
+        return Inertia::render('Cart');
     }
 
     /**
@@ -74,7 +68,7 @@ class CartController extends Controller
         $products = collect();
         if (! empty($numericIds) || ! empty($slugs)) {
             $products = Product::query()
-                ->select(['id', 'slug', 'name', 'price', 'original_price', 'size_main', 'image', 'stock', 'stock_badge', 'category'])
+                ->select(['id', 'slug', 'name', 'price', 'original_price', 'unit_type', 'is_taxable', 'size_main', 'image', 'stock', 'stock_badge', 'category'])
                 ->where(function ($query) use ($numericIds, $slugs) {
                     if (! empty($numericIds)) {
                         $query->whereIn('id', array_values(array_unique($numericIds)));
@@ -89,7 +83,7 @@ class CartController extends Controller
         $recipeKits = collect();
         if (! empty($kitNumericIds) || ! empty($kitSlugs)) {
             $recipeKits = RecipeKit::query()
-                ->with(['products:id,slug,name,price,size_main,image,stock,stock_badge'])
+                ->with(['products:id,slug,name,price,size_main,image,stock,stock_badge,unit_type,is_taxable'])
                 ->where(function ($query) use ($kitNumericIds, $kitSlugs) {
                     if (! empty($kitNumericIds)) {
                         $query->whereIn('id', array_values(array_unique($kitNumericIds)));

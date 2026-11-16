@@ -390,8 +390,14 @@ let audioCtx = null;
 
 // Base filter helper (without status column override, used for Kanban board & cards)
 function matchesNonStatusFilters(order) {
-  if (fulfillmentFilter.value !== 'all' && order.fulfillment_type !== fulfillmentFilter.value) {
-    return false;
+  if (fulfillmentFilter.value !== 'all') {
+    if (fulfillmentFilter.value === 'In-Store POS') {
+      if (order.fulfillment_type !== 'In-Store POS' && order.channel !== 'pos') {
+        return false;
+      }
+    } else if (order.fulfillment_type !== fulfillmentFilter.value) {
+      return false;
+    }
   }
   if (timingFilter.value === 'asap' && !isAsapOrder(order)) {
     return false;
@@ -522,8 +528,9 @@ const fulfillmentCounts = computed(() => {
   const all = stageScoped.length;
   const pickup = stageScoped.filter((o) => o.fulfillment_type === 'Store Pickup').length;
   const delivery = stageScoped.filter((o) => o.fulfillment_type === 'Home Delivery').length;
+  const pos = stageScoped.filter((o) => o.fulfillment_type === 'In-Store POS' || o.channel === 'pos').length;
   const asap = stageScoped.filter((o) => isAsapOrder(o)).length;
-  return { all, pickup, delivery, asap };
+  return { all, pickup, delivery, pos, asap };
 });
 
 const activeQueueCount = computed(() => {
@@ -1382,13 +1389,19 @@ function getStatusBadge(status, fulfillmentType = '') {
           </div>
 
           <!-- Today's Net Sales Pill -->
-          <div class="h-10 px-4 rounded-md bg-[#18181b] text-white border border-zinc-800 flex items-center gap-2 shadow-2xs">
+          <div
+            class="h-10 px-4 rounded-md bg-[#18181b] text-white border border-zinc-800 flex items-center gap-2 shadow-2xs"
+            :title="`Online: $${Number(liveStats.online_revenue_today || 0).toFixed(2)} · POS: $${Number(liveStats.pos_revenue_today || 0).toFixed(2)}`"
+          >
             <DollarSign class="w-3.5 h-3.5 text-[#a1a1aa] shrink-0" />
             <span class="text-xs text-zinc-300 font-medium whitespace-nowrap">
               Today <span class="text-zinc-400">({{ liveStats.total_today || 0 }})</span>:
             </span>
             <span class="text-sm font-semibold text-[#a1a1aa] whitespace-nowrap">
               ${{ Number(liveStats.revenue_today || 0).toFixed(2) }}
+            </span>
+            <span v-if="Number(liveStats.pos_revenue_today || 0) > 0" class="text-[10px] font-mono text-emerald-400 border-l border-zinc-700 pl-2 whitespace-nowrap">
+              POS ${{ Number(liveStats.pos_revenue_today || 0).toFixed(2) }}
             </span>
           </div>
 
@@ -1632,6 +1645,19 @@ function getStatusBadge(status, fulfillmentType = '') {
           >
             <Truck class="w-3.5 h-3.5 shrink-0" />
             <span>Delivery ({{ fulfillmentCounts.delivery }})</span>
+          </button>
+
+          <!-- In-Store POS -->
+          <button
+            type="button"
+            @click="fulfillmentFilter = fulfillmentFilter === 'In-Store POS' ? 'all' : 'In-Store POS'"
+            class="h-9 px-3.5 text-xs font-semibold rounded-md border transition-all cursor-pointer inline-flex items-center gap-1.5"
+            :class="fulfillmentFilter === 'In-Store POS'
+              ? 'bg-emerald-700 text-white border-emerald-800'
+              : 'bg-[#fafafa] hover:bg-[#f4f4f5] text-[#09090b] border-[#e4e4e7]'"
+          >
+            <CreditCard class="w-3.5 h-3.5 shrink-0" />
+            <span>POS ({{ fulfillmentCounts.pos }})</span>
           </button>
 
           <!-- ASAP Quick Filter -->
@@ -2023,7 +2049,7 @@ function getStatusBadge(status, fulfillmentType = '') {
 
                   <div class="flex items-center gap-1.5 shrink-0">
                     <button
-                      v-if="['confirmed', 'packing', 'ready_for_pickup'].includes(order.status) && !isItemFullyRefunded(item)"
+                      v-if="(order.channel || 'online') !== 'pos' && ['confirmed', 'packing', 'ready_for_pickup'].includes(order.status) && !isItemFullyRefunded(item)"
                       type="button"
                       @click.stop="openItemRefundModal(order, item)"
                       class="px-1.5 py-0.5 rounded text-[10px] font-bold text-rose-700 bg-rose-50 hover:bg-rose-600 hover:text-white border border-rose-200 hover:border-rose-600 transition-colors cursor-pointer"
@@ -2267,7 +2293,7 @@ function getStatusBadge(status, fulfillmentType = '') {
                       </span>
                     </button>
                     <button
-                      v-if="['confirmed', 'packing', 'ready_for_pickup'].includes(order.status) && !isItemFullyRefunded(item)"
+                      v-if="(order.channel || 'online') !== 'pos' && ['confirmed', 'packing', 'ready_for_pickup'].includes(order.status) && !isItemFullyRefunded(item)"
                       type="button"
                       @click.stop="openItemRefundModal(order, item)"
                       class="px-1.5 py-0.2 rounded text-[9px] font-bold text-rose-700 bg-rose-50 hover:bg-rose-600 hover:text-white border border-rose-200 transition-colors cursor-pointer shrink-0"
@@ -2772,7 +2798,7 @@ function getStatusBadge(status, fulfillmentType = '') {
                   </button>
                   <div class="flex items-center gap-2 shrink-0">
                     <button
-                      v-if="['confirmed', 'packing', 'ready_for_pickup'].includes(selectedOrderForModal.status) && !isItemFullyRefunded(item)"
+                      v-if="(selectedOrderForModal.channel || 'online') !== 'pos' && ['confirmed', 'packing', 'ready_for_pickup'].includes(selectedOrderForModal.status) && !isItemFullyRefunded(item)"
                       type="button"
                       @click.stop="openItemRefundModal(selectedOrderForModal, item)"
                       class="h-7 px-2.5 rounded-md text-[11px] font-bold text-rose-700 bg-rose-50 hover:bg-rose-600 hover:text-white border border-rose-200 hover:border-rose-600 transition-colors cursor-pointer"

@@ -46,6 +46,7 @@ class Checkout extends Model
         'customer_email',
         'customer_phone',
         'subtotal',
+        'tax',
         'delivery_fee',
         'total',
         'payment_method',
@@ -65,6 +66,7 @@ class Checkout extends Model
     {
         return [
             'subtotal' => 'decimal:2',
+            'tax' => 'decimal:2',
             'delivery_fee' => 'decimal:2',
             'total' => 'decimal:2',
             'items' => 'array',
@@ -187,12 +189,14 @@ class Checkout extends Model
 
             $order = Order::create([
                 'order_number' => Order::generateOrderNumber(),
+                'channel' => 'online',
                 'user_id' => $locked->user_id,
                 'customer_name' => $locked->customer_name,
                 'customer_email' => $locked->customer_email,
                 'customer_phone' => $locked->customer_phone,
                 'subtotal' => $locked->subtotal,
                 'discount' => 0.00,
+                'tax' => $locked->tax ?? 0.00,
                 'delivery_fee' => $locked->delivery_fee,
                 'total' => $locked->total,
                 'points_earned' => (int) floor((float) $locked->total),

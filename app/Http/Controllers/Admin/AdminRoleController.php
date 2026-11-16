@@ -50,4 +50,24 @@ class AdminRoleController extends Controller
 
         return back()->with('success', 'Admin roles updated successfully.');
     }
+
+    /**
+     * Set or clear a 4-digit POS quick-switch PIN for an admin staff member.
+     */
+    public function updateAdminPin(Request $request, Admin $admin): RedirectResponse
+    {
+        $validated = $request->validate([
+            'pos_pin' => ['nullable', 'digits:4'],
+        ]);
+
+        $admin->update([
+            'pos_pin' => ! empty($validated['pos_pin']) ? $validated['pos_pin'] : null,
+        ]);
+
+        $message = ! empty($validated['pos_pin'])
+            ? "POS 4-digit PIN updated for {$admin->name}."
+            : "POS PIN cleared for {$admin->name}.";
+
+        return back()->with('success', $message);
+    }
 }

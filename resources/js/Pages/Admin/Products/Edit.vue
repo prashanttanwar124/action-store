@@ -73,6 +73,8 @@ const supplierOptions = computed(() => [
 const form = useForm({
   name: props.product.name || '',
   slug: props.product.slug || '',
+  barcode: props.product.barcode || '',
+  sku: props.product.sku || '',
   category: props.product.category || 'grocery',
   category_title: props.product.category_title || props.defaultCategories[props.product.category] || 'Pantry & Groceries',
   supplier_id: props.product.supplier_id || null,
@@ -80,6 +82,8 @@ const form = useForm({
   price: props.product.price !== undefined ? props.product.price : '',
   original_price: props.product.original_price || '',
   unit_price: props.product.unit_price || '',
+  unit_type: props.product.unit_type || 'each',
+  is_taxable: !!props.product.is_taxable,
   stock: props.product.stock !== undefined ? props.product.stock : 50,
   stock_badge: props.product.stock_badge || 'In Stock',
   photo_label: props.product.photo_label || '',
@@ -291,6 +295,34 @@ const submit = () => {
                 class="w-full bg-[#fafafa] rounded-md text-xs"
               />
               <p v-if="form.errors.subtitle_tag" class="text-xs text-red-600 mt-1">{{ form.errors.subtitle_tag }}</p>
+            </div>
+
+            <!-- Barcode (EAN / UPC) -->
+            <div>
+              <Label class="block mb-1">
+                Barcode (EAN / UPC) <span class="text-[11px] text-[#71717a] font-normal">(POS Scanner)</span>
+              </Label>
+              <Input
+                v-model="form.barcode"
+                type="text"
+                placeholder="e.g. 8901234000011"
+                class="w-full bg-[#fafafa] rounded-md text-xs font-mono"
+              />
+              <p v-if="form.errors.barcode" class="text-xs text-red-600 mt-1">{{ form.errors.barcode }}</p>
+            </div>
+
+            <!-- SKU / PLU Code -->
+            <div>
+              <Label class="block mb-1">
+                SKU / Produce PLU <span class="text-[11px] text-[#71717a] font-normal">(Quick POS Lookup)</span>
+              </Label>
+              <Input
+                v-model="form.sku"
+                type="text"
+                placeholder="e.g. 4066 or MM-DAI-001"
+                class="w-full bg-[#fafafa] rounded-md text-xs font-mono"
+              />
+              <p v-if="form.errors.sku" class="text-xs text-red-600 mt-1">{{ form.errors.sku }}</p>
             </div>
 
             <!-- Category -->
@@ -534,6 +566,22 @@ const submit = () => {
               />
             </div>
 
+            <!-- POS Selling Unit Type -->
+            <div>
+              <Label class="block mb-1">
+                Selling Unit Type <span class="text-red-500">*</span>
+              </Label>
+              <select
+                v-model="form.unit_type"
+                class="w-full h-9 px-3 bg-[#fafafa] border border-[#e4e4e7] rounded-md text-xs font-medium text-[#09090b] focus:outline-none focus:border-[#18181b]"
+              >
+                <option value="each">Each (Standard Unit)</option>
+                <option value="lb">Per Pound (/lb — POS Scale Weight)</option>
+                <option value="kg">Per Kilogram (/kg — POS Scale Weight)</option>
+              </select>
+              <p v-if="form.errors.unit_type" class="text-xs text-red-600 mt-1">{{ form.errors.unit_type }}</p>
+            </div>
+
             <!-- Size Main -->
             <div>
               <Label class="block mb-1">
@@ -567,24 +615,25 @@ const submit = () => {
                 <!-- Automatic Live Badge Preview -->
                 <span 
                   class="text-[11px] font-bold px-2.5 py-0.5 rounded-md border shadow-2xs"
-                  :class="form.stock <= 0 
-                    ? 'bg-red-50 text-red-700 border-red-200' 
-                    : (form.stock <= 25 
-                      ? 'bg-amber-50 text-amber-900 border-amber-200' 
-                      : 'bg-emerald-50 text-emerald-800 border-emerald-200')"
+                  :class="form.stock < 0
+                    ? 'bg-rose-100 text-rose-800 border-rose-300'
+                    : (form.stock === 0 
+                      ? 'bg-red-50 text-red-700 border-red-200' 
+                      : (form.stock <= 25 
+                        ? 'bg-amber-50 text-amber-900 border-amber-200' 
+                        : 'bg-emerald-50 text-emerald-800 border-emerald-200'))"
                 >
-                  Live Store Badge: {{ form.stock <= 0 ? 'Out of stock' : (form.stock <= 25 ? `In stock · ${form.stock} left` : 'In stock') }}
+                  {{ form.stock < 0 ? `POS Discrepancy (${form.stock}) · Out of stock online` : (form.stock === 0 ? 'Live Store Badge: Out of stock' : (form.stock <= 25 ? `Live Store Badge: In stock · ${form.stock} left` : 'Live Store Badge: In stock')) }}
                 </span>
               </div>
               <Input 
                 v-model.number="form.stock"
                 type="number"
-                min="0"
                 placeholder="e.g. 24"
                 class="w-full bg-[#fafafa] rounded-md text-xs font-semibold"
               />
               <p class="text-[11px] text-zinc-500 mt-1">
-                Storefront stock badge is 100% automated and dynamically updates whenever orders are placed.
+                Online checkout blocks stock at 0, while in-store POS allows negative counts to flag shelf restocking discrepancies.
               </p>
             </div>
           </div>
@@ -631,6 +680,17 @@ const submit = () => {
                 <div>
                   <div class="text-xs font-semibold text-[#09090b]">Buy It Again</div>
                   <div class="text-[10px] text-[#71717a]">Shows in customer reorder carousel</div>
+                </div>
+              </label>
+
+              <label class="flex items-center gap-2.5 p-3 rounded-lg border border-[#e4e4e7] bg-[#fafafa] cursor-pointer hover:bg-zinc-50 select-none">
+                <Checkbox
+                  :checked="form.is_taxable"
+                  @update:checked="form.is_taxable = $event"
+                />
+                <div>
+                  <div class="text-xs font-semibold text-[#09090b]">Taxable Item</div>
+                  <div class="text-[10px] text-[#71717a]">Applies store sales tax at POS &amp; online checkout</div>
                 </div>
               </label>
             </div>

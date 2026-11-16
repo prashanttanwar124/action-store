@@ -32,11 +32,12 @@ class AdminCustomerController extends Controller
                 $q->where('status', '!=', 'cancelled');
             }], DB::raw('COALESCE(total, 0) - COALESCE(refunded_total, 0)'));
 
-        // Search by name or email
+        // Search by name, email, or phone
         if ($search !== '') {
             $query->where(function ($q) use ($search) {
                 $q->where('name', 'like', "%{$search}%")
-                    ->orWhere('email', 'like', "%{$search}%");
+                    ->orWhere('email', 'like', "%{$search}%")
+                    ->orWhere('phone', 'like', "%{$search}%");
             });
         }
 
@@ -73,6 +74,8 @@ class AdminCustomerController extends Controller
                 'id' => $user->id,
                 'name' => $user->name,
                 'email' => $user->email,
+                'phone' => $user->phone,
+                'reward_points' => (int) ($user->reward_points ?? 0),
                 'is_verified' => $user->email_verified_at !== null,
                 'verified_at' => $user->email_verified_at?->format('M d, Y'),
                 'created_at' => $user->created_at?->format('M d, Y'),
@@ -143,6 +146,8 @@ class AdminCustomerController extends Controller
                 'id' => $customer->id,
                 'name' => $customer->name,
                 'email' => $customer->email,
+                'phone' => $customer->phone,
+                'reward_points' => (int) ($customer->reward_points ?? 0),
                 'is_verified' => $customer->email_verified_at !== null,
                 'verified_at' => $customer->email_verified_at?->format('M d, Y · g:i A'),
                 'created_at' => $customer->created_at?->format('M d, Y · g:i A'),
@@ -196,6 +201,7 @@ class AdminCustomerController extends Controller
         User::create([
             'name' => $validated['name'],
             'email' => $validated['email'],
+            'phone' => ! empty($validated['phone']) ? trim((string) $validated['phone']) : null,
             'password' => Hash::make($validated['password']),
             'email_verified_at' => ! empty($validated['email_verified']) ? now() : null,
         ]);
@@ -214,6 +220,10 @@ class AdminCustomerController extends Controller
             'name' => $validated['name'],
             'email' => $validated['email'],
         ];
+
+        if (array_key_exists('phone', $validated)) {
+            $updateData['phone'] = ! empty($validated['phone']) ? trim((string) $validated['phone']) : null;
+        }
 
         if (! empty($validated['password'])) {
             $updateData['password'] = Hash::make($validated['password']);

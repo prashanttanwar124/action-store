@@ -384,8 +384,11 @@ const deliveryOptionFee = computed(() => {
 
 const deliveryFeeAmount = computed(() => fulfillmentMode.value === 'delivery' ? deliveryOptionFee.value : 0);
 
+const taxRate = computed(() => Number(storeInfo.value.tax_rate || 0));
+const taxAmount = computed(() => store.calculateTax(taxRate.value));
+
 const checkoutTotal = computed(() => {
-  return (store.total + deliveryFeeAmount.value).toFixed(2);
+  return (store.total + taxAmount.value + deliveryFeeAmount.value).toFixed(2);
 });
 
 // Update Stripe Elements amount whenever cart total changes (zero backend sync calls!)
@@ -841,6 +844,10 @@ async function collectPayment(clientSecret) {
               <span :class="deliveryFeeAmount === 0 ? 'text-[#8a6b32] font-bold' : 'text-stone-900 font-bold'">
                 {{ deliveryFeeAmount === 0 ? 'FREE' : `$${deliveryFeeAmount.toFixed(2)}` }}
               </span>
+            </div>
+            <div v-if="taxAmount > 0 || taxRate > 0" class="flex justify-between text-stone-600">
+              <span>Sales Tax ({{ taxRate }}%)</span>
+              <span class="font-serif font-bold text-stone-900">${{ taxAmount.toFixed(2) }}</span>
             </div>
             <div class="pt-2 border-t border-[#e0d9cc] flex justify-between items-baseline text-[#1d1d1f]">
               <span class="font-serif font-semibold">Total Due</span>
@@ -1417,6 +1424,8 @@ async function collectPayment(clientSecret) {
           :items="store.cartItems"
           :item-count="store.totalItemCount"
           :subtotal="store.subtotal"
+          :tax-rate="taxRate"
+          :tax-amount="taxAmount"
           :fulfillment-mode="fulfillmentMode"
           :delivery-fee-amount="deliveryFeeAmount"
           :checkout-total="checkoutTotal"

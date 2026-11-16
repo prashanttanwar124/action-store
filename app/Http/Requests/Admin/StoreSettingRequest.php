@@ -35,6 +35,7 @@ class StoreSettingRequest extends FormRequest
             'email' => ['required', 'email', 'max:255'],
             'opening_hours' => ['required', 'string', 'max:100'],
             ...StoreSetting::pickupValidationRules(),
+            'tax_rate' => ['nullable', 'numeric', 'min:0', 'max:50'],
             'announcement' => ['nullable', 'string', 'max:255'],
             'maps_url' => ['nullable', 'string', 'max:500', 'regex:/^(https?:\/\/|\/)/i'],
             'is_delivery_active' => ['boolean'],

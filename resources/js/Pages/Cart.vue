@@ -18,16 +18,12 @@ import {
   AlertTriangle
 } from 'lucide-vue-next';
 
-const props = defineProps({
-  impulseItems: {
-    type: Array,
-    default: () => [],
-  },
-});
-
 const store = useStore();
 const page = usePage();
 const storeInfo = computed(() => page.props.storeInfo || {});
+const taxRate = computed(() => Number(storeInfo.value?.tax_rate || 0));
+const estimatedTax = computed(() => store.calculateTax(taxRate.value));
+const cartTotalDue = computed(() => Number((store.subtotal + estimatedTax.value).toFixed(2)));
 
 onMounted(() => {
   store.refreshCartStock();
@@ -248,47 +244,6 @@ onMounted(() => {
             </div>
           </div>
 
-          <!-- Impulse Items (<$2 One-Tap Add Row) -->
-          <div class="bg-white rounded-lg border border-[#e0d9cc] p-5 space-y-3 shadow-xs">
-            <div class="flex items-center justify-between">
-              <div>
-                <h3 class="font-serif font-medium text-base text-[#1d1d1f]">Quick pantry add-ons</h3>
-                <p class="text-xs text-[#6e6e73] font-normal">Popular staples under $2 to add to your pickup basket.</p>
-              </div>
-              <span class="text-[10px] font-semibold text-[#7a5620] bg-[#f5eee2] border border-[#e0d9cc] px-2 py-0.5 rounded-md">&lt;$2 ITEMS</span>
-            </div>
-
-            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
-              <div 
-                v-for="impulse in (props.impulseItems.length ? props.impulseItems : store.impulseItems)" 
-                :key="impulse.id"
-                class="border border-[#e0d9cc] rounded-lg p-3 bg-[#f3efe7] flex items-center justify-between gap-2"
-                :class="store.isOutOfStock(impulse) ? 'opacity-60' : ''"
-              >
-                <div class="min-w-0">
-                  <div class="font-semibold text-xs text-[#1d1d1f] line-clamp-1">{{ impulse.name }}</div>
-                  <div class="text-[11px] text-[#6e6e73] font-normal">{{ impulse.size_main || impulse.size }} · ${{ Number(impulse.price).toFixed(2) }}</div>
-                </div>
-                <span
-                  v-if="store.isOutOfStock(impulse)"
-                  class="text-[10px] font-bold text-rose-700 bg-rose-50 border border-rose-200 px-2 py-1 rounded-md shrink-0"
-                >
-                  Out of Stock
-                </span>
-                <button 
-                  v-else
-                  @click="store.addToCart({ id: impulse.id, slug: impulse.slug, name: impulse.name, price: Number(impulse.price), size: impulse.size_main || impulse.size, image: impulse.image, stock: impulse.stock, stock_badge: impulse.stock_badge }, 1)"
-                  :disabled="!store.canAddMore(impulse, 1)"
-                  class="w-7 h-7 bg-[#1a1a1a] hover:bg-black text-white rounded-md flex items-center justify-center transition-colors shrink-0 active:scale-95 shadow-xs"
-                  :class="store.canAddMore(impulse, 1) ? 'cursor-pointer' : 'opacity-40 cursor-not-allowed'"
-                  aria-label="Add impulse item"
-                >
-                  <Plus class="w-3.5 h-3.5 stroke-[2.5]" />
-                </button>
-              </div>
-            </div>
-          </div>
-
         </div>
 
         <!-- RIGHT COLUMN: Order Summary & Checkout CTA (Desktop) -->
@@ -312,20 +267,20 @@ onMounted(() => {
               </div>
 
               <div class="flex justify-between text-[#6e6e73] font-normal">
-                <span>Estimated Sales Tax</span>
-                <span>$0.00</span>
+                <span>Estimated Sales Tax<template v-if="taxRate > 0"> ({{ taxRate }}%)</template></span>
+                <span>${{ estimatedTax.toFixed(2) }}</span>
               </div>
 
               <div class="pt-3 border-t border-[#e0d9cc]/60 flex justify-between items-baseline text-base text-[#1d1d1f]">
                 <span class="font-serif font-medium">Total Due</span>
-                <span class="text-2xl font-serif font-medium">${{ store.total.toFixed(2) }}</span>
+                <span class="text-2xl font-serif font-medium">${{ cartTotalDue.toFixed(2) }}</span>
               </div>
             </div>
 
             <!-- Points Box -->
             <div class="bg-[#f5eee2] border border-[#e0d9cc] rounded-lg p-3 text-xs text-[#7a5620] flex items-center gap-2">
               <Sparkles class="w-4 h-4 shrink-0 text-[#a47a3c]" />
-              <span class="font-normal">You will earn <strong class="font-bold text-[#7a5620]">+{{ Math.floor(store.subtotal) }} {{ storeInfo.brand_name }} Points</strong> on this order.</span>
+              <span class="font-normal">You will earn <strong class="font-bold text-[#7a5620]">+{{ Math.floor(cartTotalDue) }} {{ storeInfo.brand_name }} Points</strong> on this order.</span>
             </div>
 
             <!-- Desktop Checkout CTA Button -->
@@ -345,7 +300,7 @@ onMounted(() => {
             >
               <span>Go to checkout</span>
               <div class="flex items-center gap-1.5 font-serif font-medium">
-                <span>${{ store.total.toFixed(2) }}</span>
+                <span>${{ cartTotalDue.toFixed(2) }}</span>
                 <ArrowRight class="w-4 h-4 font-sans" />
               </div>
             </Link>
@@ -379,7 +334,7 @@ onMounted(() => {
         <div>
           <div class="text-[10px] text-[#86868b] uppercase leading-none font-semibold">Total Due</div>
           <div class="text-xl font-serif font-medium text-[#1d1d1f] mt-0.5 leading-none">
-            ${{ store.total.toFixed(2) }}
+            ${{ cartTotalDue.toFixed(2) }}
           </div>
         </div>
 
@@ -399,7 +354,7 @@ onMounted(() => {
         >
           <span>Go to checkout</span>
           <div class="flex items-center gap-1 font-serif font-medium text-sm">
-            <span>${{ store.total.toFixed(2) }}</span>
+            <span>${{ cartTotalDue.toFixed(2) }}</span>
             <ArrowRight class="w-3.5 h-3.5 font-sans" />
           </div>
         </Link>

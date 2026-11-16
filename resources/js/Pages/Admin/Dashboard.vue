@@ -1,8 +1,13 @@
 <script setup>
 import { ref, computed } from 'vue';
-import { useForm, usePage } from '@inertiajs/vue3';
+import { useForm, usePage, Link } from '@inertiajs/vue3';
 import AdminLayout from '@/Layouts/AdminLayout.vue';
-import { 
+import {
+  BarChart3,
+  Wallet,
+  Banknote,
+  CreditCard,
+  Globe, 
   Package, 
   Users, 
   Shield, 
@@ -37,7 +42,13 @@ const props = defineProps({
     type: Array,
     required: true,
   },
+  paymentSnapshot: {
+    type: Object,
+    default: null,
+  },
 });
+
+const formatMoney = (value) => `$${Number(value || 0).toFixed(2)}`;
 
 const page = usePage();
 const currentAdmin = page.props.auth?.admin;
@@ -107,6 +118,41 @@ const submitSyncRoles = () => {
   });
 };
 
+// Edit Admin POS PIN Form
+const editingPinAdmin = ref(null);
+const posPinForm = useForm({
+  pos_pin: '',
+});
+
+const openPinEdit = (admin) => {
+  editingPinAdmin.value = admin;
+  posPinForm.pos_pin = '';
+  posPinForm.clearErrors();
+};
+
+const submitUpdatePin = () => {
+  if (!editingPinAdmin.value) return;
+  posPinForm.post(route('admin.admins.pin.update', editingPinAdmin.value.id), {
+    preserveScroll: true,
+    onSuccess: () => {
+      editingPinAdmin.value = null;
+      posPinForm.reset();
+    },
+  });
+};
+
+const clearAdminPin = () => {
+  if (!editingPinAdmin.value) return;
+  posPinForm.pos_pin = '';
+  posPinForm.post(route('admin.admins.pin.update', editingPinAdmin.value.id), {
+    preserveScroll: true,
+    onSuccess: () => {
+      editingPinAdmin.value = null;
+      posPinForm.reset();
+    },
+  });
+};
+
 const getInitials = (name) => {
   if (!name) return 'AD';
   const parts = name.trim().split(/\s+/);
@@ -115,6 +161,17 @@ const getInitials = (name) => {
   }
   return parts[0].slice(0, 2).toUpperCase();
 };
+
+const tillLogsHref = computed(() => {
+  try {
+    if (typeof route === 'function' && route().has('admin.tills.index')) {
+      return route('admin.tills.index');
+    }
+  } catch {
+    // fallback
+  }
+  return '/admin/tills';
+});
 </script>
 
 <template>
@@ -143,6 +200,30 @@ const getInitials = (name) => {
         </div>
 
         <div class="flex flex-wrap items-center gap-2 shrink-0">
+          <Link
+            v-if="paymentSnapshot"
+            :href="route('admin.analytics.index')"
+            class="px-3 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 text-xs font-semibold rounded-md inline-flex items-center gap-1.5 border border-emerald-200 transition-colors"
+          >
+            <BarChart3 class="w-3.5 h-3.5 text-emerald-600" />
+            <span>Payment Analytics</span>
+            <ArrowUpRight class="w-3.5 h-3.5 text-emerald-600" />
+          </Link>
+
+          <Link
+            v-if="paymentSnapshot"
+            :href="tillLogsHref"
+            class="px-3 py-1.5 bg-amber-50 hover:bg-amber-100 text-amber-900 text-xs font-semibold rounded-md inline-flex items-center gap-1.5 border border-amber-200 transition-colors"
+          >
+            <Wallet class="w-3.5 h-3.5 text-amber-600" />
+            <span>Till &amp; Shift Logs</span>
+            <span
+              v-if="paymentSnapshot.open_shift"
+              class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"
+              title="Till currently open"
+            />
+          </Link>
+
           <a 
             href="/" 
             target="_blank"
@@ -239,6 +320,108 @@ const getInitials = (name) => {
           </div>
         </div>
       </div>
+
+      <!-- Today's Payment Channels Snapshot (requires view reports permission) -->
+      <section v-if="paymentSnapshot" class="bg-white border border-zinc-200 rounded-lg p-4 shadow-2xs space-y-3">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+          <div class="flex items-center gap-2">
+            <div class="w-7 h-7 rounded-md bg-emerald-50 border border-emerald-200 flex items-center justify-center text-emerald-700">
+              <BarChart3 class="w-4 h-4" />
+            </div>
+            <div>
+              <h2 class="text-sm font-semibold text-zinc-900 tracking-tight">
+                Today's Payment Channels ({{ paymentSnapshot.date_label }})
+              </h2>
+              <p class="text-[11px] text-zinc-500">
+                Net revenue after refunds across POS Cash, POS Card Terminal, and Online Website orders.
+              </p>
+            </div>
+          </div>
+
+          <div class="flex flex-wrap items-center gap-2 self-start sm:self-auto">
+            <Link
+              v-if="paymentSnapshot.open_shift"
+              :href="tillLogsHref"
+              class="inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-800 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 px-2.5 py-1.5 rounded-md transition-colors"
+            >
+              <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+              <span>Till #{{ paymentSnapshot.open_shift.id }} Open · {{ formatMoney(paymentSnapshot.open_shift.expected_cash) }}</span>
+            </Link>
+
+            <Link
+              :href="tillLogsHref"
+              class="inline-flex items-center gap-1.5 text-xs font-semibold text-zinc-700 hover:text-zinc-950 bg-white border border-zinc-200 hover:bg-zinc-50 px-3 py-1.5 rounded-md transition-colors"
+            >
+              <Wallet class="w-3.5 h-3.5 text-zinc-500" />
+              <span>Till &amp; Shift Logs</span>
+            </Link>
+
+            <Link
+              :href="route('admin.analytics.index')"
+              class="inline-flex items-center gap-1.5 text-xs font-semibold text-zinc-800 hover:text-zinc-950 bg-zinc-100 hover:bg-zinc-200/80 px-3 py-1.5 rounded-md transition-colors"
+            >
+              <span>Days / Weeks / Months Report</span>
+              <ArrowUpRight class="w-3.5 h-3.5" />
+            </Link>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+          <div class="p-3 rounded-lg bg-zinc-900 text-white">
+            <div class="text-[11px] text-zinc-400 font-medium">Total Net Today</div>
+            <div class="text-xl font-bold font-mono tabular-nums mt-1">
+              {{ formatMoney(paymentSnapshot.summary.total_net) }}
+            </div>
+            <div class="text-[11px] text-zinc-400 mt-1 font-mono tabular-nums">
+              {{ paymentSnapshot.summary.total_orders }} paid · Refunds −{{ formatMoney(paymentSnapshot.summary.total_refunds) }}
+            </div>
+          </div>
+
+          <div class="p-3 rounded-lg bg-emerald-50/70 border border-emerald-200/80">
+            <div class="flex items-center justify-between text-[11px] font-semibold text-emerald-800">
+              <span>POS Cash Sales (Net)</span>
+              <Banknote class="w-3.5 h-3.5 text-emerald-600" />
+            </div>
+            <div class="text-xl font-bold font-mono tabular-nums text-zinc-900 mt-1">
+              {{ formatMoney(paymentSnapshot.summary.pos_cash_net) }}
+            </div>
+            <div class="text-[11px] text-emerald-700 mt-1 font-mono tabular-nums">
+              <template v-if="paymentSnapshot.open_shift">
+                Active drawer: {{ formatMoney(paymentSnapshot.open_shift.expected_cash) }}
+              </template>
+              <template v-else>
+                Gross {{ formatMoney(paymentSnapshot.summary.pos_cash_gross) }} · No open shift
+              </template>
+            </div>
+          </div>
+
+          <div class="p-3 rounded-lg bg-indigo-50/70 border border-indigo-200/80">
+            <div class="flex items-center justify-between text-[11px] font-semibold text-indigo-800">
+              <span>POS Card Terminal (Net)</span>
+              <CreditCard class="w-3.5 h-3.5 text-indigo-600" />
+            </div>
+            <div class="text-xl font-bold font-mono tabular-nums text-zinc-900 mt-1">
+              {{ formatMoney(paymentSnapshot.summary.pos_card_net) }}
+            </div>
+            <div class="text-[11px] text-indigo-700 mt-1 font-mono tabular-nums">
+              Gross {{ formatMoney(paymentSnapshot.summary.pos_card_gross) }} · Refunds −{{ formatMoney(paymentSnapshot.summary.pos_card_refunds) }}
+            </div>
+          </div>
+
+          <div class="p-3 rounded-lg bg-violet-50/70 border border-violet-200/80">
+            <div class="flex items-center justify-between text-[11px] font-semibold text-violet-800">
+              <span>Website Online (Stripe)</span>
+              <Globe class="w-3.5 h-3.5 text-violet-600" />
+            </div>
+            <div class="text-xl font-bold font-mono tabular-nums text-zinc-900 mt-1">
+              {{ formatMoney(paymentSnapshot.summary.online_net) }}
+            </div>
+            <div class="text-[11px] text-violet-700 mt-1 font-mono tabular-nums">
+              {{ paymentSnapshot.summary.online_orders }} orders · Refunds −{{ formatMoney(paymentSnapshot.summary.online_refunds) }}
+            </div>
+          </div>
+        </div>
+      </section>
 
       <!-- Staff Roles & Permissions Section -->
       <section id="roles-section" class="space-y-3 pt-1">
@@ -376,6 +559,7 @@ const getInitials = (name) => {
                   <th class="py-2.5 px-4">Admin Profile</th>
                   <th class="py-2.5 px-4">Email Address</th>
                   <th class="py-2.5 px-4">Assigned Roles</th>
+                  <th class="py-2.5 px-4">POS PIN</th>
                   <th class="py-2.5 px-4">Created Date</th>
                   <th class="py-2.5 px-4 text-right">Actions</th>
                 </tr>
@@ -405,22 +589,43 @@ const getInitials = (name) => {
                       </span>
                     </div>
                   </td>
+                  <td class="py-3 px-4">
+                    <span
+                      v-if="adm.has_pos_pin"
+                      class="inline-flex items-center gap-1 text-[10px] font-mono font-semibold text-emerald-800 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded"
+                    >
+                      <Lock class="w-3 h-3" />
+                      <span>PIN Active</span>
+                    </span>
+                    <span v-else class="text-[10px] font-mono text-zinc-400">
+                      Not set
+                    </span>
+                  </td>
                   <td class="py-3 px-4 text-zinc-500">
                     {{ adm.created_at }}
                   </td>
                   <td class="py-3 px-4 text-right">
-                    <button 
-                      type="button"
-                      @click="openRoleEdit(adm)"
-                      class="px-2.5 py-1 text-xs font-medium text-zinc-700 hover:text-zinc-900 bg-white hover:bg-zinc-50 rounded-md transition-colors cursor-pointer border border-zinc-200"
-                    >
-                      Manage Roles
-                    </button>
+                    <div class="flex items-center justify-end gap-1.5">
+                      <button
+                        type="button"
+                        @click="openPinEdit(adm)"
+                        class="px-2.5 py-1 text-xs font-medium text-zinc-700 hover:text-zinc-900 bg-white hover:bg-zinc-50 rounded-md transition-colors cursor-pointer border border-zinc-200"
+                      >
+                        {{ adm.has_pos_pin ? 'Change PIN' : 'Set PIN' }}
+                      </button>
+                      <button 
+                        type="button"
+                        @click="openRoleEdit(adm)"
+                        class="px-2.5 py-1 text-xs font-medium text-zinc-700 hover:text-zinc-900 bg-white hover:bg-zinc-50 rounded-md transition-colors cursor-pointer border border-zinc-200"
+                      >
+                        Manage Roles
+                      </button>
+                    </div>
                   </td>
                 </tr>
 
                 <tr v-if="filteredAdmins.length === 0">
-                  <td colspan="5" class="py-8 text-center text-xs text-zinc-500">
+                  <td colspan="6" class="py-8 text-center text-xs text-zinc-500">
                     No administrators found matching your search and filter criteria.
                   </td>
                 </tr>
@@ -546,6 +751,72 @@ const getInitials = (name) => {
             >
               Update Roles
             </button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Edit Admin POS PIN Modal -->
+    <div 
+      v-if="editingPinAdmin"
+      class="fixed inset-0 z-50 bg-zinc-950/60 backdrop-blur-xs flex items-center justify-center p-4"
+      @click.self="editingPinAdmin = null"
+    >
+      <div class="bg-white rounded-lg max-w-sm w-full p-5 shadow-xl border border-zinc-200 space-y-4">
+        <div class="flex items-center justify-between">
+          <div>
+            <h3 class="font-semibold text-base text-zinc-900">POS Register Fast PIN</h3>
+            <p class="text-xs text-zinc-500">{{ editingPinAdmin.name }} — 4-digit counter switch code</p>
+          </div>
+          <button @click="editingPinAdmin = null" class="text-zinc-400 hover:text-zinc-700 cursor-pointer text-xl leading-none">&times;</button>
+        </div>
+
+        <form @submit.prevent="submitUpdatePin" class="space-y-4">
+          <div>
+            <label class="block text-xs font-medium text-zinc-700 mb-1">4-Digit Cashier PIN</label>
+            <input 
+              v-model="posPinForm.pos_pin"
+              type="password"
+              inputmode="numeric"
+              maxlength="4"
+              pattern="\d{4}"
+              placeholder="e.g. 1234"
+              required
+              class="w-full px-3.5 py-2 border border-zinc-200 rounded-md text-center text-lg font-mono tracking-[0.5em] focus:border-zinc-900 focus:outline-none"
+            />
+            <p v-if="posPinForm.errors.pos_pin" class="text-xs text-red-600 mt-1">{{ posPinForm.errors.pos_pin }}</p>
+            <p class="text-[11px] text-zinc-500 mt-1.5">
+              Used on shared counter tablets to switch active cashiers in 1 second without re-entering email/password.
+            </p>
+          </div>
+
+          <div class="flex items-center justify-between pt-2">
+            <button
+              v-if="editingPinAdmin.has_pos_pin"
+              type="button"
+              @click="clearAdminPin"
+              :disabled="posPinForm.processing"
+              class="text-xs font-semibold text-rose-600 hover:text-rose-800 cursor-pointer"
+            >
+              Remove PIN
+            </button>
+            <span v-else></span>
+            <div class="flex items-center gap-2">
+              <button 
+                type="button" 
+                @click="editingPinAdmin = null" 
+                class="px-3.5 py-1.5 text-xs font-medium text-zinc-600 hover:text-zinc-900 cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button 
+                type="submit" 
+                :disabled="posPinForm.processing || posPinForm.pos_pin.length !== 4"
+                class="px-4 py-1.5 bg-zinc-900 hover:bg-zinc-800 text-white text-xs font-semibold rounded-md cursor-pointer disabled:opacity-50 transition-colors"
+              >
+                Save PIN
+              </button>
+            </div>
           </div>
         </form>
       </div>

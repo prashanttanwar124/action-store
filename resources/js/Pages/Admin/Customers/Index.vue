@@ -23,7 +23,9 @@ import {
   ChevronRight,
   TrendingUp,
   Receipt,
-  UserCheck
+  UserCheck,
+  Phone,
+  Sparkles
 } from 'lucide-vue-next';
 import {
   Select,
@@ -151,6 +153,7 @@ const showCreateModal = ref(false);
 const createForm = useForm({
   name: '',
   email: '',
+  phone: '',
   password: '',
   email_verified: true,
 });
@@ -172,6 +175,7 @@ const editingCustomer = ref(null);
 const editForm = useForm({
   name: '',
   email: '',
+  phone: '',
   password: '',
   email_verified: false,
 });
@@ -180,6 +184,7 @@ const openEditModal = (customer) => {
   editingCustomer.value = customer;
   editForm.name = customer.name;
   editForm.email = customer.email;
+  editForm.phone = customer.phone || '';
   editForm.password = '';
   editForm.email_verified = customer.is_verified;
   editForm.clearErrors();
@@ -194,6 +199,7 @@ const submitEdit = () => {
       if (selectedCustomer.value && selectedCustomer.value.id === editingCustomer.value.id) {
         selectedCustomer.value.name = editForm.name;
         selectedCustomer.value.email = editForm.email;
+        selectedCustomer.value.phone = editForm.phone;
         selectedCustomer.value.is_verified = editForm.email_verified;
       }
       editingCustomer.value = null;
@@ -406,7 +412,7 @@ const formatStatusText = (status) => {
               v-model="searchInput"
               @input="handleSearchChange"
               type="text"
-              placeholder="Search by customer name or email..."
+              placeholder="Search by customer name, phone, or email..."
               class="w-full pl-9 pr-9 py-2 text-xs bg-[#fafafa] border border-[#e4e4e7] rounded-md focus:outline-none focus:ring-3 focus:ring-[#18181b]/10 focus:border-[#18181b] focus:bg-white transition-all"
             />
             <button 
@@ -545,6 +551,10 @@ const formatStatusText = (status) => {
                       <Mail class="w-3.5 h-3.5 text-[#71717a] shrink-0" />
                       <span>{{ cust.email }}</span>
                     </div>
+                    <div v-if="cust.phone" class="font-mono text-[#52525b] text-[11px] flex items-center gap-1.5">
+                      <Phone class="w-3 h-3 text-[#71717a] shrink-0" />
+                      <span>{{ cust.phone }}</span>
+                    </div>
                     <div class="flex items-center gap-1.5">
                       <span 
                         v-if="cust.is_verified" 
@@ -572,7 +582,11 @@ const formatStatusText = (status) => {
                     </div>
                     <div class="text-[11px] text-[#52525b] flex items-center gap-1 mt-0.5">
                       <ShoppingBag class="w-3 h-3 text-[#71717a]" />
-                      <span>{{ cust.orders_count }} {{ cust.orders_count === 1 ? 'order' : 'orders' }} placed</span>
+                      <span>{{ cust.orders_count }} {{ cust.orders_count === 1 ? 'order' : 'orders' }}</span>
+                      <span v-if="cust.reward_points > 0" class="ml-1 inline-flex items-center gap-0.5 text-[10px] font-semibold text-amber-800 bg-amber-50 border border-amber-200 px-1.5 py-0.2 rounded">
+                        <Sparkles class="w-2.5 h-2.5" />
+                        {{ cust.reward_points }} pts
+                      </span>
                     </div>
                   </div>
                 </td>
@@ -953,6 +967,20 @@ const formatStatusText = (status) => {
                   <p v-if="createForm.errors.email" class="text-[11px] text-rose-600 mt-1">{{ createForm.errors.email }}</p>
                 </div>
 
+                <!-- Phone Number -->
+                <div>
+                  <label class="block text-xs font-semibold text-[#09090b] mb-1">
+                    Phone Number <span class="font-normal text-[#71717a]">(POS Loyalty Lookup)</span>
+                  </label>
+                  <input 
+                    v-model="createForm.phone" 
+                    type="tel" 
+                    placeholder="e.g. +1 (555) 234-5678" 
+                    class="w-full px-3.5 py-2 text-xs bg-[#fafafa] border border-[#e4e4e7] rounded-md focus:bg-white focus:outline-none focus:ring-3 focus:ring-[#18181b]/10 focus:border-[#18181b]"
+                  />
+                  <p v-if="createForm.errors.phone" class="text-[11px] text-rose-600 mt-1">{{ createForm.errors.phone }}</p>
+                </div>
+
                 <!-- Password -->
                 <div>
                   <label class="block text-xs font-semibold text-[#09090b] mb-1">Temporary Password</label>
@@ -1070,6 +1098,20 @@ const formatStatusText = (status) => {
                     required 
                   />
                   <p v-if="editForm.errors.email" class="text-[11px] text-rose-600 mt-1">{{ editForm.errors.email }}</p>
+                </div>
+
+                <!-- Phone Number -->
+                <div>
+                  <label class="block text-xs font-semibold text-[#09090b] mb-1">
+                    Phone Number <span class="font-normal text-[#71717a]">(POS Loyalty Lookup)</span>
+                  </label>
+                  <input 
+                    v-model="editForm.phone" 
+                    type="tel" 
+                    placeholder="e.g. +1 (555) 234-5678" 
+                    class="w-full px-3.5 py-2 text-xs bg-[#fafafa] border border-[#e4e4e7] rounded-md focus:bg-white focus:outline-none focus:ring-3 focus:ring-[#18181b]/10 focus:border-[#18181b]"
+                  />
+                  <p v-if="editForm.errors.phone" class="text-[11px] text-rose-600 mt-1">{{ editForm.errors.phone }}</p>
                 </div>
 
                 <!-- Reset Password (optional) -->

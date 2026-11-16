@@ -67,6 +67,8 @@ const supplierOptions = computed(() => [
 const form = useForm({
   name: '',
   slug: '',
+  barcode: '',
+  sku: '',
   category: 'grocery',
   category_title: props.defaultCategories['grocery'] || 'Pantry & Groceries',
   supplier_id: null,
@@ -74,6 +76,8 @@ const form = useForm({
   price: '',
   original_price: '',
   unit_price: '',
+  unit_type: 'each',
+  is_taxable: false,
   stock: 50,
   stock_badge: 'In Stock',
   photo_label: 'Organic',
@@ -283,6 +287,34 @@ const submit = () => {
                 class="w-full bg-[#fafafa] rounded-md text-xs"
               />
               <p v-if="form.errors.subtitle_tag" class="text-xs text-red-600 mt-1">{{ form.errors.subtitle_tag }}</p>
+            </div>
+
+            <!-- Barcode (EAN / UPC) -->
+            <div>
+              <Label class="block mb-1">
+                Barcode (EAN / UPC) <span class="text-[11px] text-[#71717a] font-normal">(POS Scanner)</span>
+              </Label>
+              <Input
+                v-model="form.barcode"
+                type="text"
+                placeholder="e.g. 8901234000011"
+                class="w-full bg-[#fafafa] rounded-md text-xs font-mono"
+              />
+              <p v-if="form.errors.barcode" class="text-xs text-red-600 mt-1">{{ form.errors.barcode }}</p>
+            </div>
+
+            <!-- SKU / PLU Code -->
+            <div>
+              <Label class="block mb-1">
+                SKU / Produce PLU <span class="text-[11px] text-[#71717a] font-normal">(Quick POS Lookup)</span>
+              </Label>
+              <Input
+                v-model="form.sku"
+                type="text"
+                placeholder="e.g. 4066 or MM-DAI-001"
+                class="w-full bg-[#fafafa] rounded-md text-xs font-mono"
+              />
+              <p v-if="form.errors.sku" class="text-xs text-red-600 mt-1">{{ form.errors.sku }}</p>
             </div>
 
             <!-- Category -->
@@ -509,6 +541,22 @@ const submit = () => {
               />
             </div>
 
+            <!-- POS Selling Unit Type -->
+            <div>
+              <Label class="block mb-1">
+                Selling Unit Type <span class="text-red-500">*</span>
+              </Label>
+              <select
+                v-model="form.unit_type"
+                class="w-full h-9 px-3 bg-[#fafafa] border border-[#e4e4e7] rounded-md text-xs font-medium text-[#09090b] focus:outline-none focus:border-[#18181b]"
+              >
+                <option value="each">Each (Standard Unit)</option>
+                <option value="lb">Per Pound (/lb — POS Scale Weight)</option>
+                <option value="kg">Per Kilogram (/kg — POS Scale Weight)</option>
+              </select>
+              <p v-if="form.errors.unit_type" class="text-xs text-red-600 mt-1">{{ form.errors.unit_type }}</p>
+            </div>
+
             <!-- Size Main -->
             <div>
               <Label class="block mb-1">
@@ -608,6 +656,17 @@ const submit = () => {
                 <div>
                   <div class="text-xs font-semibold text-[#09090b]">Buy It Again</div>
                   <div class="text-[10px] text-[#71717a]">Shows in customer reorder carousel</div>
+                </div>
+              </label>
+
+              <label class="flex items-center gap-2.5 p-3 rounded-lg border border-[#e4e4e7] bg-[#fafafa] cursor-pointer hover:bg-zinc-50 select-none">
+                <Checkbox
+                  :checked="form.is_taxable"
+                  @update:checked="form.is_taxable = $event"
+                />
+                <div>
+                  <div class="text-xs font-semibold text-[#09090b]">Taxable Item</div>
+                  <div class="text-[10px] text-[#71717a]">Applies store sales tax at POS &amp; online checkout</div>
                 </div>
               </label>
             </div>

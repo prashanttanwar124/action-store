@@ -25,7 +25,7 @@ class HomeController extends Controller
             ->get();
 
         $recipeKits = RecipeKit::query()
-            ->with(['products:id,slug,name,price,size_main,image,stock,stock_badge'])
+            ->with(['products:id,slug,name,price,size_main,image,stock,stock_badge,unit_type,is_taxable'])
             ->where('is_active', true)
             ->latest('id')
             ->limit(10)
@@ -39,6 +39,8 @@ class HomeController extends Controller
                 'price',
                 'original_price',
                 'unit_price',
+                'unit_type',
+                'is_taxable',
                 'image',
                 'size_main',
                 'stock',
@@ -92,6 +94,8 @@ class HomeController extends Controller
                 'price',
                 'original_price',
                 'unit_price',
+                'unit_type',
+                'is_taxable',
                 'image',
                 'size_main',
                 'stock',
@@ -147,7 +151,7 @@ class HomeController extends Controller
         $products = $productsQuery->paginate(10)->withQueryString();
 
         $recipeKitsQuery = RecipeKit::query()
-            ->with(['products:id,slug,name,price,size_main,image,stock,stock_badge'])
+            ->with(['products:id,slug,name,price,size_main,image,stock,stock_badge,unit_type,is_taxable'])
             ->where('is_active', true);
 
         if ($query !== '') {

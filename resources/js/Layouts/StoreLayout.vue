@@ -75,9 +75,6 @@ watchEffect(() => {
   if (page.props.product) {
     store.setProducts([page.props.product]);
   }
-  if (page.props.impulseItems && Array.isArray(page.props.impulseItems)) {
-    store.setProducts(page.props.impulseItems);
-  }
   if (page.props.frequentlyBoughtTogether && Array.isArray(page.props.frequentlyBoughtTogether)) {
     store.setProducts(page.props.frequentlyBoughtTogether);
   }

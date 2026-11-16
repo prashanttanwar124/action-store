@@ -12,13 +12,6 @@ export const useStore = defineStore('masalaStore', () => {
   // Products Database (Dynamically populated from Laravel SQLite DB)
   const products = ref([]);
 
-  // Impulse Items for Cart (Dynamically derived from database products under $3.50)
-  const impulseItems = computed(() => {
-    return products.value
-      .filter(p => Number(p.price) <= 2.00 || (Number(p.price) <= 3.50 && ['produce', 'snacks'].includes(p.category)))
-      .slice(0, 4);
-  });
-
   // Recipe Kits
   const recipeKits = computed(() => {
     return products.value.filter(p => p.isRecipeKit);
@@ -191,6 +184,10 @@ export const useStore = defineStore('masalaStore', () => {
         price: item.price !== undefined ? Number(item.price) : Number(prev?.price || 0),
         originalPrice: Number(item.original_price || item.originalPrice || item.price || prev?.originalPrice || 0),
         unitPrice: item.unit_price || item.unitPrice || prev?.unitPrice,
+        unitType: item.unit_type || item.unitType || prev?.unitType || 'each',
+        isTaxable: item.is_taxable !== undefined
+          ? Boolean(item.is_taxable)
+          : (item.isTaxable !== undefined ? Boolean(item.isTaxable) : Boolean(prev?.isTaxable)),
         stock: parsedStock,
         stockBadge: item.stock_badge ?? item.stockBadge ?? prev?.stockBadge ?? null,
         photoLabel: item.photo_label || item.photoLabel || prev?.photoLabel,
@@ -236,6 +233,8 @@ export const useStore = defineStore('masalaStore', () => {
                 name: fbt.name,
                 price: Number(fbt.price || 0),
                 originalPrice: Number(fbt.original_price || fbt.price || 0),
+                unitType: fbt.unit_type || fbt.unitType || 'each',
+                isTaxable: Boolean(fbt.is_taxable || fbt.isTaxable),
                 sizeMain: fbt.size || fbt.size_main || '',
                 size: fbt.size || fbt.size_main || '',
                 image: fbt.image,
@@ -500,6 +499,8 @@ export const useStore = defineStore('masalaStore', () => {
       const slug = prod ? prod.slug : (item.slug || String(item.id));
       const category = prod ? prod.category : (item.category || (isKit ? 'recipe-kit' : 'grocery'));
       const originalPrice = prod ? prod.originalPrice : Number(item.originalPrice || price);
+      const isTaxable = isKit ? false : (prod ? Boolean(prod.isTaxable) : Boolean(item.isTaxable || item.is_taxable));
+      const unitType = isKit ? 'each' : (prod ? (prod.unitType || 'each') : (item.unitType || item.unit_type || 'each'));
       const unitCost = price;
 
       const availableStock = getAvailableStock(item);
@@ -542,6 +543,8 @@ export const useStore = defineStore('masalaStore', () => {
         unitCost,
         price: unitCost,
         originalPrice,
+        unitType,
+        isTaxable,
         weight: size,
         size,
         total: Number((unitCost * item.quantity).toFixed(2)),
@@ -601,6 +604,16 @@ export const useStore = defineStore('masalaStore', () => {
   const subtotal = computed(() => {
     return Number(cartItems.value.reduce((sum, item) => sum + item.total, 0).toFixed(2));
   });
+
+  const taxableSubtotal = computed(() => {
+    return Number(cartItems.value.reduce((sum, item) => sum + (item.isTaxable ? item.total : 0), 0).toFixed(2));
+  });
+
+  function calculateTax(taxRatePercent) {
+    const rate = Number(taxRatePercent || 0);
+    if (!Number.isFinite(rate) || rate <= 0) return 0;
+    return Number((taxableSubtotal.value * (rate / 100)).toFixed(2));
+  }
 
   const total = computed(() => {
     return subtotal.value;
@@ -687,6 +700,8 @@ export const useStore = defineStore('masalaStore', () => {
         originalPrice: Number(itemObj?.originalPrice || prod?.originalPrice || itemObj?.price || 0),
         image: itemObj?.image || prod?.image || '/images/products/atta.jpg',
         size: itemObj?.size || itemObj?.weight || prod?.sizeMain || '',
+        unitType: isKit ? 'each' : (itemObj?.unit_type || itemObj?.unitType || prod?.unitType || 'each'),
+        isTaxable: isKit ? false : Boolean(itemObj?.is_taxable ?? itemObj?.isTaxable ?? prod?.isTaxable ?? false),
         stock: (itemObj?.stock !== undefined && itemObj?.stock !== null) ? Number(itemObj.stock) : (prod?.stock ?? null),
         stockBadge: itemObj?.stock_badge ?? itemObj?.stockBadge ?? prod?.stockBadge ?? null,
         kitProducts: resolvedKitProducts,
@@ -765,6 +780,9 @@ export const useStore = defineStore('masalaStore', () => {
         if (prod && prod.price !== undefined) {
           item.price = Number(prod.price);
         }
+        if (prod && prod.isTaxable !== undefined) {
+          item.isTaxable = Boolean(prod.isTaxable);
+        }
       });
     } catch {
       // Non-blocking fallback
@@ -780,7 +798,6 @@ export const useStore = defineStore('masalaStore', () => {
     readyTime,
     searchQuery,
     products,
-    impulseItems,
     recipeKits,
     cart,
     cartItems,
@@ -796,6 +813,8 @@ export const useStore = defineStore('masalaStore', () => {
     canAddMore,
     totalItemCount,
     subtotal,
+    taxableSubtotal,
+    calculateTax,
     total,
     rewardPoints,
     freeDeliveryThreshold,

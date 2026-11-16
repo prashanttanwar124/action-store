@@ -27,9 +27,10 @@ class AdminOrderController extends Controller
     public function index(Request $request): Response
     {
         $status = $request->input('status', 'all');
+        $channel = $request->input('channel', 'all');
         $search = $request->input('search');
 
-        $query = Order::with('items')
+        $query = Order::with(['items', 'admin:id,name'])
             ->orderByRaw("CASE status
                 WHEN 'confirmed' THEN 1
                 WHEN 'packing' THEN 2
@@ -41,6 +42,14 @@ class AdminOrderController extends Controller
 
         if ($status && $status !== 'all') {
             $query->where('status', $status);
+        }
+
+        if ($channel === 'online') {
+            $query->where(function ($q) {
+                $q->where('channel', 'online')->orWhereNull('channel');
+            });
+        } elseif ($channel === 'pos') {
+            $query->where('channel', 'pos');
         }
 
         if ($search) {
@@ -56,15 +65,22 @@ class AdminOrderController extends Controller
             return [
                 'id' => $order->id,
                 'order_number' => $order->order_number,
+                'channel' => $order->channel ?? 'online',
+                'cashier_name' => $order->admin?->name,
                 'customer_name' => $order->customer_name,
                 'customer_email' => $order->customer_email,
                 'customer_phone' => $order->customer_phone,
                 'subtotal' => (float) $order->subtotal,
                 'discount' => (float) $order->discount,
+                'tax' => (float) ($order->tax ?? 0),
                 'total' => (float) $order->total,
                 'refunded_total' => (float) ($order->refunded_total ?? 0),
                 'points_earned' => $order->points_earned,
+                'points_redeemed' => (int) ($order->points_redeemed ?? 0),
                 'payment_method' => $order->payment_method,
+                'cash_amount' => (float) ($order->cash_amount ?? 0),
+                'terminal_amount' => (float) ($order->terminal_amount ?? 0),
+                'payment_reference' => $order->payment_reference,
                 'stripe_payment_id' => $order->stripe_payment_id,
                 'fulfillment_type' => $order->fulfillment_type,
                 'pickup_slot' => $order->pickup_slot,
@@ -82,10 +98,14 @@ class AdminOrderController extends Controller
                         'product_id' => $item->product_id,
                         'name' => $item->name,
                         'size' => $item->size,
+                        'unit_type' => $item->unit_type ?? 'each',
+                        'weight' => $item->weight !== null ? (float) $item->weight : null,
                         'unit_price' => (float) $item->unit_price,
                         'quantity' => (int) $item->quantity,
                         'refunded_quantity' => (int) ($item->refunded_quantity ?? 0),
                         'total_price' => (float) $item->total_price,
+                        'is_taxable' => (bool) $item->is_taxable,
+                        'tax_amount' => (float) ($item->tax_amount ?? 0),
                         'refunded_amount' => (float) ($item->refunded_amount ?? 0),
                         'refund_reason' => $item->refund_reason,
                         'is_packed' => (bool) $item->is_packed,
@@ -110,8 +130,12 @@ class AdminOrderController extends Controller
                 SUM(CASE WHEN created_at BETWEEN ? AND ? AND status = 'completed' THEN 1 ELSE 0 END) as completed_today,
                 SUM(CASE WHEN status = 'cancelled' THEN 1 ELSE 0 END) as cancelled,
                 SUM(CASE WHEN created_at BETWEEN ? AND ? AND status = 'cancelled' THEN 1 ELSE 0 END) as cancelled_today,
-                COALESCE(SUM(CASE WHEN created_at BETWEEN ? AND ? AND status != 'cancelled' THEN total - COALESCE(refunded_total, 0) ELSE 0 END), 0) as revenue_today
+                COALESCE(SUM(CASE WHEN created_at BETWEEN ? AND ? AND status != 'cancelled' THEN total - COALESCE(refunded_total, 0) ELSE 0 END), 0) as revenue_today,
+                COALESCE(SUM(CASE WHEN created_at BETWEEN ? AND ? AND status != 'cancelled' AND COALESCE(channel, 'online') = 'online' THEN total - COALESCE(refunded_total, 0) ELSE 0 END), 0) as online_revenue_today,
+                COALESCE(SUM(CASE WHEN created_at BETWEEN ? AND ? AND status != 'cancelled' AND channel = 'pos' THEN total - COALESCE(refunded_total, 0) ELSE 0 END), 0) as pos_revenue_today
             ", [
+                $todayStart, $todayEnd,
+                $todayStart, $todayEnd,
                 $todayStart, $todayEnd,
                 $todayStart, $todayEnd,
                 $todayStart, $todayEnd,
@@ -130,6 +154,8 @@ class AdminOrderController extends Controller
             'cancelled' => (int) ($agg->cancelled ?? 0),
             'cancelled_today' => (int) ($agg->cancelled_today ?? 0),
             'revenue_today' => (float) ($agg->revenue_today ?? 0),
+            'online_revenue_today' => (float) ($agg->online_revenue_today ?? 0),
+            'pos_revenue_today' => (float) ($agg->pos_revenue_today ?? 0),
         ];
 
         return Inertia::render('Admin/Orders/Index', [
@@ -137,6 +163,7 @@ class AdminOrderController extends Controller
             'stats' => $stats,
             'filters' => [
                 'status' => $status,
+                'channel' => $channel,
                 'search' => $search,
             ],
         ]);
@@ -155,6 +182,12 @@ class AdminOrderController extends Controller
 
         if ($newStatus === 'cancelled') {
             $order->refresh();
+
+            if (($order->channel ?? 'online') === 'pos') {
+                throw ValidationException::withMessages([
+                    'status' => 'POS orders must be refunded or returned from the POS Register so drawer and terminal shifts stay reconciled.',
+                ]);
+            }
 
             if ($order->status === 'completed') {
                 throw ValidationException::withMessages([
@@ -249,6 +282,12 @@ class AdminOrderController extends Controller
     {
         if ((int) $item->order_id !== (int) $order->id) {
             abort(404);
+        }
+
+        if (($order->channel ?? 'online') === 'pos') {
+            throw ValidationException::withMessages([
+                'item' => 'POS orders must be refunded from the POS Register so drawer cash and card terminal shifts stay reconciled.',
+            ]);
         }
 
         if (in_array($order->status, ['cancelled', 'completed'], true)) {
